@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Martian+Mono:wght@400;500;600&family=Lobster&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; background:#FDF6F3; }
+    ::selection { background:#FFA45C; color:#2B2420; }
+    input[type="checkbox"].swtoggle { appearance:none; width:36px; height:20px; border-radius:10px; background:#EFE0DB; position:relative; cursor:pointer; outline:none; transition:background .15s; }
+    input[type="checkbox"].swtoggle:checked { background:#8FE3C8; }
+    input[type="checkbox"].swtoggle::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:left .15s; box-shadow:0 1px 2px rgba(43,36,32,.25); }
+    input[type="checkbox"].swtoggle:checked::after { left:18px; }
+  </style>
+  <script src="./image-slot.js"></script>
+</helmet>
+<div style="display:flex;min-height:100vh;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;">
+  <aside style="width:232px;flex:none;background:#FFFFFF;border-right:1px solid #EFE0DB;display:flex;flex-direction:column;padding:24px 16px;gap:28px;overflow-y:auto;position:sticky;top:0;height:100vh;box-sizing:border-box;">
+    <div style="display:flex;align-items:center;gap:8px;padding:0 8px;">
+      <image-slot id="lola-logo" fit="contain" shape="rounded" radius="6" compact="" placeholder="Foto" style="width:96px;height:36px;flex:none;display:block;"></image-slot>
+      <span style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:10px;letter-spacing:.06em;color:#8A7A70;text-transform:uppercase;">admin</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px;margin-top:-14px;">
+      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="9">
+        <sc-if value="{{ item.isHeader }}" hint-placeholder-val="{{ false }}">
+          <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:10px;letter-spacing:.08em;color:#8A7A70;padding:14px 12px 4px;">{{ item.label }}</div>
+        </sc-if>
+        <sc-if value="{{ item.isLink }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ item.onClick }}" style="{{ item.style }}">
+            <span style="font-size:17px;width:20px;text-align:center;flex:none;">{{ item.icon }}</span>
+            <span style="font-size:14px;font-weight:500;white-space:nowrap;">{{ item.label }}</span>
+          </div>
+        </sc-if>
+      </sc-for>
+    </nav>
+    <div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FDF6F3;border:1px solid #EFE0DB;">
+      <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#FF8FAB,#C7A8FF);flex:none;"></div>
+      <div style="min-width:0;">
+        <div style="font-size:13px;font-weight:600;">Marina Duarte</div>
+        <div style="font-size:11px;color:#8A7A70;">Dona da loja</div>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column;">
+    <header style="display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid #EFE0DB;background:#FFFFFF;">
+      <div>
+        <div style="font-size:20px;font-weight:600;">{{ screenTitle }}</div>
+        <div style="font-size:13px;color:#8A7A70;margin-top:2px;">{{ screenSubtitle }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;flex:none;">
+        <div style="display:flex;align-items:center;gap:8px;background:#FDF6F3;border:1px solid #EFE0DB;border-radius:10px;padding:8px 14px;flex:0 1 240px;min-width:0;">
+          <span style="opacity:.6;">🔍</span>
+          <span style="font-size:13px;color:#8A7A70;">Buscar...</span>
+        </div>
+        <div style="flex:none;width:36px;height:36px;border-radius:10px;background:#FDF6F3;border:1px solid #EFE0DB;display:flex;align-items:center;justify-content:center;font-size:16px;">🔔</div>
+      </div>
+    </header>
+
+    <section style="flex:1;padding:28px 32px 40px;overflow:auto;">
+
+      <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;gap:6px;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:10px;padding:4px;">
+              <sc-for list="{{ salesFilters }}" as="f" hint-placeholder-count="3">
+                <button onClick="{{ f.onClick }}" style="{{ f.style }}">{{ f.label }}</button>
+              </sc-for>
+            </div>
+            <button onClick="{{ toggleMobile }}" style="white-space:nowrap;flex:none;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;background:none;border:1px solid #EFE0DB;border-radius:8px;padding:8px 12px;cursor:pointer;">{{ mobileToggleLabel }}</button>
+          </div>
+
+          <sc-if value="{{ showMobilePreview }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;justify-content:center;padding:20px 0;">
+              <div style="width:360px;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:28px;padding:16px;box-shadow:0 12px 32px rgba(43,36,32,.10);">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                  <image-slot id="lola-logo" fit="contain" shape="rounded" radius="6" compact="" placeholder="Foto" style="width:72px;height:26px;flex:none;display:block;"></image-slot>
+                  <span style="font-size:16px;">☰</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <div style="background:#FDF6F3;border:1px solid #EFE0DB;border-radius:14px;padding:14px;">
+                    <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;">VENDAS DO MÊS</div>
+                    <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:22px;font-weight:600;margin-top:4px;">{{ kpis.mesFmt }}</div>
+                    <div style="font-size:12px;color:#3FA383;margin-top:2px;">↑ 12% vs. mês anterior</div>
+                  </div>
+                  <div style="display:flex;gap:10px;">
+                    <div style="flex:1;background:#FDF6F3;border:1px solid #EFE0DB;border-radius:14px;padding:12px;">
+                      <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:10px;color:#8A7A70;">TOTAL</div>
+                      <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:16px;font-weight:600;">{{ kpis.totalFmt }}</div>
+                    </div>
+                    <div style="flex:1;background:#FDF6F3;border:1px solid #EFE0DB;border-radius:14px;padding:12px;">
+                      <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:10px;color:#8A7A70;">Nº VENDAS</div>
+                      <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:16px;font-weight:600;">{{ kpis.qtdFmt }}</div>
+                    </div>
+                  </div>
+                  <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:14px;padding:14px;">
+                    <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Vendas no tempo</div>
+                    <svg width="100%" height="70" viewBox="0 0 300 70" preserveAspectRatio="none"><path d="{{ chartPathMobile }}" fill="none" stroke="#FF8FAB" stroke-width="2.5"/></svg>
+                  </div>
+                  <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:14px;padding:14px;">
+                    <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Pedidos aguardando ação</div>
+                    <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:24px;font-weight:600;color:#FFA45C;">{{ pedidosAguardandoCount }}</div>
+                  </div>
+                  <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:14px;padding:14px;">
+                    <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Estoque baixo</div>
+                    <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:24px;font-weight:600;color:#FF8FAB;">{{ estoqueBaixoCount }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showDesktopOverview }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:24px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:20px;">
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.04em;">VENDAS TOTAIS</div>
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:clamp(20px,2.2vw,28px);font-weight:600;margin-top:8px;">{{ kpis.totalFmt }}</div>
+                <div style="font-size:12px;color:#3FA383;margin-top:6px;">↑ 8,2% no período</div>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:20px;">
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.04em;">VENDAS DO MÊS</div>
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:clamp(20px,2.2vw,28px);font-weight:600;margin-top:8px;">{{ kpis.mesFmt }}</div>
+                <div style="font-size:12px;color:#3FA383;margin-top:6px;">↑ 12% vs. mês anterior</div>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:20px;">
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.04em;">Nº DE VENDAS</div>
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:clamp(20px,2.2vw,28px);font-weight:600;margin-top:8px;">{{ kpis.qtdFmt }}</div>
+                <div style="font-size:12px;color:#8A7A70;margin-top:6px;">Recorte: {{ salesFilterLabel }}</div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;">
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:24px;min-width:0;">
+                <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                  <div style="font-size:15px;font-weight:600;white-space:nowrap;">Vendas no tempo</div>
+                  <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;">últimos 12 meses</div>
+                </div>
+                <svg width="100%" height="200" viewBox="0 0 720 200" preserveAspectRatio="none">
+                  <path d="{{ chartAreaPath }}" fill="url(#gradFill)"/>
+                  <path d="{{ chartPath }}" fill="none" stroke="#FF8FAB" stroke-width="3"/>
+                  <defs><linearGradient id="gradFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF8FAB" stop-opacity="0.22"/><stop offset="100%" stop-color="#FF8FAB" stop-opacity="0"/></linearGradient></defs>
+                </svg>
+                <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));margin-top:6px;font-family:'Martian Mono',monospace;font-size:10px;color:#8A7A70;overflow:hidden;text-align:center;">
+                  <span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span><span>Jul</span><span>Ago</span><span>Set</span><span>Out</span><span>Nov</span><span>Dez</span>
+                </div>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:14px;">
+                <div style="font-size:15px;font-weight:600;">Revendedores pendentes</div>
+                <sc-for list="{{ revendedoresPendentesPreview }}" as="r" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #EFE0DB;">
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.nome }}</div>
+                      <div style="font-size:11px;color:#8A7A70;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.cidade }}</div>
+                    </div>
+                    <button onClick="{{ r.onApprove }}" style="white-space:nowrap;flex:none;width:28px;height:28px;border-radius:8px;border:1px solid #8FE3C8;background:#EAFBF4;cursor:pointer;">✓</button>
+                    <button onClick="{{ r.onReject }}" style="white-space:nowrap;flex:none;width:28px;height:28px;border-radius:8px;border:1px solid #FF8FAB;background:#FFF0F4;cursor:pointer;">✕</button>
+                  </div>
+                </sc-for>
+                <button onClick="{{ goRevendedores }}" style="white-space:nowrap;flex:none;margin-top:auto;background:none;border:none;color:#FFA45C;font-size:12px;font-weight:600;text-align:left;cursor:pointer;padding:0;">Ver todos →</button>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;">
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:24px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                  <div style="font-size:15px;font-weight:600;white-space:nowrap;">Pedidos aguardando ação</div>
+                  <button onClick="{{ goPedidos }}" style="white-space:nowrap;flex:none;background:none;border:none;color:#FFA45C;font-size:12px;font-weight:600;cursor:pointer;">Ver todos →</button>
+                </div>
+                <sc-for list="{{ pedidosAguardando }}" as="p" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #EFE0DB;">
+                    <span style="{{ p.tagStyle }}"><span style="{{ p.holeStyle }}"></span>{{ p.status }}</span>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:13px;font-weight:600;">#{{ p.id }} · {{ p.cliente }}</div>
+                      <div style="font-size:11px;color:#8A7A70;">{{ p.tipoLabel }}</div>
+                    </div>
+                    <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;">{{ p.valorFmt }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:24px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                  <div style="font-size:15px;font-weight:600;">Estoque baixo</div>
+                  <button onClick="{{ goProdutos }}" style="white-space:nowrap;flex:none;background:none;border:none;color:#FFA45C;font-size:12px;font-weight:600;cursor:pointer;">Ver todos →</button>
+                </div>
+                <sc-for list="{{ estoqueBaixo }}" as="e" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #EFE0DB;">
+                    <image-slot id="produto-{{ e.id }}" shape="rounded" radius="8" compact="" placeholder="Foto" style="width:32px;height:32px;flex:none;"></image-slot>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:13px;font-weight:600;">{{ e.nome }}</div>
+                      <div style="font-size:11px;color:#8A7A70;">{{ e.categoria }}</div>
+                    </div>
+                    <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;color:#FF8FAB;">{{ e.estoque }} un.</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPedidos }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:18px;">
+          <div style="display:flex;gap:6px;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:10px;padding:4px;width:fit-content;">
+            <sc-for list="{{ pedidosFilters }}" as="f" hint-placeholder-count="3">
+              <button onClick="{{ f.onClick }}" style="{{ f.style }}">{{ f.label }}</button>
+            </sc-for>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;overflow-x:auto;">
+            <div style="display:grid;grid-template-columns:90px 1.4fr 1fr 90px 110px 130px 110px;min-width:820px;padding:14px 20px;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.04em;border-bottom:1px solid #EFE0DB;">
+              <div>PEDIDO</div><div>CLIENTE / REVENDEDOR</div><div>TIPO</div><div>ITENS</div><div>VALOR</div><div>ENTREGA</div><div>DATA</div>
+            </div>
+            <sc-for list="{{ pedidosFiltrados }}" as="p" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:90px 1.4fr 1fr 90px 110px 130px 110px;min-width:820px;padding:16px 20px;align-items:center;border-bottom:1px solid #EFE0DB;">
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;">#{{ p.id }}</div>
+                <div style="min-width:0;">
+                  <div style="font-size:13px;font-weight:600;">{{ p.cliente }}</div>
+                  <sc-if value="{{ p.isAtacado }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;color:#8A7A70;">Revendedor</div></sc-if>
+                </div>
+                <div><span style="{{ p.tipoTagStyle }}">{{ p.tipoLabel }}</span></div>
+                <div style="font-size:13px;">{{ p.itens }}</div>
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;">{{ p.valorFmt }}</div>
+                <div><span style="{{ p.tagStyle }}"><span style="{{ p.holeStyle }}"></span>{{ p.status }}</span></div>
+                <div style="font-size:12px;color:#8A7A70;">{{ p.data }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isProdutos }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div style="font-size:13px;color:#8A7A70;">{{ produtosCount }} produtos cadastrados</div>
+          <button onClick="{{ openNovo }}" style="white-space:nowrap;background:#FFA45C;color:#2B2420;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">+ Cadastrar produto</button>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;overflow-x:auto;">
+          <div style="display:grid;grid-template-columns:1.6fr 1fr 100px 100px 80px 80px 90px 90px 80px;min-width:980px;padding:14px 20px;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.04em;border-bottom:1px solid #EFE0DB;">
+            <div>PRODUTO</div><div>CATEGORIA</div><div>VAREJO</div><div>ATACADO</div><div>ESTOQUE</div><div>VISÍVEL</div><div>DESTAQUE</div><div>DESCONTO</div><div></div>
+          </div>
+          <sc-for list="{{ produtos }}" as="pr" hint-placeholder-count="7">
+            <div style="display:grid;grid-template-columns:1.6fr 1fr 100px 100px 80px 80px 90px 90px 80px;min-width:980px;padding:14px 20px;align-items:center;border-bottom:1px solid #EFE0DB;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <image-slot id="produto-{{ pr.id }}" shape="rounded" radius="10" compact="" placeholder="Foto" style="width:44px;height:44px;flex:none;"></image-slot>
+                <div style="font-size:13px;font-weight:600;">{{ pr.nome }}</div>
+              </div>
+              <div style="font-size:13px;color:#8A7A70;">{{ pr.categoria }}</div>
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;">{{ pr.precoFmt }}</div>
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;color:#6E56B8;">{{ pr.atacadoFmt }}</div>
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;color:{{ pr.estoqueColor }};">{{ pr.estoque }}</div>
+              <div><input type="checkbox" class="swtoggle" checked="{{ pr.visivel }}" onChange="{{ pr.toggleVisivel }}"/></div>
+              <div><input type="checkbox" class="swtoggle" checked="{{ pr.destaque }}" onChange="{{ pr.toggleDestaque }}"/></div>
+              <div><span style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:12px;background:#FFF3E8;color:#C46A1F;border-radius:6px;padding:3px 8px;">{{ pr.descontoLabel }}</span></div>
+              <div><button onClick="{{ pr.onEdit }}" style="white-space:nowrap;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;">Editar</button></div>
+            </div>
+          </sc-for>
+        </div>
+        </div>
+        <sc-if value="{{ novoOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:fixed;inset:0;background:rgba(43,36,32,.35);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;">
+            <div style="background:#FFFFFF;border-radius:16px;padding:28px;width:100%;max-width:640px;max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:18px;box-sizing:border-box;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="font-size:18px;font-weight:600;">Cadastrar produto</div>
+                <button onClick="{{ closeNovo }}" style="background:none;border:none;font-size:18px;color:#8A7A70;cursor:pointer;">✕</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;">
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <label style="font-size:12px;color:#8A7A70;">Foto do produto</label>
+                  <div style="width:100%;aspect-ratio:1/1;">
+                    <image-slot id="produto-{{ novoId }}" shape="rounded" radius="12" placeholder="Arraste a foto aqui"></image-slot>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:14px;min-width:0;">
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:0;">
+                  <label style="font-size:12px;color:#8A7A70;">Nome</label>
+                  <input value="{{ novo.nome }}" onChange="{{ novoSet.nome }}" placeholder="Ex.: Tênis Nuvem Rosa" style="border:1px solid #EFE0DB;border-radius:8px;padding:10px 12px;font-size:13px;color:#2B2420;background:#FFFFFF;outline:none;width:100%;box-sizing:border-box;font-family:'Hanken Grotesk',sans-serif;"/>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <label style="font-size:12px;color:#8A7A70;">Categoria</label>
+                  <select value="{{ novo.categoria }}" onChange="{{ novoSet.categoria }}" style="border:1px solid #EFE0DB;border-radius:8px;padding:10px 12px;font-size:13px;color:#2B2420;background:#FFFFFF;outline:none;width:100%;box-sizing:border-box;font-family:'Hanken Grotesk',sans-serif;">
+                    <option value="Tênis">Tênis</option><option value="Sandália">Sandália</option><option value="Bota">Bota</option><option value="Chinelo">Chinelo</option><option value="Bolsa">Bolsa</option><option value="Mochila">Mochila</option><option value="Acessório">Acessório</option>
+                  </select>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:0;">
+                  <label style="font-size:12px;color:#8A7A70;">Preço varejo (R$)</label>
+                  <input value="{{ novo.preco }}" onChange="{{ novoSet.preco }}" placeholder="0,00" style="border:1px solid #EFE0DB;border-radius:8px;padding:10px 12px;font-size:13px;color:#2B2420;background:#FFFFFF;outline:none;width:100%;box-sizing:border-box;font-family:'Martian Mono',monospace;"/>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:0;">
+                  <label style="font-size:12px;color:#8A7A70;">Preço atacado (R$)</label>
+                  <input value="{{ novo.atacado }}" onChange="{{ novoSet.atacado }}" placeholder="0,00" style="border:1px solid #EFE0DB;border-radius:8px;padding:10px 12px;font-size:13px;color:#2B2420;background:#FFFFFF;outline:none;width:100%;box-sizing:border-box;font-family:'Martian Mono',monospace;"/>
+                </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:0;">
+                  <label style="font-size:12px;color:#8A7A70;">Estoque (un.)</label>
+                  <input value="{{ novo.estoque }}" onChange="{{ novoSet.estoque }}" placeholder="0" style="border:1px solid #EFE0DB;border-radius:8px;padding:10px 12px;font-size:13px;color:#2B2420;background:#FFFFFF;outline:none;width:100%;box-sizing:border-box;font-family:'Martian Mono',monospace;"/>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:0;">
+                  <label style="font-size:12px;color:#8A7A70;">Desconto (%)</label>
+                  <input value="{{ novo.desconto }}" onChange="{{ novoSet.desconto }}" placeholder="0" style="border:1px solid #EFE0DB;border-radius:8px;padding:10px 12px;font-size:13px;color:#2B2420;background:#FFFFFF;outline:none;width:100%;box-sizing:border-box;font-family:'Martian Mono',monospace;"/>
+                </div>
+                </div>
+                <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" class="swtoggle" checked="{{ novo.visivel }}" onChange="{{ novoToggle.visivel }}"/>Visível na loja</label>
+                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" class="swtoggle" checked="{{ novo.destaque }}" onChange="{{ novoToggle.destaque }}"/>Destaque</label>
+                </div>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:6px;border-top:1px solid #EFE0DB;">
+                <button onClick="{{ closeNovo }}" style="background:#FDF6F3;border:1px solid #EFE0DB;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;">Cancelar</button>
+                <button onClick="{{ saveNovo }}" disabled="{{ novoInvalid }}" style="{{ saveNovoStyle }}">Salvar produto</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ isFinanceiro }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:20px;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;">
+            <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:20px;">
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;">RECEITA TOTAL</div>
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:clamp(18px,1.9vw,24px);font-weight:600;margin-top:8px;">R$ 184.230</div>
+            </div>
+            <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:20px;">
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;">A RECEBER (ATACADO)</div>
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:clamp(18px,1.9vw,24px);font-weight:600;margin-top:8px;">R$ 32.900</div>
+            </div>
+            <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:20px;">
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;">TICKET MÉDIO</div>
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:clamp(18px,1.9vw,24px);font-weight:600;margin-top:8px;">R$ 219</div>
+            </div>
+            <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:20px;">
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;">REPASSES PENDENTES</div>
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:clamp(18px,1.9vw,24px);font-weight:600;margin-top:8px;color:#FFA45C;">7</div>
+            </div>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;overflow-x:auto;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #EFE0DB;">
+              <div style="font-size:15px;font-weight:600;">Lançamentos</div>
+              <button onClick="{{ openLancamento }}" style="white-space:nowrap;flex:none;background:#FFA45C;color:#2B2420;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;">+ Lançamento manual</button>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 90px 1.3fr 100px 130px 110px;min-width:820px;padding:14px 20px;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.04em;border-bottom:1px solid #EFE0DB;">
+              <div>DATA</div><div>PEDIDO</div><div>CLIENTE / REVENDEDOR</div><div>VALOR</div><div>PAGAMENTO</div><div>STATUS</div>
+            </div>
+            <sc-for list="{{ financeiroRows }}" as="fr" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:110px 90px 1.3fr 100px 130px 110px;min-width:820px;padding:14px 20px;align-items:center;border-bottom:1px solid #EFE0DB;">
+                <div style="font-size:12px;color:#8A7A70;">{{ fr.data }}</div>
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;">#{{ fr.pedido }}</div>
+                <div style="font-size:13px;">{{ fr.cliente }}</div>
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;">{{ fr.valorFmt }}</div>
+                <div style="font-size:12px;color:#8A7A70;">{{ fr.pagamento }}</div>
+                <div><span style="{{ fr.tagStyle }}"><span style="{{ fr.holeStyle }}"></span>{{ fr.status }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ lancamentoOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:fixed;inset:0;background:rgba(43,36,32,.35);display:flex;align-items:center;justify-content:center;z-index:50;">
+            <div style="background:#FFFFFF;border-radius:16px;padding:28px;width:380px;display:flex;flex-direction:column;gap:14px;">
+              <div style="font-size:16px;font-weight:600;">Novo lançamento manual</div>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <label style="font-size:12px;color:#8A7A70;">Descrição</label>
+                <input placeholder="Ex.: Ajuste de repasse" style="border:1px solid #EFE0DB;border-radius:8px;padding:10px 12px;font-size:13px;font-family:'Hanken Grotesk',sans-serif;"/>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <label style="font-size:12px;color:#8A7A70;">Valor (R$)</label>
+                <input placeholder="0,00" style="border:1px solid #EFE0DB;border-radius:8px;padding:10px 12px;font-size:13px;font-family:'Martian Mono',monospace;"/>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:8px;">
+                <button onClick="{{ closeLancamento }}" style="white-space:nowrap;flex:none;flex:1;background:#FDF6F3;border:1px solid #EFE0DB;border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;">Cancelar</button>
+                <button onClick="{{ closeLancamento }}" style="white-space:nowrap;flex:none;flex:1;background:#FFA45C;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;">Salvar</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ isRevendedores }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div style="font-size:13px;color:#8A7A70;">{{ revendedoresCount }} revendedores · {{ pendentesCount }} pendentes</div>
+          <button onClick="{{ novoRevendedor }}" style="white-space:nowrap;background:#FFA45C;color:#2B2420;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">+ Cadastrar revendedor</button>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;overflow-x:auto;">
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 110px 160px 180px 80px;min-width:900px;padding:14px 20px;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.04em;border-bottom:1px solid #EFE0DB;">
+            <div>LOJA</div><div>CIDADE</div><div>SOLICITADO</div><div>STATUS</div><div>AÇÕES</div><div></div>
+          </div>
+          <sc-for list="{{ revendedores }}" as="r" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:1.4fr 1fr 110px 160px 180px 80px;min-width:900px;padding:16px 20px;align-items:center;border-bottom:1px solid #EFE0DB;">
+              <div style="font-size:13px;font-weight:600;">{{ r.nome }}</div>
+              <div style="font-size:13px;color:#8A7A70;">{{ r.cidade }}</div>
+              <div style="font-size:12px;color:#8A7A70;">{{ r.data }}</div>
+              <div><sc-if value="{{ r.isPendente }}" hint-placeholder-val="{{ true }}"><span style="{{ r.tagStyle }}"><span style="{{ r.holeStyle }}"></span>Cadastro pendente</span></sc-if><sc-if value="{{ r.isDecidido }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A7A70;">{{ r.statusLabel }}</span></sc-if></div>
+              <sc-if value="{{ r.isPendente }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:8px;">
+                <button onClick="{{ r.onApprove }}" style="white-space:nowrap;flex:none;background:#EAFBF4;border:1px solid #8FE3C8;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">Aprovar</button>
+                <button onClick="{{ r.onReject }}" style="white-space:nowrap;flex:none;background:#FFF0F4;border:1px solid #FF8FAB;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">Recusar</button>
+              </div>
+              </sc-if>
+              <sc-if value="{{ r.isDecidido }}" hint-placeholder-val="{{ false }}"><div></div></sc-if>
+              <div><button onClick="{{ r.onEdit }}" style="white-space:nowrap;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;">Editar</button></div>
+            </div>
+          </sc-for>
+        </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isUsuarios }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;gap:6px;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:10px;padding:4px;">
+              <sc-for list="{{ papelFilters }}" as="f" hint-placeholder-count="4">
+                <button onClick="{{ f.onClick }}" style="{{ f.style }}">{{ f.label }}</button>
+              </sc-for>
+            </div>
+            <button onClick="{{ novoUsuario }}" style="white-space:nowrap;background:#FFA45C;color:#2B2420;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">+ Adicionar usuário</button>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;overflow-x:auto;">
+            <div style="display:grid;grid-template-columns:1.3fr 1.4fr 130px 130px 90px 80px;min-width:860px;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.04em;border-bottom:1px solid #EFE0DB;padding:14px 20px;">
+              <div>NOME</div><div>E-MAIL</div><div>PAPEL</div><div>ÚLTIMO ACESSO</div><div>STATUS</div><div></div>
+            </div>
+            <sc-for list="{{ usuarios }}" as="u" hint-placeholder-count="5">
+              <div style="display:grid;grid-template-columns:1.3fr 1.4fr 130px 130px 90px 80px;min-width:860px;padding:14px 20px;align-items:center;border-bottom:1px solid #EFE0DB;">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                  <div style="width:32px;height:32px;border-radius:50%;flex:none;background:#FDF6F3;border:1px solid #EFE0DB;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">{{ u.inicial }}</div>
+                  <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ u.nome }}</div>
+                </div>
+                <div style="font-size:13px;color:#8A7A70;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ u.email }}</div>
+                <div><span style="{{ u.papelStyle }}">{{ u.papel }}</span></div>
+                <div style="font-family:'Martian Mono',monospace;font-size:12px;color:#8A7A70;">{{ u.ultimo }}</div>
+                <div style="font-size:12px;font-weight:600;color:{{ u.statusColor }};">{{ u.statusLabel }}</div>
+                <div><button onClick="{{ u.onEdit }}" style="white-space:nowrap;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;">Editar</button></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPromocoes }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div style="font-size:13px;color:#8A7A70;">{{ promoAtivasCount }} promoções ativas</div>
+            <button onClick="{{ novaPromocao }}" style="white-space:nowrap;background:#FFA45C;color:#2B2420;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">+ Criar promoção</button>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;overflow-x:auto;">
+            <div style="display:grid;grid-template-columns:1.5fr 100px 1fr 180px 80px 80px;min-width:860px;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.04em;border-bottom:1px solid #EFE0DB;padding:14px 20px;">
+              <div>PROMOÇÃO</div><div>DESCONTO</div><div>APLICA A</div><div>PERÍODO</div><div>ATIVA</div><div></div>
+            </div>
+            <sc-for list="{{ promocoes }}" as="pm" hint-placeholder-count="4">
+              <div style="display:grid;grid-template-columns:1.5fr 100px 1fr 180px 80px 80px;min-width:860px;padding:14px 20px;align-items:center;border-bottom:1px solid #EFE0DB;">
+                <div style="min-width:0;display:flex;flex-direction:column;gap:3px;">
+                  <div style="font-size:13px;font-weight:600;">{{ pm.nome }}</div>
+                  <sc-if value="{{ pm.cupom }}" hint-placeholder-val="{{ false }}"><div style="font-family:'Martian Mono',monospace;font-size:11px;color:#6E56B8;">CUPOM {{ pm.cupom }}</div></sc-if>
+                </div>
+                <div><span style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:12px;font-weight:600;background:#FFF3E8;color:#C46A1F;border-radius:6px;padding:3px 8px;">-{{ pm.desconto }}%</span></div>
+                <div style="font-size:13px;">{{ pm.aplica }}</div>
+                <div style="font-family:'Martian Mono',monospace;font-size:12px;color:#8A7A70;white-space:nowrap;">{{ pm.periodo }}</div>
+                <div><input type="checkbox" class="swtoggle" checked="{{ pm.ativa }}" onChange="{{ pm.toggleAtiva }}"/></div>
+                <div><button onClick="{{ pm.onEdit }}" style="white-space:nowrap;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;">Editar</button></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isBanner }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;align-items:start;">
+          <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:15px;font-weight:600;">Conteúdo do banner</div>
+            <sc-for list="{{ bannerFields }}" as="bf" hint-placeholder-count="5">
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <label style="font-size:12px;color:#8A7A70;">{{ bf.label }}</label>
+                <input value="{{ bf.value }}" onChange="{{ bf.onChange }}" style="border:1px solid #EFE0DB;border-radius:8px;padding:10px 12px;font-size:13px;color:#2B2420;background:#FFFFFF;outline:none;width:100%;box-sizing:border-box;font-family:'Hanken Grotesk',sans-serif;"/>
+              </div>
+            </sc-for>
+            <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;padding-top:4px;cursor:pointer;">Mostrar segundo botão<input type="checkbox" class="swtoggle" checked="{{ banner.cta2On }}" onChange="{{ toggleCta2 }}"/></label>
+            <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:10px;border-top:1px solid #EFE0DB;">
+              <button onClick="{{ resetBanner }}" style="white-space:nowrap;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;padding:10px 16px;font-size:13px;">Descartar</button>
+              <button onClick="{{ publicarBanner }}" style="white-space:nowrap;background:#FFA45C;color:#2B2420;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Publicar na vitrine</button>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.04em;">PRÉ-VISUALIZAÇÃO · ARRASTE A FOTO PARA TROCAR</div>
+            <div style="position:relative;aspect-ratio:16/10;border-radius:16px;overflow:hidden;background:#FFE4EC;border:1px solid #EFE0DB;">
+              <div style="position:absolute;inset:0;"><image-slot id="hero-campanha" shape="rect" compact="" placeholder="Hero"></image-slot></div>
+              <div style="position:absolute;left:28px;right:28px;bottom:28px;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:380px;">
+                <span style="font-family:'Martian Mono',monospace;font-size:10px;letter-spacing:.08em;">{{ banner.etiqueta }}</span>
+                <span style="font-size:40px;line-height:.95;font-weight:700;letter-spacing:-.02em;">{{ banner.titulo }}</span>
+                <span style="font-size:13px;line-height:1.5;">{{ banner.subtitulo }}</span>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <span style="white-space:nowrap;background:#FFA45C;font-size:12px;font-weight:600;border-radius:10px;padding:10px 16px;">{{ banner.cta1 }}</span>
+                  <sc-if value="{{ banner.cta2On }}" hint-placeholder-val="{{ true }}"><span style="white-space:nowrap;background:#FFFFFF;border:1px solid #EFE0DB;font-size:12px;font-weight:600;border-radius:10px;padding:10px 16px;">{{ banner.cta2 }}</span></sc-if>
+                </div>
+              </div>
+            </div>
+            <div style="font-size:12px;color:#8A7A70;">{{ bannerStatus }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+    </section>
+  </main>
+
+  <sc-if value="{{ editorOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeEditor }}" style="position:fixed;inset:0;background:rgba(43,36,32,.35);z-index:70;"></div>
+    <aside style="position:fixed;top:0;right:0;bottom:0;width:min(460px,100vw);background:#FFFFFF;z-index:71;display:flex;flex-direction:column;box-shadow:-12px 0 32px rgba(43,36,32,.12);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 24px;border-bottom:1px solid #EFE0DB;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:'Martian Mono',monospace;font-size:10px;letter-spacing:.08em;color:#8A7A70;">{{ editorKicker }}</span>
+          <span style="font-size:18px;font-weight:600;">{{ editorTitle }}</span>
+        </div>
+        <button onClick="{{ closeEditor }}" style="flex:none;width:36px;height:36px;border-radius:10px;border:1px solid #EFE0DB;background:#FDF6F3;cursor:pointer;font-size:14px;color:#2B2420;">✕</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+        <sc-for list="{{ edFields }}" as="f" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <sc-if value="{{ f.isToggle }}" hint-placeholder-val="{{ false }}">
+              <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;padding:6px 0;cursor:pointer;">{{ f.label }}<input type="checkbox" class="swtoggle" checked="{{ f.checked }}" onChange="{{ f.onToggle }}"/></label>
+            </sc-if>
+            <sc-if value="{{ f.hasLabel }}" hint-placeholder-val="{{ true }}">
+              <label style="font-size:12px;color:#8A7A70;">{{ f.label }}</label>
+            </sc-if>
+            <sc-if value="{{ f.isInput }}" hint-placeholder-val="{{ true }}">
+              <input type="{{ f.inputType }}" value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.ph }}" style="{{ f.style }}"/>
+            </sc-if>
+            <sc-if value="{{ f.isSelect }}" hint-placeholder-val="{{ false }}">
+              <select value="{{ f.value }}" onChange="{{ f.onChange }}" style="border:1px solid #EFE0DB;border-radius:8px;padding:10px 12px;font-size:13px;color:#2B2420;background:#FFFFFF;outline:none;width:100%;box-sizing:border-box;font-family:'Hanken Grotesk',sans-serif;">
+                <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.l }}</option></sc-for>
+              </select>
+            </sc-if>
+            <sc-if value="{{ f.isImage }}" hint-placeholder-val="{{ false }}">
+              <div style="width:160px;height:160px;"><image-slot id="{{ f.slotId }}" shape="rounded" radius="12" placeholder="Arraste a foto"></image-slot></div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ edError }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#C4416F;">{{ edError }}</div></sc-if>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:16px 24px;border-top:1px solid #EFE0DB;">
+        <sc-if value="{{ edCanDelete }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ deleteEditor }}" style="white-space:nowrap;background:none;border:none;color:#C4416F;font-size:13px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;padding:0;">Excluir</button>
+        </sc-if>
+        <div style="flex:1;"></div>
+        <button onClick="{{ closeEditor }}" style="white-space:nowrap;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;padding:10px 16px;font-size:13px;">Cancelar</button>
+        <button onClick="{{ saveEditor }}" style="white-space:nowrap;background:#FFA45C;color:#2B2420;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Salvar</button>
+      </div>
+    </aside>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:80;background:#2B2420;color:#FDF6F3;border-radius:12px;padding:12px 18px;font-size:13px;font-weight:600;box-shadow:0 12px 32px rgba(43,36,32,.25);white-space:nowrap;">{{ toast }}</div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+
+const TAG_COLORS = {
+  'Entregue': { bg:'#EAFBF4', text:'#2E7D63', hole:'#EAFBF4' },
+  'Aprovado': { bg:'#EAFBF4', text:'#2E7D63', hole:'#EAFBF4' },
+  'Pago': { bg:'#EAFBF4', text:'#2E7D63', hole:'#EAFBF4' },
+  'Enviado': { bg:'#F2ECFF', text:'#6E56B8', hole:'#F2ECFF' },
+  'Em preparação': { bg:'#FFF3E8', text:'#C46A1F', hole:'#FFF3E8' },
+  'Pendente': { bg:'#FFF3E8', text:'#C46A1F', hole:'#FFF3E8' },
+  'Cancelado': { bg:'#FFF0F4', text:'#C4416F', hole:'#FFF0F4' },
+  'Recusado': { bg:'#FFF0F4', text:'#C4416F', hole:'#FFF0F4' },
+};
+function tagStyle(status){
+  const c = TAG_COLORS[status] || TAG_COLORS['Pendente'];
+  return `display:inline-flex;align-items:center;gap:6px;position:relative;padding:5px 12px 5px 18px;font-size:12px;font-weight:600;color:${c.text};background:${c.bg};white-space:nowrap;flex:none;clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%);`;
+}
+function holeStyle(status){
+  return `position:absolute;left:5px;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:#FDF6F3;`;
+}
+function fmtBRL(n){ return 'R$ ' + n.toLocaleString('pt-BR'); }
+
+const PRODUTOS_SEED = [
+  { id:1, nome:'Tênis Nuvem Rosa', categoria:'Tênis', preco:299, estoque:42, color:'#FFDDE6', visivel:true, destaque:true, desconto:0 },
+  { id:2, nome:'Sandália Slide Menta', categoria:'Sandália', preco:189, estoque:4, color:'#D9F7EA', visivel:true, destaque:false, desconto:10 },
+  { id:3, nome:'Bolsa Tote Lilás', categoria:'Bolsa', preco:249, estoque:18, color:'#E9DFFF', visivel:true, destaque:false, desconto:0 },
+  { id:4, nome:'Tênis Skate Pêssego', categoria:'Tênis', preco:319, estoque:3, color:'#FFE4CC', visivel:true, destaque:true, desconto:15 },
+  { id:5, nome:'Chinelo Confete', categoria:'Chinelo', preco:79, estoque:60, color:'#FFDDE6', visivel:false, destaque:false, desconto:0 },
+  { id:6, nome:'Mochila Mini Lilás', categoria:'Mochila', preco:229, estoque:22, color:'#E9DFFF', visivel:true, destaque:false, desconto:0 },
+  { id:7, nome:'Bota Chelsea Preta', categoria:'Bota', preco:389, estoque:9, color:'#EFE0DB', visivel:true, destaque:false, desconto:0 },
+];
+const PEDIDOS_SEED = [
+  { id:5231, cliente:'Camila Rocha', tipo:'varejo', itens:2, valor:398, status:'Em preparação', data:'20/09' },
+  { id:5230, cliente:'Bela Vitrine Calçados', tipo:'atacado', itens:24, valor:4320, status:'Enviado', data:'19/09' },
+  { id:5229, cliente:'João Pedro Alves', tipo:'varejo', itens:1, valor:189, status:'Entregue', data:'19/09' },
+  { id:5228, cliente:'Passo Certo Calçados', tipo:'atacado', itens:36, valor:6840, status:'Em preparação', data:'18/09' },
+  { id:5227, cliente:'Fernanda Lima', tipo:'varejo', itens:3, valor:567, status:'Cancelado', data:'17/09' },
+  { id:5226, cliente:'Moda Encanto', tipo:'atacado', itens:12, valor:2100, status:'Entregue', data:'16/09' },
+  { id:5225, cliente:'Rafael Souza', tipo:'varejo', itens:1, valor:299, status:'Enviado', data:'15/09' },
+];
+const REVENDEDORES_SEED = [
+  { id:1, nome:'Bela Vitrine Calçados', cidade:'Curitiba, PR', data:'18/09', status:'aprovado' },
+  { id:2, nome:'Passo Certo Calçados', cidade:'Belo Horizonte, MG', data:'19/09', status:'pendente' },
+  { id:3, nome:'Moda Encanto', cidade:'Recife, PE', data:'17/09', status:'aprovado' },
+  { id:4, nome:'Estilo Norte', cidade:'Manaus, AM', data:'20/09', status:'pendente' },
+  { id:5, nome:'Trend Box', cidade:'Porto Alegre, RS', data:'14/09', status:'recusado' },
+];
+const FINANCEIRO_SEED = [
+  { pedido:5231, cliente:'Camila Rocha', data:'20/09', valor:398, pagamento:'Pix', status:'Pago' },
+  { pedido:5230, cliente:'Bela Vitrine Calçados', data:'19/09', valor:4320, pagamento:'Boleto', status:'Pendente' },
+  { pedido:5229, cliente:'João Pedro Alves', data:'19/09', valor:189, pagamento:'Cartão', status:'Pago' },
+  { pedido:5228, cliente:'Passo Certo Calçados', data:'18/09', valor:6840, pagamento:'Boleto', status:'Pendente' },
+  { pedido:5227, cliente:'Fernanda Lima', data:'17/09', valor:567, pagamento:'Cartão', status:'Cancelado' },
+];
+
+const USUARIOS_SEED = [
+  { id:1, nome:'Marina Duarte', email:'marina@lola.com.br', papel:'admin', ultimo:'hoje', ativo:true },
+  { id:2, nome:'Júlia Prado', email:'julia@lola.com.br', papel:'editor', ultimo:'ontem', ativo:true },
+  { id:3, nome:'Camila Rocha', email:'camila.rocha@email.com', papel:'cliente', ultimo:'20/09', ativo:true },
+  { id:4, nome:'Bela Vitrine Calçados', email:'contato@belavitrine.com', papel:'revendedor', ultimo:'19/09', ativo:true },
+  { id:5, nome:'Rafael Souza', email:'rafa.souza@email.com', papel:'cliente', ultimo:'02/08', ativo:false },
+];
+const PROMOCOES_SEED = [
+  { id:1, nome:'Verão 26', desconto:15, aplica:'Toda a loja', inicio:'2026-10-01', fim:'2026-10-31', cupom:'VERAO26', ativa:true },
+  { id:2, nome:'Semana do Tênis', desconto:20, aplica:'Tênis', inicio:'2026-11-03', fim:'2026-11-09', cupom:'', ativa:false },
+  { id:3, nome:'Bolsas da estação', desconto:10, aplica:'Bolsa', inicio:'2026-09-15', fim:'2026-10-15', cupom:'', ativa:true },
+];
+const BANNER_SEED = { etiqueta:'COLEÇÃO VERÃO 26', titulo:'Pisa confiante.', subtitulo:'Tênis, sandálias e bolsas pra quem já sabe onde quer chegar.', cta1:'Ver coleção', cta2:'Comprar por categoria', link:'/lancamentos', cta2On:true };
+const CATS = ['Tênis','Sandália','Bota','Chinelo','Bolsa','Mochila','Acessório'];
+const opts = a => a.map(x => Array.isArray(x) ? { v:x[0], l:x[1] } : { v:x, l:x });
+const PAPEIS = [['admin','Administrador'],['editor','Editor'],['cliente','Cliente'],['revendedor','Revendedor']];
+const SCHEMAS = {
+  produto: { list:'produtos', label:'produto', fields:[
+    { k:'foto', l:'Foto', t:'image' }, { k:'nome', l:'Nome', t:'text', ph:'Ex.: Tênis Nuvem Rosa', req:true },
+    { k:'categoria', l:'Categoria', t:'select', o:opts(CATS) },
+    { k:'preco', l:'Preço varejo (R$)', t:'number', mono:true, req:true }, { k:'atacado', l:'Preço atacado (R$)', t:'number', mono:true },
+    { k:'estoque', l:'Estoque (un.)', t:'number', mono:true }, { k:'desconto', l:'Desconto (%)', t:'number', mono:true },
+    { k:'visivel', l:'Visível na loja', t:'toggle' }, { k:'destaque', l:'Destaque na home', t:'toggle' } ],
+    defaults:{ nome:'', categoria:'Tênis', preco:'', atacado:'', estoque:'', desconto:'', visivel:true, destaque:false, color:'#EFE0DB' } },
+  revendedor: { list:'revendedores', label:'revendedor', fields:[
+    { k:'nome', l:'Loja / razão social', t:'text', req:true }, { k:'cnpj', l:'CNPJ', t:'text', mono:true, ph:'00.000.000/0000-00' },
+    { k:'responsavel', l:'Responsável', t:'text' }, { k:'email', l:'E-mail', t:'email' }, { k:'whats', l:'WhatsApp', t:'tel', mono:true },
+    { k:'cidade', l:'Cidade / UF', t:'text', ph:'Curitiba, PR' },
+    { k:'status', l:'Status do cadastro', t:'select', o:opts([['pendente','Pendente'],['aprovado','Aprovado'],['recusado','Recusado']]) } ],
+    defaults:{ nome:'', cnpj:'', responsavel:'', email:'', whats:'', cidade:'', status:'aprovado' } },
+  usuario: { list:'usuarios', label:'usuário', fields:[
+    { k:'nome', l:'Nome', t:'text', req:true }, { k:'email', l:'E-mail', t:'email', req:true },
+    { k:'papel', l:'Papel', t:'select', o:opts(PAPEIS) }, { k:'ativo', l:'Conta ativa', t:'toggle' } ],
+    defaults:{ nome:'', email:'', papel:'cliente', ativo:true, ultimo:'—' } },
+  promocao: { list:'promocoes', label:'promoção', fields:[
+    { k:'nome', l:'Nome da promoção', t:'text', req:true, ph:'Ex.: Black Friday' }, { k:'desconto', l:'Desconto (%)', t:'number', mono:true, req:true },
+    { k:'aplica', l:'Aplica a', t:'select', o:opts(['Toda a loja'].concat(CATS)) },
+    { k:'inicio', l:'Início', t:'date', mono:true }, { k:'fim', l:'Fim', t:'date', mono:true },
+    { k:'cupom', l:'Cupom (opcional)', t:'text', mono:true, ph:'EX.: LOLA10' }, { k:'ativa', l:'Promoção ativa', t:'toggle' } ],
+    defaults:{ nome:'', desconto:'', aplica:'Toda a loja', inicio:'', fim:'', cupom:'', ativa:true } },
+};
+const NUMS = { produto:['preco','atacado','estoque','desconto'], promocao:['desconto'] };
+const toNum = v => Number(String(v).replace(/\./g,'').replace(',','.')) || 0;
+const fmtDate = d => d ? d.split('-').reverse().slice(0,2).join('/') : '—';
+
+class Component extends DCLogic {
+  state = {
+    screen: 'overview',
+    salesFilter: 'todos',
+    pedidosFilter: 'todos',
+    mobilePreview: false,
+    lancamentoOpen: false,
+    produtos: PRODUTOS_SEED,
+    novoOpen: false,
+    novo: { nome:'', categoria:'Tênis', preco:'', atacado:'', estoque:'', desconto:'', visivel:true, destaque:false },
+    revendedores: REVENDEDORES_SEED,
+    usuarios: USUARIOS_SEED,
+    promocoes: PROMOCOES_SEED,
+    banner: BANNER_SEED,
+    bannerSaved: BANNER_SEED,
+    papelFilter: 'todos',
+    editor: null,
+    edError: '',
+    toast: '',
+  };
+
+  flash(msg){ this.setState({ toast:msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast:'' }), 2200); }
+  openEditor(entity, id){
+    const sc = SCHEMAS[entity]; const list = this.state[sc.list];
+    const rec = id != null ? list.find(x => x.id === id) : null;
+    const nextId = Math.max(0, ...list.map(x => x.id)) + 1;
+    this.setState({ editor:{ entity, isNew:!rec, form:{ ...sc.defaults, ...(rec||{}), id: rec ? rec.id : nextId } }, edError:'' });
+  }
+  saveEditor(){
+    const ed = this.state.editor; const sc = SCHEMAS[ed.entity];
+    const miss = sc.fields.find(f => f.req && !String(ed.form[f.k] ?? '').trim());
+    if (miss) return this.setState({ edError: 'Preencha: ' + miss.l });
+    const rec = { ...ed.form };
+    (NUMS[ed.entity]||[]).forEach(k => { rec[k] = toNum(rec[k]); });
+    if (ed.entity==='produto' && !rec.atacado) rec.atacado = Math.round(rec.preco*0.5);
+    if (ed.isNew && ed.entity==='revendedor') { const d = new Date(); rec.data = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0'); }
+    const list = this.state[sc.list];
+    const next = ed.isNew ? [rec, ...list] : list.map(x => x.id === rec.id ? rec : x);
+    this.setState({ [sc.list]: next, editor:null });
+    this.flash((ed.isNew ? 'Cadastrado: ' : 'Salvo: ') + rec.nome);
+  }
+  deleteEditor(){
+    const ed = this.state.editor; const sc = SCHEMAS[ed.entity];
+    this.setState({ [sc.list]: this.state[sc.list].filter(x => x.id !== ed.form.id), editor:null });
+    this.flash('Excluído: ' + ed.form.nome);
+  }
+  go(screen){ this.setState({ screen }); }
+
+  renderVals(){
+    const s = this.state;
+    const titles = {
+      overview: ['Visão geral', 'Acompanhe o desempenho da loja em tempo real'],
+      pedidos: ['Pedidos', 'Todos os pedidos de varejo e atacado'],
+      produtos: ['Produtos', 'Gerencie visibilidade, destaque e desconto'],
+      financeiro: ['Financeiro', 'Receita, repasses e lançamentos'],
+      revendedores: ['Revendedores', 'Cadastre, edite e aprove revendedores'],
+      usuarios: ['Usuários', 'Contas de equipe, clientes e revendedores'],
+      promocoes: ['Promoções', 'Descontos por categoria, período e cupom'],
+      banner: ['Banner do hero', 'O destaque principal da home da vitrine'],
+    };
+    const [screenTitle, screenSubtitle] = titles[s.screen];
+
+    const navDefs = [
+      { h:'GERAL' },
+      { key:'overview', icon:'◆', label:'Visão geral' },
+      { key:'pedidos', icon:'▤', label:'Pedidos' },
+      { key:'financeiro', icon:'◈', label:'Financeiro' },
+      { h:'CATÁLOGO' },
+      { key:'produtos', icon:'◇', label:'Produtos' },
+      { key:'promocoes', icon:'%', label:'Promoções' },
+      { h:'APARÊNCIA' },
+      { key:'banner', icon:'▣', label:'Banner do hero' },
+      { h:'PESSOAS' },
+      { key:'revendedores', icon:'◎', label:'Revendedores' },
+      { key:'usuarios', icon:'○', label:'Usuários' },
+    ];
+    const navItems = navDefs.map(n => n.h ? { isHeader:true, isLink:false, label:n.h } : ({
+      isHeader:false, isLink:true, icon: n.icon, label: n.label,
+      onClick: () => this.go(n.key),
+      style: `display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;background:${s.screen===n.key?'#FFF3E8':'transparent'};color:${s.screen===n.key?'#C46A1F':'#2B2420'};`
+    }));
+
+    const salesFilterDefs = [ ['todos','Todos'], ['varejo','Varejo'], ['atacado','Atacado'] ];
+    const salesFilters = salesFilterDefs.map(([k,label]) => ({
+      label, onClick: () => this.setState({ salesFilter:k }),
+      style: `white-space:nowrap;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;background:${s.salesFilter===k?'#FFA45C':'transparent'};color:${s.salesFilter===k?'#2B2420':'#8A7A70'};`
+    }));
+    const filterMult = { todos:1, varejo:0.6, atacado:0.4 }[s.salesFilter];
+    const totalBase = 184230, mesBase = 32900, qtdBase = 812;
+    const kpis = {
+      totalFmt: fmtBRL(Math.round(totalBase*filterMult)),
+      mesFmt: fmtBRL(Math.round(mesBase*filterMult)),
+      qtdFmt: Math.round(qtdBase*filterMult).toLocaleString('pt-BR'),
+    };
+    const salesFilterLabel = { todos:'Todos', varejo:'Varejo', atacado:'Atacado' }[s.salesFilter];
+
+    const pointsBase = [40,70,55,90,75,110,95,130,120,150,135,170];
+    const pts = pointsBase.map(p => p*filterMult + 20);
+    const toPath = (pts,w,h,max) => pts.map((v,i)=>`${i===0?'M':'L'} ${(i/(pts.length-1))*w} ${h-(v/max)*h}`).join(' ');
+    const max = Math.max(...pts)*1.1;
+    const chartPath = toPath(pts,720,190,max);
+    const chartAreaPath = chartPath + ` L 720 200 L 0 200 Z`;
+    const chartPathMobile = toPath(pts,300,65,max);
+
+    const pedidosFilterDefs = [ ['todos','Todos'], ['varejo','Varejo'], ['atacado','Atacado'] ];
+    const pedidosFilters = pedidosFilterDefs.map(([k,label]) => ({
+      label, onClick: () => this.setState({ pedidosFilter:k }),
+      style: `white-space:nowrap;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;background:${s.pedidosFilter===k?'#FFA45C':'transparent'};color:${s.pedidosFilter===k?'#2B2420':'#8A7A70'};`
+    }));
+    const pedidosFiltrados = PEDIDOS_SEED
+      .filter(p => s.pedidosFilter==='todos' || p.tipo===s.pedidosFilter)
+      .map(p => ({
+        id:p.id, cliente:p.cliente, itens:p.itens, valorFmt:fmtBRL(p.valor), status:p.status, data:p.data,
+        isAtacado: p.tipo==='atacado',
+        tipoLabel: p.tipo==='atacado' ? 'Atacado' : 'Varejo',
+        tipoTagStyle: `font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;background:${p.tipo==='atacado'?'#F2ECFF':'#FFF0F4'};color:${p.tipo==='atacado'?'#6E56B8':'#C4416F'};`,
+        tagStyle: tagStyle(p.status), holeStyle: holeStyle(p.status),
+      }));
+
+    const pedidosAguardando = PEDIDOS_SEED.filter(p => p.status==='Em preparação').map(p => ({
+      id:p.id, cliente:p.cliente, valorFmt:fmtBRL(p.valor), status:p.status,
+      tipoLabel: p.tipo==='atacado'?'Atacado':'Varejo',
+      tagStyle: tagStyle(p.status), holeStyle: holeStyle(p.status),
+    }));
+    const pedidosAguardandoCount = pedidosAguardando.length;
+
+    const estoqueBaixo = s.produtos.filter(p => p.estoque <= 5).map(p => ({
+      id:p.id, nome:p.nome, categoria:p.categoria, estoque:p.estoque, color:p.color,
+    }));
+    const estoqueBaixoCount = estoqueBaixo.length;
+
+    const cidadeMap = { 'Bela Vitrine Calçados':'Curitiba, PR', 'Passo Certo Calçados':'Belo Horizonte, MG', 'Moda Encanto':'Recife, PE', 'Estilo Norte':'Manaus, AM', 'Trend Box':'Porto Alegre, RS' };
+    const revendedores = s.revendedores.map(r => ({
+      id:r.id, nome:r.nome, cidade:r.cidade, data:r.data,
+      statusLabel: r.status==='aprovado'?'Aprovado':r.status==='recusado'?'Recusado':'Pendente',
+      isPendente: r.status==='pendente', isDecidido: r.status!=='pendente',
+      tagStyle: tagStyle(r.status==='aprovado'?'Aprovado':r.status==='recusado'?'Recusado':'Pendente'),
+      holeStyle: holeStyle('x'),
+      onApprove: () => this.setState({ revendedores: s.revendedores.map(x=>x.id===r.id?{...x,status:'aprovado'}:x) }),
+      onReject: () => this.setState({ revendedores: s.revendedores.map(x=>x.id===r.id?{...x,status:'recusado'}:x) }),
+      onEdit: () => this.openEditor('revendedor', r.id),
+    }));
+    const revendedoresPendentesPreview = revendedores.filter(r => r.statusLabel==='Pendente').slice(0,3).map(r=>({
+      nome:r.nome, cidade:r.cidade, onApprove:r.onApprove, onReject:r.onReject,
+    }));
+
+    const produtos = s.produtos.map(p => ({
+      id:p.id, nome:p.nome, categoria:p.categoria, precoFmt:fmtBRL(p.preco), atacadoFmt:fmtBRL(p.atacado ?? Math.round(p.preco*0.5)), estoque:p.estoque, color:p.color,
+      estoqueColor: p.estoque<=5 ? '#C4416F' : '#2B2420',
+      visivel:p.visivel, destaque:p.destaque,
+      descontoLabel: p.desconto>0 ? `-${p.desconto}%` : '—',
+      toggleVisivel: () => this.setState({ produtos: s.produtos.map(x=>x.id===p.id?{...x,visivel:!x.visivel}:x) }),
+      toggleDestaque: () => this.setState({ produtos: s.produtos.map(x=>x.id===p.id?{...x,destaque:!x.destaque}:x) }),
+      onEdit: () => this.openEditor('produto', p.id),
+    }));
+
+    const financeiroRows = FINANCEIRO_SEED.map(f => ({
+      pedido:f.pedido, cliente:f.cliente, data:f.data, valorFmt:fmtBRL(f.valor), pagamento:f.pagamento, status:f.status,
+      tagStyle: tagStyle(f.status), holeStyle: holeStyle(f.status),
+    }));
+
+    const nextId = Math.max(...s.produtos.map(p=>p.id)) + 1;
+    const num = v => Number(String(v).replace(/\./g,'').replace(',','.')) || 0;
+    const novoSet = {};
+    ['nome','categoria','preco','atacado','estoque','desconto'].forEach(k => { novoSet[k] = e => { const v = e.target.value; this.setState(st => ({ novo:{...st.novo,[k]:v} })); }; });
+    const novoToggle = {};
+    ['visivel','destaque'].forEach(k => { novoToggle[k] = () => this.setState(st => ({ novo:{...st.novo,[k]:!st.novo[k]} })); });
+    const novoInvalid = !s.novo.nome.trim() || !num(s.novo.preco);
+    const emptyNovo = { nome:'', categoria:'Tênis', preco:'', atacado:'', estoque:'', desconto:'', visivel:true, destaque:false };
+    const saveNovo = () => {
+      if (novoInvalid) return;
+      const n = s.novo;
+      const p = { id:nextId, nome:n.nome.trim(), categoria:n.categoria, preco:num(n.preco), atacado:num(n.atacado)||Math.round(num(n.preco)*0.5), estoque:Math.round(num(n.estoque)), desconto:Math.round(num(n.desconto)), color:'#EFE0DB', visivel:n.visivel, destaque:n.destaque };
+      this.setState({ produtos:[p, ...s.produtos], novoOpen:false, novo:emptyNovo });
+    };
+    const IN = "border:1px solid #EFE0DB;border-radius:8px;padding:10px 12px;font-size:13px;color:#2B2420;background:#FFFFFF;outline:none;width:100%;box-sizing:border-box;";
+    const ed = s.editor;
+    const setForm = (k, v) => this.setState(st => ({ editor:{ ...st.editor, form:{ ...st.editor.form, [k]:v } }, edError:'' }));
+    const edFields = ed ? SCHEMAS[ed.entity].fields.map(f => ({
+      label: f.l + (f.req ? ' *' : ''), ph: f.ph || '',
+      isToggle: f.t==='toggle', isSelect: f.t==='select', isImage: f.t==='image',
+      isInput: ['text','number','email','tel','date'].includes(f.t), hasLabel: f.t!=='toggle',
+      inputType: f.t==='number' ? 'text' : f.t, inputMode: f.t==='number' ? 'decimal' : undefined,
+      value: ed.form[f.k] ?? '', checked: !!ed.form[f.k], options: f.o || [],
+      slotId: (ed.entity==='produto' ? 'produto-' : ed.entity + '-') + ed.form.id,
+      style: IN + "font-family:" + (f.mono ? "'Martian Mono',monospace" : "'Hanken Grotesk',sans-serif") + ";",
+      onChange: e => setForm(f.k, e.target.value), onToggle: () => setForm(f.k, !ed.form[f.k]),
+    })) : [];
+    const papelLabel = Object.fromEntries(PAPEIS);
+    const papelTint = { admin:['#FFF3E8','#C46A1F'], editor:['#F2ECFF','#6E56B8'], cliente:['#FFF0F4','#C4416F'], revendedor:['#EAFBF4','#2E7D63'] };
+    const papelFilters = [['todos','Todos']].concat(PAPEIS.map(p => [p[0], p[1] + 's'])).map(([k,l]) => ({ label: k==='todos' ? 'Todos' : l.replace('Administradors','Admins').replace('Editors','Equipe'),
+      onClick: () => this.setState({ papelFilter:k }),
+      style: "white-space:nowrap;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;background:" + (s.papelFilter===k?'#FFA45C':'transparent') + ";color:" + (s.papelFilter===k?'#2B2420':'#8A7A70') + ";" }));
+    const usuarios = s.usuarios.filter(u => s.papelFilter==='todos' || u.papel===s.papelFilter).map(u => ({
+      ...u, inicial: u.nome.trim().charAt(0).toUpperCase(), papel: papelLabel[u.papel],
+      papelStyle: "white-space:nowrap;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;background:" + papelTint[u.papel][0] + ";color:" + papelTint[u.papel][1] + ";",
+      statusLabel: u.ativo ? 'Ativo' : 'Inativo', statusColor: u.ativo ? '#2E7D63' : '#8A7A70',
+      onEdit: () => this.openEditor('usuario', u.id) }));
+    const promocoes = s.promocoes.map(p => ({ ...p, periodo: fmtDate(p.inicio) + ' → ' + fmtDate(p.fim),
+      toggleAtiva: () => this.setState({ promocoes: s.promocoes.map(x => x.id===p.id ? { ...x, ativa:!x.ativa } : x) }),
+      onEdit: () => this.openEditor('promocao', p.id) }));
+    const bannerDirty = JSON.stringify(s.banner) !== JSON.stringify(s.bannerSaved);
+    const bannerFields = [['etiqueta','Etiqueta (acima do título)'],['titulo','Título'],['subtitulo','Subtítulo'],['cta1','Texto do botão principal'],['link','Link do botão principal'],['cta2','Texto do segundo botão']].map(([k,l]) => ({
+      label:l, value:s.banner[k], onChange: e => { const v = e.target.value; this.setState(st => ({ banner:{ ...st.banner, [k]:v } })); } }));
+    return {
+      isUsuarios: s.screen==='usuarios', isPromocoes: s.screen==='promocoes', isBanner: s.screen==='banner',
+      revendedoresCount: s.revendedores.length, pendentesCount: s.revendedores.filter(r => r.status==='pendente').length,
+      novoRevendedor: () => this.openEditor('revendedor', null), novoUsuario: () => this.openEditor('usuario', null), novaPromocao: () => this.openEditor('promocao', null),
+      papelFilters, usuarios, promocoes, promoAtivasCount: s.promocoes.filter(p => p.ativa).length,
+      banner: s.banner, bannerFields, bannerStatus: bannerDirty ? 'Alterações não publicadas' : 'Publicado na vitrine',
+      toggleCta2: () => this.setState(st => ({ banner:{ ...st.banner, cta2On:!st.banner.cta2On } })),
+      resetBanner: () => this.setState(st => ({ banner: st.bannerSaved })),
+      publicarBanner: () => { this.setState(st => ({ bannerSaved: st.banner })); this.flash('Banner publicado na vitrine'); },
+      editorOpen: !!ed, edFields, edError: s.edError, edCanDelete: !!(ed && !ed.isNew),
+      editorKicker: ed ? (ed.isNew ? 'NOVO ' : 'EDITAR ') + SCHEMAS[ed.entity].label.toUpperCase() : '',
+      editorTitle: ed ? (ed.isNew ? 'Cadastrar ' + SCHEMAS[ed.entity].label : (ed.form.nome || 'Sem nome')) : '',
+      closeEditor: () => this.setState({ editor:null }), saveEditor: () => this.saveEditor(), deleteEditor: () => this.deleteEditor(),
+      toast: s.toast,
+      produtosCount: s.produtos.length, novoId: nextId, novo: s.novo, novoSet, novoToggle, novoInvalid, saveNovo,
+      saveNovoStyle: `border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;font-family:'Hanken Grotesk',sans-serif;color:${novoInvalid?'#8A7A70':'#2B2420'};background:${novoInvalid?'#EFE0DB':'#FFA45C'};cursor:${novoInvalid?'not-allowed':'pointer'};`,
+      novoOpen: s.novoOpen, openNovo: () => this.openEditor('produto', null), closeNovo: () => this.setState({ novoOpen:false }),
+      screenTitle, screenSubtitle, navItems,
+      isOverview: s.screen==='overview', isPedidos: s.screen==='pedidos', isProdutos: s.screen==='produtos',
+      isFinanceiro: s.screen==='financeiro', isRevendedores: s.screen==='revendedores',
+      salesFilters, salesFilterLabel, kpis,
+      chartPath, chartAreaPath, chartPathMobile,
+      mobileToggleLabel: s.mobilePreview ? '🖥 Ver desktop' : '📱 Ver mobile',
+      toggleMobile: () => this.setState({ mobilePreview: !s.mobilePreview }),
+      showMobilePreview: s.mobilePreview, showDesktopOverview: !s.mobilePreview,
+      pedidosAguardando, pedidosAguardandoCount, estoqueBaixo, estoqueBaixoCount,
+      revendedoresPendentesPreview,
+      goPedidos: () => this.go('pedidos'), goProdutos: () => this.go('produtos'), goRevendedores: () => this.go('revendedores'),
+      pedidosFilters, pedidosFiltrados,
+      produtos,
+      financeiroRows, lancamentoOpen: s.lancamentoOpen,
+      openLancamento: () => this.setState({ lancamentoOpen:true }), closeLancamento: () => this.setState({ lancamentoOpen:false }),
+      revendedores,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Martian+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="./image-slot.js"></script>
+  <style>
+    body { margin:0; background:#FDF6F3; }
+    ::selection { background:#FFA45C; color:#2B2420; }
+    a { color:#2B2420; text-decoration:none; }
+    a:hover { color:#C46A1F; }
+    .lola-rail::-webkit-scrollbar { display:none; }
+  </style>
+</helmet>
+<div style="min-height:100vh;background:#E9DED9;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;display:flex;justify-content:center;">
+  <div style="{{ frameStyle }}">
+
+    <div style="background:#2B2420;color:#FDF6F3;font-family:'Martian Mono',monospace;font-size:11px;letter-spacing:.04em;text-align:center;padding:9px 16px;">FRETE GRÁTIS ACIMA DE R$ 299 · TROCA FÁCIL EM 30 DIAS</div>
+
+    <header style="position:sticky;top:0;z-index:20;background:#FFFFFF;border-bottom:1px solid #EFE0DB;display:flex;align-items:center;gap:24px;padding:14px clamp(16px,4cqw,48px);">
+      <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+        <button style="flex:none;width:40px;height:40px;border:none;background:none;font-size:20px;cursor:pointer;color:#2B2420;padding:0;">☰</button>
+      </sc-if>
+      <a href="#" style="flex:none;display:block;"><image-slot id="lola-logo" compact="" fit="contain" shape="rounded" radius="6" placeholder="Logo" style="width:96px;height:36px;display:block;"></image-slot></a>
+      <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+        <nav style="display:flex;gap:28px;flex:1;">
+          <a href="#categorias" style="font-size:14px;font-weight:500;">Tênis</a>
+          <a href="#categorias" style="font-size:14px;font-weight:500;">Sandálias</a>
+          <a href="#categorias" style="font-size:14px;font-weight:500;">Botas</a>
+          <a href="#categorias" style="font-size:14px;font-weight:500;">Bolsas</a>
+          <a href="#categorias" style="font-size:14px;font-weight:500;">Acessórios</a>
+          <a href="#lancamentos" style="font-size:14px;font-weight:600;color:#C4416F;">Lançamentos</a>
+        </nav>
+      </sc-if>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex:none;">
+        <button style="width:40px;height:40px;border:none;background:none;font-size:17px;cursor:pointer;">🔍</button>
+        <a href="LOLA Login.dc.html" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:17px;">👤</a>
+        <button style="position:relative;width:40px;height:40px;border:none;background:none;font-size:17px;cursor:pointer;">
+          👜
+          <span style="position:absolute;top:4px;right:2px;min-width:16px;height:16px;border-radius:8px;background:#FFA45C;color:#2B2420;font-family:'Martian Mono',monospace;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;">2</span>
+        </button>
+      </div>
+    </header>
+
+    <section style="position:relative;height:{{ heroHeight }};background:#FFE4EC;overflow:hidden;">
+      <div style="position:absolute;inset:0;">
+        <image-slot id="hero-campanha" shape="rect" compact="" placeholder="Hero"></image-slot>
+      </div>
+      <div style="position:absolute;left:clamp(20px,6cqw,80px);right:clamp(20px,6cqw,80px);bottom:clamp(28px,7cqw,80px);max-width:560px;display:flex;flex-direction:column;gap:16px;pointer-events:none;">
+        <span style="font-family:'Martian Mono',monospace;font-size:12px;letter-spacing:.08em;">COLEÇÃO VERÃO 26</span>
+        <h1 style="margin:0;font-size:clamp(40px,7cqw,84px);line-height:.95;font-weight:700;letter-spacing:-.02em;text-wrap:balance;">Pisa confiante.</h1>
+        <p style="margin:0;font-size:clamp(15px,1.6cqw,18px);line-height:1.5;max-width:420px;text-wrap:pretty;">Tênis, sandálias e bolsas pra quem já sabe onde quer chegar.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;pointer-events:auto;">
+          <a href="#lancamentos" style="flex:none;white-space:nowrap;display:inline-flex;align-items:center;background:#FFA45C;color:#2B2420;font-size:14px;font-weight:600;border-radius:12px;padding:14px 24px;">Ver coleção</a>
+          <a href="#categorias" style="flex:none;white-space:nowrap;display:inline-flex;align-items:center;background:#FFFFFF;color:#2B2420;font-size:14px;font-weight:600;border-radius:12px;padding:14px 24px;border:1px solid #EFE0DB;">Comprar por categoria</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="categorias" style="padding:clamp(40px,6cqw,72px) clamp(16px,4cqw,48px) 0;display:flex;flex-direction:column;gap:24px;">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+        <h2 style="margin:0;font-size:clamp(24px,3cqw,32px);font-weight:700;letter-spacing:-.01em;">Categorias</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax({{ catMin }},1fr));gap:12px;">
+        <sc-for list="{{ categorias }}" as="c" hint-placeholder-count="5">
+          <a href="#" style="display:flex;flex-direction:column;gap:10px;">
+            <div style="aspect-ratio:4/5;border-radius:16px;overflow:hidden;background:{{ c.bg }};">
+              <image-slot id="cat-{{ c.slug }}" shape="rect" placeholder="{{ c.nome }}"></image-slot>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:15px;font-weight:600;">{{ c.nome }}</span>
+              <span style="font-size:14px;">→</span>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+    </section>
+
+    <section id="lancamentos" style="padding:clamp(48px,7cqw,88px) 0 0;display:flex;flex-direction:column;gap:24px;">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:0 clamp(16px,4cqw,48px);">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <span style="font-family:'Martian Mono',monospace;font-size:11px;letter-spacing:.08em;color:#8A7A70;">ACABOU DE CHEGAR</span>
+          <h2 style="margin:0;font-size:clamp(24px,3cqw,32px);font-weight:700;letter-spacing:-.01em;">Lançamentos</h2>
+        </div>
+        <div style="display:flex;gap:8px;flex:none;">
+          <button onClick="{{ prev }}" style="width:44px;height:44px;border-radius:50%;border:1px solid #EFE0DB;background:#FFFFFF;font-size:16px;cursor:pointer;color:#2B2420;">←</button>
+          <button onClick="{{ next }}" style="width:44px;height:44px;border-radius:50%;border:1px solid #EFE0DB;background:#FFFFFF;font-size:16px;cursor:pointer;color:#2B2420;">→</button>
+        </div>
+      </div>
+      <div ref="{{ railRef }}" class="lola-rail" style="display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:0 clamp(16px,4cqw,48px) 4px;scroll-padding:0 clamp(16px,4cqw,48px);">
+        <sc-for list="{{ lancamentos }}" as="p" hint-placeholder-count="6">
+          <div style="flex:none;width:{{ cardW }};scroll-snap-align:start;display:flex;flex-direction:column;gap:12px;">
+            <div style="position:relative;aspect-ratio:3/4;border-radius:16px;overflow:hidden;background:#FFFFFF;border:1px solid #EFE0DB;">
+              <image-slot id="produto-{{ p.id }}" shape="rect" placeholder="Foto do produto"></image-slot>
+              <span style="position:absolute;top:12px;left:12px;pointer-events:none;display:inline-flex;align-items:center;padding:5px 12px 5px 18px;font-size:11px;font-weight:700;letter-spacing:.04em;background:#8FE3C8;color:#2B2420;clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%);">
+                <span style="position:absolute;left:5px;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:#FFFFFF;"></span>NOVO
+              </span>
+              <button onClick="{{ p.toggleFav }}" style="position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:none;background:#FFFFFF;cursor:pointer;font-size:15px;color:#C4416F;">{{ p.favIcon }}</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <span style="font-size:12px;color:#8A7A70;">{{ p.categoria }}</span>
+              <span style="font-size:15px;font-weight:600;">{{ p.nome }}</span>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span style="font-family:'Martian Mono',monospace;font-size:15px;font-weight:600;">{{ p.precoFmt }}</span>
+                <span style="font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;">ou 3x {{ p.parcelaFmt }}</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <sc-for list="{{ p.cores }}" as="cor" hint-placeholder-count="3">
+                <span style="width:14px;height:14px;border-radius:50%;background:{{ cor }};border:1px solid #EFE0DB;"></span>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="padding:clamp(48px,7cqw,88px) clamp(16px,4cqw,48px);">
+      <div style="background:#8FE3C8;border-radius:24px;overflow:hidden;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
+        <div style="padding:clamp(28px,5cqw,56px);display:flex;flex-direction:column;gap:16px;justify-content:center;">
+          <span style="font-family:'Martian Mono',monospace;font-size:11px;letter-spacing:.08em;">ATACADO LOLA</span>
+          <h2 style="margin:0;font-size:clamp(28px,4cqw,44px);line-height:1.02;font-weight:700;letter-spacing:-.02em;text-wrap:balance;">Seja revendedora LOLA.</h2>
+          <p style="margin:0;font-size:16px;line-height:1.5;max-width:420px;text-wrap:pretty;">Preço de atacado a partir de 12 modelos diferentes. Cadastro com CNPJ, aprovação rápida.</p>
+          <div style="display:flex;">
+            <a href="LOLA Login.dc.html" style="flex:none;white-space:nowrap;display:inline-flex;align-items:center;background:#2B2420;color:#FDF6F3;font-size:14px;font-weight:600;border-radius:12px;padding:14px 24px;">Quero ser revendedor</a>
+          </div>
+        </div>
+        <div style="min-height:260px;">
+          <image-slot id="banner-revendedor" shape="rect" placeholder="Foto loja / revendedora"></image-slot>
+        </div>
+      </div>
+    </section>
+
+    <footer style="background:#FFFFFF;border-top:1px solid #EFE0DB;padding:40px clamp(16px,4cqw,48px) 28px;display:flex;flex-direction:column;gap:32px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:28px;">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <image-slot id="lola-logo" compact="" fit="contain" shape="rounded" radius="6" placeholder="Logo" style="width:96px;height:36px;display:block;"></image-slot>
+          <span style="font-size:13px;color:#8A7A70;line-height:1.5;">Calçados e acessórios.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+          <span style="font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.06em;">LOJA</span>
+          <a href="#">Tênis</a><a href="#">Sandálias</a><a href="#">Bolsas</a><a href="#lancamentos">Lançamentos</a>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+          <span style="font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.06em;">AJUDA</span>
+          <a href="#">Trocas e devoluções</a><a href="#">Prazos de entrega</a><a href="#">Fale com a gente</a>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+          <span style="font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.06em;">CONTA</span>
+          <a href="LOLA Login.dc.html">Entrar</a><a href="LOLA Login.dc.html">Seja revendedor</a>
+        </div>
+      </div>
+      <div style="font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;border-top:1px solid #EFE0DB;padding-top:20px;">© 2026 LOLA</div>
+    </footer>
+  </div>
+
+  <div style="position:fixed;right:20px;bottom:20px;z-index:60;display:flex;gap:4px;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:12px;padding:4px;box-shadow:0 8px 24px rgba(43,36,32,.12);">
+    <button onClick="{{ setDesktop }}" style="{{ btnDesktop }}">Desktop</button>
+    <button onClick="{{ setMobile }}" style="{{ btnMobile }}">Mobile</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const LANC = [
+  { id:1, nome:'Tênis Nuvem Rosa', categoria:'Tênis', preco:299, cores:['#FF8FAB','#FFFFFF','#2B2420'] },
+  { id:3, nome:'Bolsa Tote Lilás', categoria:'Bolsa', preco:249, cores:['#C7A8FF','#FDF6F3'] },
+  { id:4, nome:'Tênis Skate Pêssego', categoria:'Tênis', preco:319, cores:['#FFA45C','#FFFFFF'] },
+  { id:2, nome:'Sandália Slide Menta', categoria:'Sandália', preco:189, cores:['#8FE3C8','#2B2420','#FF8FAB'] },
+  { id:6, nome:'Mochila Mini Lilás', categoria:'Mochila', preco:229, cores:['#C7A8FF','#2B2420'] },
+  { id:7, nome:'Bota Chelsea Preta', categoria:'Bota', preco:389, cores:['#2B2420','#8A7A70'] },
+  { id:8, nome:'Tênis Corrida Menta', categoria:'Tênis', preco:329, cores:['#8FE3C8','#FFFFFF'] },
+];
+const CATS = [
+  { slug:'tenis', nome:'Tênis', bg:'#FFE4EC' },
+  { slug:'sandalias', nome:'Sandálias', bg:'#DDF7EE' },
+  { slug:'botas', nome:'Botas', bg:'#EFE0DB' },
+  { slug:'bolsas', nome:'Bolsas', bg:'#EEE5FF' },
+  { slug:'acessorios', nome:'Acessórios', bg:'#FFEBDA' },
+];
+const fmt = n => 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+class Component extends DCLogic {
+  state = { mobile:false, fav:{} };
+  railRef = React.createRef();
+  scroll(dir){ const el = this.railRef.current; if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior:'smooth' }); }
+  renderVals(){
+    const m = this.state.mobile;
+    const seg = on => `border:none;border-radius:8px;padding:8px 14px;font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;cursor:pointer;background:${on?'#FFA45C':'transparent'};color:#2B2420;`;
+    return {
+      isMobile:m, isDesktop:!m,
+      frameStyle: m
+        ? 'width:390px;margin:24px 0 96px;background:#FDF6F3;container-type:inline-size;border-radius:28px;overflow:hidden;box-shadow:0 20px 48px rgba(43,36,32,.18);align-self:flex-start;'
+        : 'width:100%;background:#FDF6F3;container-type:inline-size;',
+      heroHeight: m ? '560px' : 'min(78vh,720px)',
+      catMin: m ? '140px' : '180px',
+      cardW: m ? '72%' : 'clamp(220px,22cqw,300px)',
+      categorias: CATS,
+      lancamentos: LANC.map(p => ({ ...p, precoFmt:fmt(p.preco), parcelaFmt:fmt(p.preco/3),
+        favIcon: this.state.fav[p.id] ? '♥' : '♡',
+        toggleFav: () => this.setState(s => ({ fav:{ ...s.fav, [p.id]:!s.fav[p.id] } })) })),
+      railRef:this.railRef, prev:() => this.scroll(-1), next:() => this.scroll(1),
+      setDesktop:() => this.setState({ mobile:false }), setMobile:() => this.setState({ mobile:true }),
+      btnDesktop:seg(!m), btnMobile:seg(m),
+    };
+  }
+}
+</script>
+</body>
+</html>

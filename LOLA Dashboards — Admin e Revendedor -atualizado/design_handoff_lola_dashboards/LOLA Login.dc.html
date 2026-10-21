@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Martian+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="./image-slot.js"></script>
+  <style>
+    body { margin:0; background:#FDF6F3; }
+    ::selection { background:#FFA45C; color:#2B2420; }
+    a { color:#2B2420; }
+    a:hover { color:#C46A1F; }
+    input:focus { border-color:#FFA45C !important; box-shadow:0 0 0 3px #FFE4CC; }
+  </style>
+</helmet>
+<div style="min-height:100vh;background:#E9DED9;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;display:flex;justify-content:center;">
+  <div style="{{ frameStyle }}">
+
+    <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+      <div style="position:relative;background:#FFE4EC;min-height:100vh;">
+        <image-slot id="login-foto" shape="rect" compact="" placeholder="Foto"></image-slot>
+        <div style="position:absolute;left:48px;bottom:48px;right:48px;pointer-events:none;display:flex;flex-direction:column;gap:10px;max-width:420px;">
+          <span style="font-family:'Martian Mono',monospace;font-size:11px;letter-spacing:.08em;">COLEÇÃO VERÃO 26</span>
+          <span style="font-size:44px;line-height:1;font-weight:700;letter-spacing:-.02em;">Pisa confiante.</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column;min-height:{{ formMinH }};padding:{{ formPad }};background:#FDF6F3;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <a href="LOLA Vitrine Home.dc.html" style="display:block;"><image-slot id="lola-logo" compact="" fit="contain" shape="rounded" radius="6" placeholder="Logo" style="width:96px;height:36px;display:block;"></image-slot></a>
+        <a href="LOLA Vitrine Home.dc.html" style="flex:none;white-space:nowrap;font-size:13px;font-weight:500;text-decoration:none;">← Voltar à loja</a>
+      </div>
+
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:32px 0;">
+        <div style="width:100%;max-width:400px;display:flex;flex-direction:column;gap:22px;">
+
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <sc-if value="{{ showBack }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ goEntrar }}" style="white-space:nowrap;align-self:flex-start;background:none;border:none;padding:0;font-family:'Hanken Grotesk',sans-serif;font-size:13px;color:#8A7A70;cursor:pointer;">← Voltar para entrar</button>
+            </sc-if>
+            <h1 style="margin:0;font-size:30px;font-weight:700;letter-spacing:-.01em;">{{ title }}</h1>
+            <p style="margin:0;font-size:14px;color:#5C5049;line-height:1.5;">{{ subtitle }}</p>
+          </div>
+
+          <sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:12px;padding:4px;">
+              <button onClick="{{ goEntrar }}" style="{{ tabEntrar }}">Entrar</button>
+              <button onClick="{{ goCadastro }}" style="{{ tabCadastro }}">Criar conta</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#EAFBF4;border:1px solid #8FE3C8;border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.5;color:#2E7D63;">{{ sentMsg }}</div>
+          </sc-if>
+
+          <sc-if value="{{ showForm }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <sc-if value="{{ showGoogle }}" hint-placeholder-val="{{ true }}">
+                <button style="white-space:nowrap;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;height:48px;border-radius:12px;border:1px solid #EFE0DB;background:#FFFFFF;font-family:'Hanken Grotesk',sans-serif;font-size:14px;font-weight:600;color:#2B2420;cursor:pointer;">
+                  <span style="font-weight:700;font-size:16px;">G</span>{{ googleLabel }}
+                </button>
+                <div style="display:flex;align-items:center;gap:12px;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;">
+                  <span style="flex:1;height:1px;background:#EFE0DB;"></span>OU<span style="flex:1;height:1px;background:#EFE0DB;"></span>
+                </div>
+              </sc-if>
+
+              <sc-for list="{{ fields }}" as="f" hint-placeholder-count="2">
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                    <label style="font-size:13px;font-weight:600;">{{ f.label }}</label>
+                    <sc-if value="{{ f.isSenhaLogin }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ goEsqueci }}" style="flex:none;white-space:nowrap;background:none;border:none;padding:0;font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;color:#C46A1F;cursor:pointer;">Esqueci a senha</button>
+                    </sc-if>
+                  </div>
+                  <input type="{{ f.type }}" value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.ph }}" style="{{ f.style }}"/>
+                </div>
+              </sc-for>
+
+              <sc-if value="{{ error }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:13px;color:#C4416F;">{{ error }}</div>
+              </sc-if>
+
+              <button onClick="{{ submit }}" style="white-space:nowrap;width:100%;height:50px;border-radius:12px;border:none;background:#FFA45C;color:#2B2420;font-family:'Hanken Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;">{{ submitLabel }}</button>
+              <sc-if value="{{ isRevendedor }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:0;font-size:12px;color:#8A7A70;line-height:1.5;">Sua solicitação será analisada pela equipe LOLA.</p>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showRevLink }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ goRevendedor }}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;width:100%;background:#FFFFFF;border:1px dashed #C7A8FF;border-radius:14px;padding:16px 18px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;">
+              <span style="display:flex;flex-direction:column;gap:2px;">
+                <span style="font-size:14px;font-weight:700;">Quero ser revendedor</span>
+                <span style="font-size:12px;color:#8A7A70;">Compre no atacado com CNPJ</span>
+              </span>
+              <span style="font-size:16px;">→</span>
+            </button>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="font-family:'Martian Mono',monospace;font-size:10px;color:#8A7A70;line-height:1.6;">Demo: e-mail com "admin" abre o painel Admin; com "revenda", o painel do Revendedor.</div>
+    </div>
+  </div>
+
+  <div style="position:fixed;right:20px;bottom:20px;z-index:60;display:flex;gap:4px;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:12px;padding:4px;box-shadow:0 8px 24px rgba(43,36,32,.12);">
+    <button onClick="{{ setDesktop }}" style="{{ btnDesktop }}">Desktop</button>
+    <button onClick="{{ setMobile }}" style="{{ btnMobile }}">Mobile</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const INPUT = `height:48px;border-radius:12px;border:1px solid #EFE0DB;background:#FFFFFF;padding:0 14px;font-size:14px;color:#2B2420;outline:none;width:100%;box-sizing:border-box;`;
+const DEFS = {
+  entrar: [['email','E-mail','email','voce@email.com'],['senha','Senha','password','••••••••']],
+  cadastro: [['nome','Nome completo','text','Como você se chama?'],['email','E-mail','email','voce@email.com'],['senha','Crie uma senha','password','Mínimo 8 caracteres']],
+  revendedor: [['razao','Nome da loja / razão social','text','Ex.: Bela Vitrine Calçados'],['cnpj','CNPJ','text','00.000.000/0000-00',true],['nome','Seu nome','text','Responsável pela conta'],['email','E-mail','email','loja@email.com'],['whats','WhatsApp','tel','(00) 00000-0000',true],['senha','Crie uma senha','password','Mínimo 8 caracteres']],
+  esqueci: [['email','E-mail da conta','email','voce@email.com']],
+};
+const COPY = {
+  entrar: ['Oi de novo.', 'Entre na sua conta LOLA.', 'Entrar', 'Entrar com Google'],
+  cadastro: ['Crie sua conta.', 'Acompanhe pedidos e salve seus favoritos.', 'Criar conta', 'Cadastrar com Google'],
+  revendedor: ['Seja revendedor.', 'Preço de atacado a partir de 12 modelos diferentes.', 'Enviar solicitação'],
+  esqueci: ['Esqueceu a senha?', 'Enviamos um link para você criar uma nova.', 'Enviar link'],
+};
+const cnpjMask = v => v.replace(/\D/g,'').slice(0,14).replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d)/,'.$1/$2').replace(/(\d{4})(\d)/,'$1-$2');
+const telMask = v => v.replace(/\D/g,'').slice(0,11).replace(/^(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2');
+
+class Component extends DCLogic {
+  state = { mode:'entrar', mobile:false, vals:{}, error:'', sent:'' };
+  go(mode){ this.setState({ mode, error:'', sent:'' }); }
+  submit(){
+    const { mode, vals } = this.state;
+    const missing = DEFS[mode].some(([k]) => !(vals[k]||'').trim());
+    if (missing) return this.setState({ error:'Preencha todos os campos.' });
+    if (!/\S+@\S+\.\S+/.test(vals.email||'')) return this.setState({ error:'Confira o e-mail.' });
+    if (mode==='revendedor' && (vals.cnpj||'').replace(/\D/g,'').length!==14) return this.setState({ error:'CNPJ precisa ter 14 dígitos.' });
+    if (mode==='esqueci') return this.setState({ error:'', sent:`Link enviado para ${vals.email}.` });
+    if (mode==='revendedor') return this.setState({ error:'', sent:'Solicitação enviada. Seu cadastro está pendente de aprovação.' });
+    const e = vals.email.toLowerCase();
+    window.location.href = e.includes('admin') ? 'LOLA Admin Dashboard.dc.html' : e.includes('revenda') ? 'LOLA Revendedor Dashboard.dc.html' : 'LOLA Vitrine Home.dc.html';
+  }
+  renderVals(){
+    const { mode, mobile:m, vals, error, sent } = this.state;
+    const [title, subtitle, submitLabel, googleLabel] = COPY[mode];
+    const tab = on => `white-space:nowrap;min-width:0;height:40px;border:none;border-radius:9px;font-family:'Hanken Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;background:${on?'#FFA45C':'transparent'};color:#2B2420;`;
+    const seg = on => `border:none;border-radius:8px;padding:8px 14px;font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;cursor:pointer;background:${on?'#FFA45C':'transparent'};color:#2B2420;`;
+    const fields = DEFS[mode].map(([k,label,type,ph,mono]) => ({
+      label, type, ph, value: vals[k]||'',
+      isSenhaLogin: mode==='entrar' && k==='senha',
+      style: INPUT + `font-family:${mono?"'Martian Mono',monospace":"'Hanken Grotesk',sans-serif"};`,
+      onChange: e => { let v = e.target.value; if (k==='cnpj') v = cnpjMask(v); if (k==='whats') v = telMask(v); this.setState(s => ({ vals:{ ...s.vals, [k]:v }, error:'' })); },
+    }));
+    const showForm = !(sent && (mode==='revendedor' || mode==='esqueci'));
+    return {
+      title, subtitle, submitLabel, googleLabel, fields, error, sent:!!sent, sentMsg:sent,
+      isDesktop:!m, showForm,
+      showTabs: mode==='entrar' || mode==='cadastro',
+      showBack: mode==='revendedor' || mode==='esqueci',
+      showGoogle: mode==='entrar' || mode==='cadastro',
+      showRevLink: mode==='entrar' || mode==='cadastro',
+      isRevendedor: mode==='revendedor',
+      tabEntrar: tab(mode==='entrar'), tabCadastro: tab(mode==='cadastro'),
+      goEntrar:()=>this.go('entrar'), goCadastro:()=>this.go('cadastro'), goRevendedor:()=>this.go('revendedor'), goEsqueci:()=>this.go('esqueci'),
+      submit:()=>this.submit(),
+      frameStyle: m
+        ? 'width:390px;margin:24px 0 96px;border-radius:28px;overflow:hidden;box-shadow:0 20px 48px rgba(43,36,32,.18);align-self:flex-start;display:grid;grid-template-columns:1fr;'
+        : 'width:100%;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(420px,1fr);',
+      formMinH: m ? '780px' : '100vh', formPad: m ? '20px' : '32px 48px',
+      setDesktop:()=>this.setState({ mobile:false }), setMobile:()=>this.setState({ mobile:true }),
+      btnDesktop:seg(!m), btnMobile:seg(m),
+    };
+  }
+}
+</script>
+</body>
+</html>

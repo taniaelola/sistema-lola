@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Martian+Mono:wght@400;500;600&family=Lobster&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; background:#FDF6F3; }
+    ::selection { background:#FFA45C; color:#2B2420; }
+  </style>
+  <script src="./image-slot.js"></script>
+</helmet>
+<div style="display:flex;min-height:100vh;font-family:'Hanken Grotesk',sans-serif;color:#2B2420;">
+
+  <sc-if value="{{ isApproved }}" hint-placeholder-val="{{ true }}">
+  <aside style="width:232px;flex:none;background:#FFFFFF;border-right:1px solid #EFE0DB;display:flex;flex-direction:column;padding:24px 16px;gap:28px;">
+    <div style="display:flex;align-items:center;gap:8px;padding:0 8px;">
+      <image-slot id="lola-logo" fit="contain" shape="rounded" radius="6" compact="" placeholder="Foto" style="width:96px;height:36px;flex:none;display:block;"></image-slot>
+      <span style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:10px;letter-spacing:.06em;color:#8A7A70;text-transform:uppercase;">atacado</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px;">
+      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="4">
+        <div onClick="{{ item.onClick }}" style="{{ item.style }}">
+          <span style="font-size:17px;width:20px;text-align:center;flex:none;">{{ item.icon }}</span>
+          <span style="font-size:14px;font-weight:500;white-space:nowrap;">{{ item.label }}</span>
+          <sc-if value="{{ item.badge }}" hint-placeholder-val="{{ false }}">
+            <span style="margin-left:auto;background:#FFA45C;color:#2B2420;font-family:'Martian Mono',monospace;font-size:10px;font-weight:600;border-radius:10px;padding:2px 7px;">{{ item.badge }}</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </nav>
+    <div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FDF6F3;border:1px solid #EFE0DB;">
+      <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#8FE3C8,#C7A8FF);flex:none;"></div>
+      <div style="min-width:0;">
+        <div style="font-size:13px;font-weight:600;">Bela Vitrine</div>
+        <div style="font-size:11px;color:#8A7A70;">Revendedor</div>
+      </div>
+    </div>
+  </aside>
+  </sc-if>
+
+  <div style="position:fixed;right:20px;bottom:20px;z-index:60;display:flex;align-items:center;gap:4px;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:12px;padding:4px;box-shadow:0 6px 20px rgba(43,36,32,.10);">
+    <span style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:10px;color:#8A7A70;padding:0 8px;">SIMULAR CADASTRO</span>
+    <sc-for list="{{ statusOptions }}" as="o" hint-placeholder-count="3">
+      <button onClick="{{ o.onClick }}" style="{{ o.style }}">{{ o.label }}</button>
+    </sc-for>
+  </div>
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column;">
+
+    <sc-if value="{{ isApproved }}" hint-placeholder-val="{{ true }}">
+    <header style="display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid #EFE0DB;background:#FFFFFF;">
+      <div>
+        <div style="font-size:20px;font-weight:600;">{{ screenTitle }}</div>
+        <div style="font-size:13px;color:#8A7A70;margin-top:2px;">{{ screenSubtitle }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;flex:none;">
+        <button onClick="{{ toggleMobile }}" style="white-space:nowrap;flex:none;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;background:none;border:1px solid #EFE0DB;border-radius:8px;padding:8px 12px;cursor:pointer;">{{ mobileToggleLabel }}</button>
+        <div onClick="{{ goCarrinho }}" style="white-space:nowrap;flex:none;display:flex;align-items:center;gap:8px;background:#FFF3E8;border:1px solid #FFA45C;border-radius:10px;padding:8px 14px;cursor:pointer;">
+          <span>🛒</span>
+          <span style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:12px;font-weight:600;color:#C46A1F;">{{ cartProgressLabel }}</span>
+        </div>
+      </div>
+    </header>
+    </sc-if>
+
+    <section style="flex:1;padding:28px 32px 40px;overflow:auto;">
+
+      <!-- STATUS SCREENS (pending / rejected) -->
+      <sc-if value="{{ isPending }}" hint-placeholder-val="{{ false }}">
+        <div style="min-height:80vh;display:flex;align-items:center;justify-content:center;">
+          <div style="max-width:420px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;">
+            <image-slot id="lola-logo" fit="contain" shape="rounded" radius="6" placeholder="Logo LOLA" style="width:150px;height:56px;flex:none;display:block;"></image-slot>
+            <div style="position:relative;padding:10px 20px 10px 26px;background:#FFF3E8;white-space:nowrap;flex:none;clip-path:polygon(14px 0,100% 0,100% 100%,14px 100%,0 50%);">
+              <span style="position:absolute;left:7px;top:50%;transform:translateY(-50%);width:5px;height:5px;border-radius:50%;background:#FDF6F3;"></span>
+              <span style="font-size:13px;font-weight:600;color:#C46A1F;">Cadastro pendente</span>
+            </div>
+            <div style="font-size:15px;color:#5C5049;line-height:1.5;">Seu cadastro de revendedor está sendo avaliado pela equipe LOLA.</div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isRejected }}" hint-placeholder-val="{{ false }}">
+        <div style="min-height:80vh;display:flex;align-items:center;justify-content:center;">
+          <div style="max-width:420px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;">
+            <image-slot id="lola-logo" fit="contain" shape="rounded" radius="6" placeholder="Logo LOLA" style="width:150px;height:56px;flex:none;display:block;"></image-slot>
+            <div style="position:relative;padding:10px 20px 10px 26px;background:#FFF0F4;white-space:nowrap;flex:none;clip-path:polygon(14px 0,100% 0,100% 100%,14px 100%,0 50%);">
+              <span style="position:absolute;left:7px;top:50%;transform:translateY(-50%);width:5px;height:5px;border-radius:50%;background:#FDF6F3;"></span>
+              <span style="font-size:13px;font-weight:600;color:#C4416F;">Cadastro não aprovado</span>
+            </div>
+            <div style="font-size:15px;color:#5C5049;line-height:1.5;">Seu cadastro de revendedor não foi aprovado desta vez.</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- PAINEL INICIAL -->
+      <sc-if value="{{ isPainel }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:24px;">
+
+          <sc-if value="{{ showMobilePreview }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;justify-content:center;padding:20px 0;">
+              <div style="width:360px;background:#FFFFFF;border:1px solid #EFE0DB;border-radius:28px;padding:16px;box-shadow:0 12px 32px rgba(43,36,32,.10);">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                  <image-slot id="lola-logo" fit="contain" shape="rounded" radius="6" compact="" placeholder="Foto" style="width:72px;height:26px;flex:none;display:block;"></image-slot>
+                  <span style="font-size:16px;">☰</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <div style="background:#FFF3E8;border:1px solid #FFA45C;border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                      <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:10px;color:#C46A1F;">SEU CARRINHO</div>
+                      <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:18px;font-weight:600;margin-top:2px;">{{ cartProgressLabel }}</div>
+                    </div>
+                    <span style="font-size:20px;">🛒</span>
+                  </div>
+                  <div style="background:#FDF6F3;border:1px solid #EFE0DB;border-radius:14px;padding:12px;">
+                    <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:10px;color:#8A7A70;">PEDIDOS ESTE MÊS</div>
+                    <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:18px;font-weight:600;">{{ pedidosMesCount }}</div>
+                  </div>
+                  <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:14px;padding:14px;">
+                    <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Últimos pedidos</div>
+                    <sc-for list="{{ meusPedidosPreview }}" as="p" hint-placeholder-count="3">
+                      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #EFE0DB;">
+                        <span style="{{ p.tagStyle }}"><span style="{{ p.holeStyle }}"></span>{{ p.status }}</span>
+                        <div style="font-size:12px;flex:1;">#{{ p.id }}</div>
+                        <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:12px;font-weight:600;">{{ p.valorFmt }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:14px;padding:14px;">
+                    <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Novidades no catálogo</div>
+                    <div style="display:flex;gap:8px;">
+                      <sc-for list="{{ catalogoNovidadesPreview }}" as="c" hint-placeholder-count="3">
+                        <image-slot id="produto-{{ c.id }}" shape="rounded" radius="10" compact="" placeholder="Foto" style="width:56px;height:56px;flex:none;"></image-slot>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showDesktopOverview }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:24px;">
+            <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:24px;display:flex;align-items:center;gap:24px;">
+              <div style="flex:1;">
+                <div style="font-size:15px;font-weight:600;margin-bottom:4px;">Pedido mínimo: 12 SKUs distintos</div>
+                <div style="font-size:13px;color:#8A7A70;">Adicione itens ao carrinho até completar o mínimo para finalizar o pedido.</div>
+                <div style="margin-top:14px;height:10px;border-radius:6px;background:#EFE0DB;overflow:hidden;">
+                  <div style="height:100%;border-radius:6px;background:linear-gradient(90deg,#FFA45C,#FF8FAB);width:{{ cartProgressPct }}%;"></div>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:28px;font-weight:600;">{{ cartProgressLabel }}</div>
+                <button onClick="{{ goCarrinho }}" style="white-space:nowrap;flex:none;margin-top:8px;background:#FFA45C;border:none;border-radius:10px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">Ver carrinho</button>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:20px;">
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;">PEDIDOS ESTE MÊS</div>
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:clamp(18px,2vw,26px);font-weight:600;margin-top:8px;">{{ pedidosMesCount }}</div>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:20px;">
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;">TOTAL COMPRADO</div>
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:clamp(18px,2vw,26px);font-weight:600;margin-top:8px;">R$ 18.240</div>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:20px;">
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;">DESCONTO ATACADO</div>
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:clamp(18px,2vw,26px);font-weight:600;margin-top:8px;color:#3FA383;">-35%</div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;">
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:24px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                  <div style="font-size:15px;font-weight:600;">Últimos pedidos</div>
+                  <button onClick="{{ goPedidos }}" style="white-space:nowrap;flex:none;background:none;border:none;color:#FFA45C;font-size:12px;font-weight:600;cursor:pointer;">Ver todos →</button>
+                </div>
+                <sc-for list="{{ meusPedidosPreview }}" as="p" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #EFE0DB;">
+                    <span style="{{ p.tagStyle }}"><span style="{{ p.holeStyle }}"></span>{{ p.status }}</span>
+                    <div style="flex:1;font-size:13px;font-weight:600;">#{{ p.id }}</div>
+                    <div style="font-size:12px;color:#8A7A70;">{{ p.skus }} SKUs</div>
+                    <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;">{{ p.valorFmt }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:24px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                  <div style="font-size:15px;font-weight:600;">Novidades no catálogo</div>
+                  <button onClick="{{ goCatalogo }}" style="white-space:nowrap;flex:none;background:none;border:none;color:#FFA45C;font-size:12px;font-weight:600;cursor:pointer;">Ver todos →</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <sc-for list="{{ catalogoNovidadesPreview }}" as="c" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                      <image-slot id="produto-{{ c.id }}" shape="rounded" radius="10" compact="" placeholder="Foto" style="width:44px;height:44px;flex:none;"></image-slot>
+                      <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;font-weight:600;">{{ c.nome }}</div>
+                        <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:12px;color:#8A7A70;">{{ c.precoFmt }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- CARRINHO -->
+      <sc-if value="{{ isCarrinho }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;">
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <sc-for list="{{ carrinhoItens }}" as="it" hint-placeholder-count="4">
+              <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:16px;">
+                <image-slot id="produto-{{ it.id }}" shape="rounded" radius="10" compact="" placeholder="Foto" style="width:52px;height:52px;flex:none;"></image-slot>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:600;">{{ it.nome }}</div>
+                  <div style="font-size:12px;color:#8A7A70;">{{ it.categoria }} · {{ it.precoFmt }} / un.</div>
+                  <sc-if value="{{ it.alerta }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:11px;font-weight:600;color:{{ it.alertaColor }};margin-top:4px;">{{ it.alerta }}</div>
+                  </sc-if>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <button onClick="{{ it.dec }}" style="white-space:nowrap;flex:none;width:26px;height:26px;border-radius:8px;border:1px solid #EFE0DB;background:#FDF6F3;cursor:pointer;">−</button>
+                  <span style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;width:24px;text-align:center;">{{ it.qtd }}</span>
+                  <button onClick="{{ it.inc }}" disabled="{{ it.incDisabled }}" style="{{ it.incStyle }}">+</button>
+                </div>
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:14px;font-weight:600;width:80px;text-align:right;">{{ it.subtotalFmt }}</div>
+                <button onClick="{{ it.remove }}" style="white-space:nowrap;flex:none;background:none;border:none;color:#8A7A70;font-size:16px;cursor:pointer;">✕</button>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:16px;height:fit-content;">
+            <div style="font-size:15px;font-weight:600;">Resumo do pedido</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="font-size:13px;color:#8A7A70;">SKUs distintos no carrinho</div>
+              <div style="height:10px;border-radius:6px;background:#EFE0DB;overflow:hidden;">
+                <div style="height:100%;border-radius:6px;background:linear-gradient(90deg,#FFA45C,#FF8FAB);width:{{ cartProgressPct }}%;"></div>
+              </div>
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;">{{ cartProgressLabel }}</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:#8A7A70;padding-top:8px;border-top:1px solid #EFE0DB;">
+              <span>Peças totais</span><span style="white-space:nowrap;font-family:'Martian Mono',monospace;font-weight:600;color:#2B2420;">{{ cartTotalPecas }}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;">
+              <span>Total</span><span style="white-space:nowrap;font-family:'Martian Mono',monospace;">{{ cartTotalFmt }}</span>
+            </div>
+            <button disabled="{{ checkoutDisabled }}" style="{{ checkoutStyle }}">{{ checkoutLabel }}</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- CATÁLOGO -->
+      <sc-if value="{{ isCatalogo }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;">
+          <sc-for list="{{ catalogo }}" as="c" hint-placeholder-count="8">
+            <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;">
+              <div style="height:160px;position:relative;">
+                <image-slot id="produto-{{ c.id }}" shape="rect" placeholder="Foto do produto"></image-slot>
+                <sc-if value="{{ c.alerta }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;top:10px;left:10px;pointer-events:none;background:#FFFFFF;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;color:{{ c.alertaColor }};">{{ c.alerta }}</div>
+                </sc-if>
+              </div>
+              <div style="padding:14px;display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:13px;font-weight:600;">{{ c.nome }}</div>
+                <div style="font-size:11px;color:#8A7A70;">{{ c.categoria }}</div>
+                <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:15px;font-weight:600;">{{ c.precoFmt }}</div>
+                <div style="font-size:11px;color:#8A7A70;">preço de atacado</div>
+                <button onClick="{{ c.addToCart }}" disabled="{{ c.disabled }}" style="{{ c.btnStyle }}">{{ c.btnLabel }}</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- MEUS PEDIDOS -->
+      <sc-if value="{{ isMeusPedidos }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#FFFFFF;border:1px solid #EFE0DB;border-radius:16px;overflow-x:auto;">
+          <div style="display:grid;grid-template-columns:100px 100px 1fr 130px 130px;min-width:820px;padding:14px 20px;font-family:'Martian Mono',monospace;font-size:11px;color:#8A7A70;letter-spacing:.04em;border-bottom:1px solid #EFE0DB;">
+            <div>PEDIDO</div><div>SKUS</div><div>DATA</div><div>VALOR</div><div>STATUS</div>
+          </div>
+          <sc-for list="{{ meusPedidos }}" as="p" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:100px 100px 1fr 130px 130px;min-width:820px;padding:16px 20px;align-items:center;border-bottom:1px solid #EFE0DB;">
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;">#{{ p.id }}</div>
+              <div style="font-size:13px;">{{ p.skus }}</div>
+              <div style="font-size:12px;color:#8A7A70;">{{ p.data }}</div>
+              <div style="white-space:nowrap;font-family:'Martian Mono',monospace;font-size:13px;font-weight:600;">{{ p.valorFmt }}</div>
+              <div><span style="{{ p.tagStyle }}"><span style="{{ p.holeStyle }}"></span>{{ p.status }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+    </section>
+  </main>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+
+const TAG_COLORS = {
+  'Entregue': { bg:'#EAFBF4', text:'#2E7D63' },
+  'Enviado': { bg:'#F2ECFF', text:'#6E56B8' },
+  'Em preparação': { bg:'#FFF3E8', text:'#C46A1F' },
+  'Cancelado': { bg:'#FFF0F4', text:'#C4416F' },
+};
+function tagStyle(status){
+  const c = TAG_COLORS[status] || TAG_COLORS['Em preparação'];
+  return `display:inline-flex;align-items:center;gap:6px;position:relative;padding:5px 12px 5px 18px;font-size:12px;font-weight:600;color:${c.text};background:${c.bg};white-space:nowrap;flex:none;clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%);`;
+}
+function holeStyle(){ return `position:absolute;left:5px;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:#FDF6F3;`; }
+function fmtBRL(n){ return 'R$ ' + n.toLocaleString('pt-BR'); }
+
+const CATALOGO_SEED = [
+  { id:1, nome:'Tênis Nuvem Rosa', categoria:'Tênis', preco:149, color:'#FFDDE6', estoque:42 },
+  { id:2, nome:'Sandália Slide Menta', categoria:'Sandália', preco:99, color:'#D9F7EA', estoque:3 },
+  { id:3, nome:'Bolsa Tote Lilás', categoria:'Bolsa', preco:129, color:'#E9DFFF', estoque:18 },
+  { id:4, nome:'Tênis Skate Pêssego', categoria:'Tênis', preco:169, color:'#FFE4CC', estoque:0 },
+  { id:5, nome:'Chinelo Confete', categoria:'Chinelo', preco:39, color:'#FFDDE6', estoque:60 },
+  { id:6, nome:'Mochila Mini Lilás', categoria:'Mochila', preco:119, color:'#E9DFFF', estoque:22 },
+  { id:7, nome:'Bota Chelsea Preta', categoria:'Bota', preco:199, color:'#EFE0DB', estoque:2 },
+  { id:8, nome:'Tênis Corrida Menta', categoria:'Tênis', preco:159, color:'#D9F7EA', estoque:31 },
+];
+const MEUS_PEDIDOS_SEED = [
+  { id:8231, skus:14, data:'19/09', valor:2380, status:'Enviado' },
+  { id:8219, skus:12, data:'05/09', valor:2040, status:'Entregue' },
+  { id:8201, skus:18, data:'22/08', valor:3060, status:'Entregue' },
+  { id:8188, skus:12, data:'10/08', valor:1980, status:'Cancelado' },
+  { id:8175, skus:16, data:'28/07', valor:2720, status:'Entregue' },
+];
+
+class Component extends DCLogic {
+  state = {
+    accountStatus: 'aprovado', // 'pendente' | 'aprovado' | 'recusado'
+    screen: 'painel',
+    mobilePreview: false,
+    carrinho: {}, // id -> qtd
+  };
+
+  addToCart(id){
+    const c = {...this.state.carrinho};
+    c[id] = (c[id]||0) + 1;
+    this.setState({ carrinho: c });
+  }
+  incQtd(id){
+    const item = CATALOGO_SEED.find(x=>x.id===id);
+    const c = {...this.state.carrinho};
+    if ((c[id]||0) < item.estoque) c[id] = (c[id]||0) + 1;
+    this.setState({ carrinho: c });
+  }
+  decQtd(id){
+    const c = {...this.state.carrinho};
+    c[id] = Math.max(0, (c[id]||0) - 1);
+    if (c[id]===0) delete c[id];
+    this.setState({ carrinho: c });
+  }
+  removeItem(id){
+    const c = {...this.state.carrinho};
+    delete c[id];
+    this.setState({ carrinho: c });
+  }
+  go(screen){ this.setState({ screen }); }
+
+  renderVals(){
+    const s = this.state;
+    const statusOptions = [['pendente','Pendente'],['aprovado','Aprovado'],['recusado','Recusado']].map(([k,label]) => ({
+      label, onClick: () => this.setState({ accountStatus:k }),
+      style: `white-space:nowrap;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;background:${s.accountStatus===k?'#FFA45C':'transparent'};color:${s.accountStatus===k?'#2B2420':'#8A7A70'};`
+    }));
+
+    if (s.accountStatus === 'pendente') {
+      return { statusOptions, isPending:true, isRejected:false, isPainel:false, isCarrinho:false, isCatalogo:false, isMeusPedidos:false, isApproved:false };
+    }
+    if (s.accountStatus === 'recusado') {
+      return { statusOptions, isPending:false, isRejected:true, isPainel:false, isCarrinho:false, isCatalogo:false, isMeusPedidos:false, isApproved:false };
+    }
+
+    const cartIds = Object.keys(s.carrinho).filter(id => s.carrinho[id] > 0);
+    const skuCount = cartIds.length;
+    const cartProgressLabel = `${skuCount} de 12 SKUs`;
+    const cartProgressPct = Math.min(100, Math.round((skuCount/12)*100));
+    const cartTotalPecas = cartIds.reduce((sum,id) => sum + s.carrinho[id], 0);
+    const cartTotal = cartIds.reduce((sum,id) => {
+      const item = CATALOGO_SEED.find(x=>String(x.id)===id);
+      return sum + item.preco * s.carrinho[id];
+    }, 0);
+
+    const titles = {
+      painel: ['Painel', 'Visão geral da sua conta de revendedor'],
+      carrinho: ['Carrinho', `Pedido mínimo de 12 SKUs distintos`],
+      catalogo: ['Catálogo', 'Preços de atacado para sua loja'],
+      pedidos: ['Meus pedidos', 'Histórico de pedidos de atacado'],
+    };
+    const [screenTitle, screenSubtitle] = titles[s.screen];
+
+    const navDefs = [
+      { key:'painel', icon:'◆', label:'Painel', badge:null },
+      { key:'carrinho', icon:'🛒', label:'Carrinho', badge: skuCount>0 ? String(skuCount) : null },
+      { key:'catalogo', icon:'◇', label:'Catálogo', badge:null },
+      { key:'pedidos', icon:'▤', label:'Meus pedidos', badge:null },
+    ];
+    const navItems = navDefs.map(n => ({
+      icon:n.icon, label:n.label, badge:n.badge,
+      onClick: () => this.go(n.key),
+      style: `display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;background:${s.screen===n.key?'#FFF3E8':'transparent'};color:${s.screen===n.key?'#C46A1F':'#2B2420'};`
+    }));
+
+    const meusPedidos = MEUS_PEDIDOS_SEED.map(p => ({
+      id:p.id, skus:p.skus, data:p.data, valorFmt:fmtBRL(p.valor), status:p.status,
+      tagStyle:tagStyle(p.status), holeStyle:holeStyle(),
+    }));
+    const meusPedidosPreview = meusPedidos.slice(0,4);
+    const pedidosMesCount = 3;
+
+    const catalogoNovidadesPreview = CATALOGO_SEED.slice(0,3).map(c => ({
+      id:c.id, nome:c.nome, color:c.color, precoFmt:fmtBRL(c.preco),
+    }));
+
+    const catalogo = CATALOGO_SEED.map(c => {
+      let alerta = null, alertaColor = '#C4416F';
+      if (c.estoque === 0) alerta = 'Sem estoque';
+      else if (c.estoque <= 5) alerta = `Só restam ${c.estoque}`;
+      const inCart = s.carrinho[c.id] || 0;
+      const disabled = c.estoque === 0;
+      return {
+        id:c.id, nome:c.nome, categoria:c.categoria, precoFmt:fmtBRL(c.preco), color:c.color,
+        alerta, alertaColor, disabled,
+        addToCart: () => this.addToCart(c.id),
+        btnLabel: disabled ? 'Sem estoque' : (inCart>0 ? `No carrinho (${inCart})` : 'Adicionar'),
+        btnStyle: `white-space:nowrap;margin-top:6px;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:${disabled?'not-allowed':'pointer'};background:${disabled?'#EFE0DB':(inCart>0?'#8FE3C8':'#FFA45C')};color:${disabled?'#8A7A70':'#2B2420'};`,
+      };
+    });
+
+    const carrinhoItens = cartIds.map(idStr => {
+      const id = Number(idStr);
+      const c = CATALOGO_SEED.find(x=>x.id===id);
+      const qtd = s.carrinho[id];
+      let alerta = null, alertaColor = '#C4416F';
+      if (c.estoque <= 5) alerta = `Só restam ${c.estoque}`;
+      return {
+        id, nome:c.nome, categoria:c.categoria, precoFmt:fmtBRL(c.preco), color:c.color,
+        qtd, subtotalFmt: fmtBRL(c.preco*qtd),
+        alerta, alertaColor,
+        inc: () => this.incQtd(id), dec: () => this.decQtd(id), remove: () => this.removeItem(id),
+        incDisabled: qtd >= c.estoque,
+        incStyle: `flex:none;width:26px;height:26px;border-radius:8px;border:1px solid #EFE0DB;background:${qtd>=c.estoque?'#EFE0DB':'#FDF6F3'};cursor:${qtd>=c.estoque?'not-allowed':'pointer'};`,
+      };
+    });
+
+    const checkoutDisabled = skuCount < 12;
+    const checkoutLabel = checkoutDisabled ? `Faltam ${12-skuCount} SKUs para finalizar` : 'Finalizar pedido';
+    const checkoutStyle = `border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:${checkoutDisabled?'not-allowed':'pointer'};background:${checkoutDisabled?'#EFE0DB':'#FFA45C'};color:${checkoutDisabled?'#8A7A70':'#2B2420'};`;
+
+    return {
+      statusOptions, isPending:false, isRejected:false, isApproved:true,
+      isPainel: s.screen==='painel', isCarrinho: s.screen==='carrinho', isCatalogo: s.screen==='catalogo', isMeusPedidos: s.screen==='pedidos',
+      screenTitle, screenSubtitle, navItems,
+      cartProgressLabel, cartProgressPct, cartTotalPecas, cartTotalFmt: fmtBRL(cartTotal),
+      goCarrinho: () => this.go('carrinho'), goPedidos: () => this.go('pedidos'), goCatalogo: () => this.go('catalogo'),
+      mobileToggleLabel: s.mobilePreview ? '🖥 Ver desktop' : '📱 Ver mobile',
+      toggleMobile: () => this.setState({ mobilePreview: !s.mobilePreview }),
+      showMobilePreview: s.mobilePreview, showDesktopOverview: !s.mobilePreview,
+      pedidosMesCount, meusPedidos, meusPedidosPreview, catalogoNovidadesPreview,
+      catalogo, carrinhoItens, checkoutDisabled, checkoutLabel, checkoutStyle,
+    };
+  }
+}
+
+</script>
+</body>
+</html>
