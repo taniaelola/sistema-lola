@@ -9,3 +9,9 @@ reference/
 next-env.d.ts
 coverage/
 .superpowers/
+
+# Cloudflare / OpenNext
+.open-next
+.wrangler
+.dev.vars
+cloudflare-env.d.ts
