@@ -60,7 +60,7 @@ begin
 
     insert into orders (id, status, cliente_nome, cliente_telefone, entrega_tipo,
                         valor_produtos, valor_total, is_atacado, customer_id, revendedor_id) values
-      (o_cli_a, 'pendente', 'Teste', '000', 'retirada', 10, 10, false, u_cli_a, null),
+      (o_cli_a, 'pendente', 'Teste', '55SENTINELA77', 'retirada', 10, 10, false, u_cli_a, null),
       (o_cli_b, 'pendente', 'Teste', '000', 'retirada', 10, 10, false, u_cli_b, null),
       (o_rev_a, 'pendente', 'Teste', '000', 'retirada', 10, 10, true,  null, r_a),
       (o_rev_b, 'pendente', 'Teste', '000', 'retirada', 10, 10, true,  null, r_b);
@@ -99,8 +99,8 @@ begin
         (24, 'anon não chama admin_get_config',  'anon', null::uuid, 'select admin_get_config()::text', 'ERRO'),
         (25, 'anon não chama meus_pedidos',      'anon', null::uuid, 'select meus_pedidos()::text', 'ERRO'),
         (26, 'INFO: anon atacado_me',            'anon', null::uuid, 'select left(atacado_me()::text, 60)', 'INFO'),
-        (27, 'INFO: anon lê pedido por UUID (public_get_order) devolve telefone?', 'anon', null::uuid,
-             format('select (public_get_order(%L)::text like %L)::text', o_cli_a, '%000%'), 'INFO'),
+        (27, 'INFO: anon lê pedido por UUID (public_get_order) devolve o telefone?', 'anon', null::uuid,
+             format('select (public_get_order(%L)::text like %L)::text', o_cli_a, '%SENTINELA77%'), 'INFO'),
         (28, 'anon get_textos',                  'anon', null::uuid, 'select left(get_textos()::text, 20)', 'OK'),
         (29, 'anon get_banner_hero',             'anon', null::uuid, 'select left(get_banner_hero()::text, 20)', 'OK'),
         (30, 'anon get_promocoes_ativas',        'anon', null::uuid, 'select left(get_promocoes_ativas()::text, 20)', 'OK'),
