@@ -75,11 +75,12 @@ Seção de amostra (`get_destaques_atacado()`) mostra **varejo riscado/referênc
 
 ### 5.4 Papéis e permissões
 - `lib/roles.ts`: `supervisor` ganha a tela `produtos` (cadastrar/editar). Sem `excluir`. `ACESSO`, `telasVisiveis`, `podeAcessar` e os testes de papéis atualizados.
-- Banco: as RPCs de produto (`admin_list_products`, `admin_upsert_product`, `admin_upsert_color`, `admin_upsert_size`, `admin_set_ativo`, `admin_set_destaque`, `admin_list_categorias`, `admin_upsert_categoria`) passam a aceitar `supervisor`; `admin_delete_*` continua só `admin`/`superadmin`. Abrir Produtos ao supervisor libera também os campos de preço (`preco`, `preco_atacado`, desconto, `desconto_atacado_percentual`); decisão do dono pendente (§12). A matriz do README e do `docs/QA.md` é atualizada.
+- Banco: as RPCs de produto (`admin_list_products`, `admin_upsert_product`, `admin_upsert_color`, `admin_upsert_size`, `admin_set_ativo`, `admin_set_destaque`, `admin_list_categorias`, `admin_upsert_categoria`) passam a aceitar `supervisor`; `admin_delete_*` continua só `admin`/`superadmin`. O supervisor edita o **cadastro**, mas os **campos de preço** (`preco`, `preco_atacado`, `desconto_percentual` do produto e `desconto_atacado_percentual` da categoria) ficam só com `admin` e `superadmin` (decisão 4(b), §12). No banco, `admin_upsert_product` e `admin_upsert_categoria` **preservam** o valor atual desses campos quando o chamador é `supervisor` (ignoram o que vier do cliente); `admin_set_desconto` continua só `admin`/`superadmin`. Produto **criado por supervisor** nasce com `preco = 0` e `ativo = false`, e só vai para a vitrine depois que um admin define o preço e ativa (hipótese operacional a confirmar no plano). Na tela de Produtos, os campos de preço aparecem desabilitados para o supervisor.
+- **Pedidos para o supervisor** (decisão 2(b)): `admin_list_orders` mascara `valor_produtos`, `valor_total`, `entrega_taxa` e `preco_unit`/`subtotal` dos itens para `supervisor`, como `admin_list_sales` já faz; telefone e endereço continuam visíveis (a operação precisa deles). A matriz do README e do `docs/QA.md` é atualizada.
 - Revisão da matriz completa (todas as `admin_*`) feita na B0 e fechada aqui.
 
 ### 5.5 Migração e ordem de aplicação
-`supabase/migrations/0010_lp_atacado_bonus.sql` (spec de 27/10) **mais** as funções de §5.1, as revogações de privilégio, a abertura de `supervisor` e as correções da B0, incluindo a higiene do S-08 (`set search_path` em `_slugify`, `_preco_atacado` e `_preco_varejo`). Entra no `release-unico.sql` e no `smoke.sql`/`rls-teste.sql`. Ordem: SQL primeiro, depois merge/deploy (spec de 27/10 §10). Como o app novo passa a ler catálogo por função e a revogação quebra o app antigo, aplicar SQL e deploy **na mesma janela**, em horário de pouco movimento. Antes da janela, ter o rollback do SQL pronto: reconceder o `SELECT` **e** recriar as políticas `*_read` (`create policy ... for select using (true)`), senão o catálogo fica vazio com a RLS ligada. Leitores diretos das tabelas de produto no app hoje, a migrar para as funções: `app/page.tsx`, `app/produto/[slug]/page.tsx`, `app/atacado/dados.ts`, `app/atacado/actions.ts`, `lib/header-dados.ts` (lê `categorias`), `app/api/categoria-img/[id]/route.ts` (lê `categorias`) e `app/admin/actions.ts` (confirmar se roda com sessão de equipe via RPC ou leitura direta).
+`supabase/migrations/0010_lp_atacado_bonus.sql` (spec de 27/10) **mais** as funções de §5.1, as revogações de privilégio (incluindo `EXECUTE` de `checkout_iniciar_pedido` para `anon`, decisão 1(a): o checkout de atacado já exige login, `auth.uid()`, e o de varejo de convidado fica fechado até uma migração futura, quando o varejo for religado), a abertura de `supervisor` e as correções da B0, incluindo a higiene do S-08 (`set search_path` em `_slugify`, `_preco_atacado` e `_preco_varejo`). Entra no `release-unico.sql` e no `smoke.sql`/`rls-teste.sql`. Ordem: SQL primeiro, depois merge/deploy (spec de 27/10 §10). Como o app novo passa a ler catálogo por função e a revogação quebra o app antigo, aplicar SQL e deploy **na mesma janela**, em horário de pouco movimento. Antes da janela, ter o rollback do SQL pronto: reconceder o `SELECT` **e** recriar as políticas `*_read` (`create policy ... for select using (true)`), senão o catálogo fica vazio com a RLS ligada. Leitores diretos das tabelas de produto no app hoje, a migrar para as funções: `app/page.tsx`, `app/produto/[slug]/page.tsx`, `app/atacado/dados.ts`, `app/atacado/actions.ts`, `lib/header-dados.ts` (lê `categorias`), `app/api/categoria-img/[id]/route.ts` (lê `categorias`) e `app/admin/actions.ts` (confirmar se roda com sessão de equipe via RPC ou leitura direta).
 
 ## 6. Parte C — Rastreamento e SEO
 
@@ -106,15 +107,15 @@ No webhook do Mercado Pago (`app/api/webhook/mercadopago/route.ts`), após marca
 ## 7. Segurança e riscos
 
 1. A revogação de `SELECT` em tabelas de produto muda como o app lê dados: risco de quebrar telas. Mitigação: testes do `rls-teste.sql`, `npm run build`/`test`, QA manual de vitrine e janela única SQL+deploy.
-2. Mexer em `checkout_iniciar_pedido` (dinheiro e estoque): herdado da spec de 27/10; revisão dedicada obrigatória.
+2. Mexer em `checkout_iniciar_pedido` (dinheiro e estoque; bônus da spec de 27/10 e revogação de `EXECUTE` para `anon`): revisão dedicada obrigatória.
 3. Hash de e-mail/telefone e consentimento: seguir LGPD; revisar texto com o agente `juridico-lgpd-brasil` antes de publicar o aviso.
-4. O webhook do Mercado Pago continua chamando `mp_register_order_payment`, mas `p_transaction_amount` passa a ser obrigatório (S-06). Migrar essa RPC para a service role (revogando `EXECUTE` de `anon`) é decisão do dono, em aberto (§12). A chamada à API de Conversões é isolada.
+4. O webhook do Mercado Pago continua chamando `mp_register_order_payment`, mas `p_transaction_amount` passa a ser obrigatório (S-06). A RPC **continua** chamável com a chave anon, protegida pelo segredo longo já rotacionado (decisão 3(a), §12); não se migra para a service role. A chamada à API de Conversões é isolada.
 5. O catálogo atual é de demonstração; o cadastro real de produtos continua em andamento e não bloqueia esta spec.
 
 ## 8. Testes e verificação
 
 - Vitest: matriz de papéis (supervisor com `produtos`, sem excluir), formatação de preços varejo/atacado, funções de evento do `dataLayer` (sem dado pessoal sem consentimento), montagem do payload da API de Conversões (hash, `event_id`).
-- `supabase/rls-teste.sql` (B0) rodado antes e depois da `0010`; `smoke.sql` ampliado.
+- `supabase/rls-teste.sql` (B0) rodado antes e depois da `0010`; `smoke.sql` ampliado. Casos novos: `anon` sem `EXECUTE` em `checkout_iniciar_pedido`; `admin_list_orders` como supervisor sem `valor_*` nem `preco_unit`; supervisor que salva produto não altera `preco`/`preco_atacado` nem `desconto_atacado_percentual`; produto criado por supervisor nasce `ativo = false` e `preco = 0`; `mp_register_order_payment` sem `p_transaction_amount` falha.
 - `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build` verdes a cada tarefa.
 - Manual (QA): login de cada papel, vitrine para aprovado/pendente/anônimo, evento no GTM Preview, evento de compra no Gerenciador de Eventos da Meta, sitemap e robots.
 - Code Reviewer na SQL; Reality Checker dá o veredito final (`LIDER.md`).
@@ -133,12 +134,11 @@ GTM ID, GA4 Measurement ID, Meta Pixel ID e token da API de Conversões, token d
 
 ## 11. Fora de escopo
 
-Reativar o varejo (só o interruptor), bônus por faixa e acumulativo, cupom no checkout, busca, GTM server-side, remarketing dinâmico por catálogo.
+Reativar o varejo (exigirá uma migração futura que devolva `EXECUTE` do checkout de convidado, decisão 1(a); hoje só o interruptor), bônus por faixa e acumulativo, cupom no checkout, busca, GTM server-side, remarketing dinâmico por catálogo.
 
+## 12. Decisões do dono (fechadas em 2026-11-05)
 
-## 12. Decisões em aberto do dono
-
-1. **S-05, checkout de convidado.** Revogar `EXECUTE` de `checkout_iniciar_pedido` para `anon` contradiz "reativar o varejo só pelo interruptor". Opções: (a) revogar e exigir uma migração para religar o varejo de convidado; (b) manter o checkout de convidado com limites de tamanho de texto e de itens e `size_id` obrigatório.
-2. **S-07, supervisor em Pedidos.** O supervisor vê valores e telefone em `admin_list_orders`. Opções: (a) manter e registrar na matriz do README; (b) mascarar `valor_*` e `preco_unit` para o supervisor, como já é feito em Vendas.
-3. **S-06, webhook.** Opções: (a) manter `mp_register_order_payment` com a chave anon e segredo longo rotacionado, com `p_transaction_amount` obrigatório; (b) migrar a RPC para a service role e revogar `EXECUTE` de `anon` (muda o app e a variável de ambiente).
-4. **Supervisor e campos de preço.** Ao abrir Produtos ao supervisor (§5.4): (a) ele edita tudo, inclusive `preco`, `preco_atacado`, desconto e `desconto_atacado_percentual`; (b) ele edita o cadastro mas os campos de preço ficam só com `admin` e `superadmin`.
+1. **S-05, checkout de convidado: (a) revogar.** `EXECUTE` de `checkout_iniciar_pedido` é revogado de `anon`. Motivo do dono: a vitrine só aparece para revendedor logado e a Home não terá botão de comprar, então o visitante nunca chega ao checkout; isso só muda quando existir venda no varejo. Consequência: religar o varejo de convidado exigirá uma migração futura.
+2. **S-07, supervisor em Pedidos: (b) mascarar.** `valor_*`, `entrega_taxa` e `preco_unit`/`subtotal` ficam ocultos para o supervisor, como em Vendas; telefone e endereço continuam visíveis.
+3. **S-06, webhook: (a) manter.** `mp_register_order_payment` continua com a chave anon e o segredo longo rotacionado, com `p_transaction_amount` obrigatório (comparado ao total do pedido). Sem migração para a service role.
+4. **Supervisor e campos de preço: (b) só o cadastro.** O supervisor edita o cadastro; `preco`, `preco_atacado`, `desconto_percentual` e `desconto_atacado_percentual` são só de `admin`/`superadmin`. Hipótese operacional registrada em §5.4: produto criado por supervisor nasce inativo e com preço 0 até um admin definir o preço e ativar.
