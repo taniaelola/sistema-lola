@@ -14,6 +14,8 @@ Trava: Login, checkout, painel admin e webhook dão erro até as variáveis secr
 ## Para o conselheiro
 - Hospedagem: Cloudflare Workers (plano gratuito: bundle de 3 MB gzip e 10 ms de CPU por requisição). Se estourar, Workers Paid custa cerca de US$ 5/mês. Decisão de assinar fica com o Dudu.
 - ADMIN_WEBHOOK_SECRET novo precisa andar junto com o SQL de admin_config.webhook_secret_hash; um lado sem o outro quebra o webhook.
-- Pendentes: colar variáveis; trocar segredo + SQL; webhook do Mercado Pago para https://lolaonline.com.br/api/webhook/mercadopago; checkout real de teste; merge da cloudflare na main e voltar a branch de produção para main; apagar o projeto sistema-lola na Vercel só depois de validar.
+- Feito em 05/11: variáveis públicas e secrets (MP_ACCESS_TOKEN, NTFY_TOPIC, ADMIN_WEBHOOK_SECRET) no Worker; novo segredo do webhook + hash no Supabase conferido (hash_confere = true).
+- Webhook do Mercado Pago: o checkout envia notification_url em cada pagamento, então não precisa de configuração no painel do cliente (o Dudu não tem acesso a essa conta).
+- Pendentes: checkout real de teste (valor pequeno, Pix); merge da cloudflare na main e voltar a branch de produção para main; apagar o projeto sistema-lola na Vercel só depois de validar.
 - Repositório é público: revisar o histórico do git atrás de segredos expostos e considerar torná-lo privado.
 - Arquivo da fonte Bacony Script é "uso pessoal apenas"; não foi versionado. Precisa de licença comercial se for usada no site.

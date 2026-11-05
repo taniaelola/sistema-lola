@@ -69,8 +69,12 @@ as migrações 0004 a 0008; as 0001 a 0003 já estão no banco de produção.
      `set search_path = public, extensions; update admin_config set webhook_secret_hash = crypt('<novo-webhook-secret>', gen_salt('bf', 10)) where id = 1;`
      Se só um dos lados for trocado, o webhook falha e o pedido não é marcado
      como pago (log: "mp_register_order_payment falhou").
-   - Registrar o webhook `https://lolaonline.com.br/api/webhook/mercadopago` no
-     Mercado Pago (evento `payment`). Não use mais o endereço `.vercel.app`.
+   - Webhook do Mercado Pago: o checkout já envia `notification_url`
+     (`<NEXT_PUBLIC_SITE_URL>/api/webhook/mercadopago`) em cada pagamento, então
+     **não é obrigatório** registrá-lo no painel. Se quiser um reserva, registre
+     `https://lolaonline.com.br/api/webhook/mercadopago` (evento `payment`) na
+     conta dona do `MP_ACCESS_TOKEN`; e, se a conta ainda tiver o endereço
+     antigo `.vercel.app` cadastrado, remova-o.
    - Configurar `NTFY_TOPIC` (string longa aleatória) como Secret do Worker e
      assinar o tópico no app ntfy.
    - Revisar o histórico do git atrás de segredos expostos: o repositório
@@ -238,13 +242,10 @@ mude lá e em Build > Variables. Os **Secrets** (`MP_ACCESS_TOKEN`,
 
 ### Depois do deploy
 
-1. No **painel do Mercado Pago**, em Webhooks / Notificações, registre a URL:
-
-   ```
-   https://lolaonline.com.br/api/webhook/mercadopago
-   ```
-
-   Assine o evento de pagamento (`payment`). Remova o endereço antigo `.vercel.app`.
+1. **Webhook do Mercado Pago:** nada a fazer no painel. A URL vai em cada
+   pagamento (`notification_url`, montada com `NEXT_PUBLIC_SITE_URL`). Opcional,
+   como reserva, na conta dona do token: Webhooks, modo produção,
+   `https://lolaonline.com.br/api/webhook/mercadopago`, evento `payment`.
 2. No app **ntfy** (celular ou web), inscreva-se no tópico igual ao valor de
    `NTFY_TOPIC` para receber as notificações de venda.
 
@@ -272,7 +273,7 @@ no código, mas sem a Vercel hospedando ele não coleta nada útil.
   serem coladas.
 - [ ] Colar as variáveis (tabela acima) no Worker e em Build > Variables.
 - [ ] Gerar o novo `ADMIN_WEBHOOK_SECRET` e rodar o SQL de `webhook_secret_hash` no Supabase.
-- [ ] Atualizar o webhook do Mercado Pago para `https://lolaonline.com.br/api/webhook/mercadopago`.
+- [x] Webhook do Mercado Pago: dispensa o painel (o checkout envia `notification_url`).
 - [ ] Testar um checkout real (Pix, valor pequeno) e confirmar `pago`, baixa de estoque e ntfy.
 - [ ] Fazer merge da branch `cloudflare` na `main` e voltar a branch de produção no Cloudflare para `main`.
 - [ ] Apagar o projeto `sistema-lola` na Vercel, só depois de tudo validado.

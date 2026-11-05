@@ -28,8 +28,9 @@ com tudo `ok = true` e a conta do dono criada (ver "Lançamento" no `README.md`)
 - [ ] Redirect URLs do Auth são exatamente `<domínio>/entrar` e
       `<domínio>/entrar/redefinir` (sem curinga) e `NEXT_PUBLIC_SITE_URL` está
       definida no Worker (Settings > Variables and secrets **e** Build > Variables).
-- [ ] Webhook do Mercado Pago aponta para
-      `https://lolaonline.com.br/api/webhook/mercadopago` (evento `payment`), e o
+- [ ] Webhook do Mercado Pago: o checkout envia `notification_url` apontando para
+      `https://lolaonline.com.br/api/webhook/mercadopago` (não exige cadastro no
+      painel; se houver cadastro, sem endereço `.vercel.app`), e o
       `ADMIN_WEBHOOK_SECRET` do Worker bate com o hash em
       `admin_config.webhook_secret_hash`. Prova: um pagamento de teste vira `pago`;
       se o log do Worker mostrar "mp_register_order_payment falhou", repita o par
