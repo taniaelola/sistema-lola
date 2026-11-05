@@ -224,6 +224,12 @@ As três `NEXT_PUBLIC_*` **também** precisam estar em **Settings > Build >
 Variables**, porque o Next as embute no código durante o build; só no runtime
 elas não chegam ao navegador. Alterou uma `NEXT_PUBLIC_*`? Dispare um novo build.
 
+Atenção: cada deploy do wrangler **apaga** as variáveis de runtime criadas só no
+painel e que não estão no `wrangler.jsonc`. Por isso as três `NEXT_PUBLIC_*`
+(valores públicos) também ficam em `vars` no `wrangler.jsonc`; mudou o valor,
+mude lá e em Build > Variables. Os **Secrets** (`MP_ACCESS_TOKEN`,
+`NTFY_TOPIC`, `ADMIN_WEBHOOK_SECRET`) não são apagados e ficam só no painel.
+
 > **`ADMIN_WEBHOOK_SECRET` e o banco andam juntos.** Os valores secretos da
 > Vercel não podem ser lidos, então foi gerado um valor novo. Ele só funciona se
 > o hash em `admin_config.webhook_secret_hash` for atualizado junto, com o SQL do
