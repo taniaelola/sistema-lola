@@ -16,6 +16,7 @@ Trava: Login, checkout, painel admin e webhook dão erro até as variáveis secr
 - ADMIN_WEBHOOK_SECRET novo precisa andar junto com o SQL de admin_config.webhook_secret_hash; um lado sem o outro quebra o webhook.
 - Feito em 05/11: variáveis públicas e secrets (MP_ACCESS_TOKEN, NTFY_TOPIC, ADMIN_WEBHOOK_SECRET) no Worker; novo segredo do webhook + hash no Supabase conferido (hash_confere = true).
 - Webhook do Mercado Pago: o checkout envia notification_url em cada pagamento, então não precisa de configuração no painel do cliente (o Dudu não tem acesso a essa conta).
-- Pendentes: checkout real de teste (valor pequeno, Pix); merge da cloudflare na main e voltar a branch de produção para main; apagar o projeto sistema-lola na Vercel só depois de validar.
+- Checkout real testado em 05/11 (Pix R$ 1,00 no Scrunchie Cetim, preço restaurado para R$ 19,90): pedido pago, venda em sales, estoque baixou, webhook ok. Sobraram pedidos de teste pendentes (R$ 19,90) para cancelar no admin.
+- Pendentes: confirmar ntfy no celular; merge da cloudflare na main e voltar a branch de produção para main; apagar o projeto sistema-lola na Vercel só depois de validar.
 - Repositório é público: revisar o histórico do git atrás de segredos expostos e considerar torná-lo privado.
 - Arquivo da fonte Bacony Script é "uso pessoal apenas"; não foi versionado. Precisa de licença comercial se for usada no site.

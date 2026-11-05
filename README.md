@@ -274,7 +274,7 @@ no código, mas sem a Vercel hospedando ele não coleta nada útil.
 - [ ] Colar as variáveis (tabela acima) no Worker e em Build > Variables.
 - [ ] Gerar o novo `ADMIN_WEBHOOK_SECRET` e rodar o SQL de `webhook_secret_hash` no Supabase.
 - [x] Webhook do Mercado Pago: dispensa o painel (o checkout envia `notification_url`).
-- [ ] Testar um checkout real (Pix, valor pequeno) e confirmar `pago`, baixa de estoque e ntfy.
+- [x] Checkout real testado em 05/11/2026 (Pix de R$ 1,00): pedido `pago`, venda registrada e estoque baixado. Falta só confirmar a notificação ntfy.
 - [ ] Fazer merge da branch `cloudflare` na `main` e voltar a branch de produção no Cloudflare para `main`.
 - [ ] Apagar o projeto `sistema-lola` na Vercel, só depois de tudo validado.
 - [ ] Revisar o histórico do git atrás de segredos expostos (repositório público) e considerar torná-lo privado.
