@@ -6,8 +6,12 @@ Cobre a loja de varejo (spec-mãe `docs/superpowers/specs/2026-09-09-loja-lola-d
 
 ## Como rodar
 
-Estes itens rodam contra um **deploy de preview da Vercel** (ou produção após o
-merge) ligado ao **Supabase real** e a um **`MP_ACCESS_TOKEN`**. Como o token é
+Estes itens rodam contra um **deploy de preview do Worker na Cloudflare** (build
+de branch via `npx opennextjs-cloudflare upload`) ou contra produção
+(`https://lolaonline.com.br`), ligado ao **Supabase real** e a um
+**`MP_ACCESS_TOKEN`**. As variáveis do Worker (inclusive as `NEXT_PUBLIC_*` em
+Build > Variables) precisam estar coladas, senão login, checkout, admin e webhook
+dão erro; ver "Deploy (Cloudflare Workers)" no `README.md`. Como o token é
 de **produção**, os itens de pagamento (Pix / cartão) exigem um pagamento real de
 valor pequeno; não há sandbox. Registre o resultado de cada item no PR.
 Qualquer falha vira correção antes de liberar a loja.
@@ -23,7 +27,13 @@ com tudo `ok = true` e a conta do dono criada (ver "Lançamento" no `README.md`)
       lançamento.
 - [ ] Redirect URLs do Auth são exatamente `<domínio>/entrar` e
       `<domínio>/entrar/redefinir` (sem curinga) e `NEXT_PUBLIC_SITE_URL` está
-      definida na Vercel.
+      definida no Worker (Settings > Variables and secrets **e** Build > Variables).
+- [ ] Webhook do Mercado Pago aponta para
+      `https://lolaonline.com.br/api/webhook/mercadopago` (evento `payment`), e o
+      `ADMIN_WEBHOOK_SECRET` do Worker bate com o hash em
+      `admin_config.webhook_secret_hash`. Prova: um pagamento de teste vira `pago`;
+      se o log do Worker mostrar "mp_register_order_payment falhou", repita o par
+      Secret + SQL.
 
 ## Já coberto pelo build automatizado
 

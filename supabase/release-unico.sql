@@ -14,7 +14,7 @@
 --        Redirect URLs    = https://<seu-dominio>/entrar
 --                           https://<seu-dominio>/entrar/redefinir
 --      URLs exatas, SEM curinga (nada de ** nem *).
---   3. Vercel > Environment Variables: NEXT_PUBLIC_SITE_URL = https://<seu-dominio>
+--   3. Cloudflare > Worker > Variables and secrets (e Build > Variables): NEXT_PUBLIC_SITE_URL = https://<seu-dominio>
 --      (Production e Preview) e redeploy depois de salvar.
 --   4. Edite o e-mail do dono no BLOCO FINAL deste arquivo (procure por
 --      SEU_EMAIL_AQUI@exemplo.com). O bloco aborta se o e-mail não for trocado.
