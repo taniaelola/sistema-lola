@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-11-05-loja-lola-site-so-atacado-seguranca-rastreamento-design.md` (§4). Base: `docs/superpowers/specs/2026-10-27-loja-lola-lp-atacado-bonus-design.md`.
 
+> **Nota (pós-execução):** os arquivos commitados em `supabase/auditoria/` e `supabase/rls-teste.sql` valem mais que os trechos deste plano (o 02 parte 2 foi trocado por versão agregada; o caso 27 usa telefone-sentinela; o grep do Step 2 do Task 2 deve retornar vazio; 16 tabelas conhecidas, 15 em produção).
+
 ## Global Constraints
 
 - B0 é **somente leitura**: nenhum `create/alter/drop/grant/revoke` persistente, nenhum `insert/update/delete` que sobreviva à execução (spec §4).

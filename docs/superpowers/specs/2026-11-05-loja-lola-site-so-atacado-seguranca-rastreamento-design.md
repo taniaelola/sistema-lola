@@ -43,7 +43,7 @@ Arquivo novo `supabase/rls-teste.sql`, repetível, que usa `set local role` e `r
 - cliente A não lê pedido, perfil nem carrinho do cliente B (por tabela e por RPC);
 - revendedor A não lê pedido, cadastro nem preço de outro revendedor;
 - visitante não lê preço de atacado fora dos destaques da LP;
-- pendente e recusado não leem vitrine;
+- pendente e recusado não leem vitrine (o caso de revendedor RECUSADO e os casos de leitura de catálogo por `authenticated` entram no roteiro);
 - cada papel só executa as RPCs `admin_*` que a matriz permite.
 Falha do roteiro = achado. O roteiro entra no `smoke.sql`/QA para rodar a cada migração.
 
@@ -55,7 +55,9 @@ Relatório `docs/auditoria-seguranca-2026-11.md` com achados por gravidade (crí
 Tudo da spec de 27/10 (§4 a §10) vale. Acréscimos e correções:
 
 ### 5.1 Catálogo só para quem pode ver (no banco)
-- Revogar `SELECT` de `anon` (e, se a auditoria mostrar excesso, de `authenticated`) nas tabelas de produto: `products`, `product_colors`, `product_sizes`, `categorias`.
+- Revogar `SELECT` de `anon` **e de `authenticated`** nas tabelas de produto (`products`, `product_colors`, `product_sizes`, `categorias`) e dropar as políticas `prod_read`, `col_read`, `siz_read`, `cat_read` (achado S-01 da auditoria).
+- As funções de catálogo nunca devolvem `desconto_atacado_percentual` nem o objeto `categoria` cru e não reutilizam `_product_json` (S-02). O único preço de atacado público é o já calculado dos até 8 destaques de `get_destaques_atacado()` (função a criar; não existe hoje).
+- Revogar `EXECUTE` de `public_get_surpresa` para `anon` (ou removê-la) (S-03). Fechar o S-02 exige S-01 e S-03 juntos.
 - Leitura passa a ser por funções `SECURITY DEFINER` com validação de sessão e papel:
   - `get_catalogo_revendedor(...)`: exige revendedor **aprovado** (ou equipe). Devolve nome, slug, imagens, cores, tamanhos, estoque, **preço de varejo** e **preço de atacado**. Nunca devolve custo, `preco_atacado` bruto nem campos internos.
   - `get_produto_revendedor(p_slug)`: idem, para a página do produto.
@@ -73,11 +75,11 @@ Seção de amostra (`get_destaques_atacado()`) mostra **varejo riscado/referênc
 
 ### 5.4 Papéis e permissões
 - `lib/roles.ts`: `supervisor` ganha a tela `produtos` (cadastrar/editar). Sem `excluir`. `ACESSO`, `telasVisiveis`, `podeAcessar` e os testes de papéis atualizados.
-- Banco: as RPCs de produto (`admin_save_product`, `admin_save_categoria` e correlatas) passam a aceitar `supervisor`; `admin_delete_*` continua só `admin`/`superadmin`. A matriz do README e do `docs/QA.md` é atualizada.
+- Banco: as RPCs de produto (`admin_list_products`, `admin_upsert_product`, `admin_upsert_color`, `admin_upsert_size`, `admin_set_ativo`, `admin_set_destaque`, `admin_list_categorias`, `admin_upsert_categoria`) passam a aceitar `supervisor`; `admin_delete_*` continua só `admin`/`superadmin`. Abrir Produtos ao supervisor libera também os campos de preço (`preco`, `preco_atacado`, desconto, `desconto_atacado_percentual`); decisão do dono pendente (§12). A matriz do README e do `docs/QA.md` é atualizada.
 - Revisão da matriz completa (todas as `admin_*`) feita na B0 e fechada aqui.
 
 ### 5.5 Migração e ordem de aplicação
-`supabase/migrations/0010_lp_atacado_bonus.sql` (spec de 27/10) **mais** as funções de §5.1, as revogações de privilégio, a abertura de `supervisor` e as correções da B0. Entra no `release-unico.sql` e no `smoke.sql`/`rls-teste.sql`. Ordem: SQL primeiro, depois merge/deploy (spec de 27/10 §10). Como o app novo passa a ler catálogo por função e a revogação quebra o app antigo, aplicar SQL e deploy **na mesma janela**, em horário de pouco movimento. Antes da janela, ter o rollback do SQL pronto (reconceder os `SELECT`).
+`supabase/migrations/0010_lp_atacado_bonus.sql` (spec de 27/10) **mais** as funções de §5.1, as revogações de privilégio, a abertura de `supervisor` e as correções da B0, incluindo a higiene do S-08 (`set search_path` em `_slugify`, `_preco_atacado` e `_preco_varejo`). Entra no `release-unico.sql` e no `smoke.sql`/`rls-teste.sql`. Ordem: SQL primeiro, depois merge/deploy (spec de 27/10 §10). Como o app novo passa a ler catálogo por função e a revogação quebra o app antigo, aplicar SQL e deploy **na mesma janela**, em horário de pouco movimento. Antes da janela, ter o rollback do SQL pronto: reconceder o `SELECT` **e** recriar as políticas `*_read` (`create policy ... for select using (true)`), senão o catálogo fica vazio com a RLS ligada. Leitores diretos das tabelas de produto no app hoje, a migrar para as funções: `app/page.tsx`, `app/produto/[slug]/page.tsx`, `app/atacado/dados.ts`, `app/atacado/actions.ts`, `lib/header-dados.ts` (lê `categorias`), `app/api/categoria-img/[id]/route.ts` (lê `categorias`) e `app/admin/actions.ts` (confirmar se roda com sessão de equipe via RPC ou leitura direta).
 
 ## 6. Parte C — Rastreamento e SEO
 
@@ -90,7 +92,7 @@ Seção de amostra (`get_destaques_atacado()`) mostra **varejo riscado/referênc
 Aviso de cookies com Consent Mode v2: `analytics_storage` e `ad_storage` **negados** por padrão; liberados só após aceite. Sem aceite, o Pixel não dispara e o GA4 não guarda identificadores. Componente `components/ConsentimentoCookies.tsx` e texto na política de privacidade.
 
 ### 6.3 Eventos (`dataLayer`)
-`cadastro_revendedor_iniciado`, `cadastro_revendedor_concluido`, `login`, `vitrine_vista`, `produto_visto`, `carrinho_atacado_item_adicionado`, `pedido_atacado_iniciado` e `compra` (pedido pago). Sem dado pessoal em claro no `dataLayer`; e-mail e telefone só em hash SHA-256 quando houver consentimento.
+`cadastro_revendedor_iniciado`, `cadastro_revendedor_concluido`, `login`, `vitrine_vista`, `produto_visto`, `carrinho_atacado_item_adicionado`, `pedido_atacado_iniciado` e `compra` (pedido pago). Sem dado pessoal em claro no `dataLayer`; e-mail e telefone só em hash SHA-256 quando houver consentimento. O UUID do pedido (`/pedido/[id]`) não vai em `page_location` nem em URLs enviadas ao GA4/Meta (S-04); a Parte A reduz também o que `public_get_order` devolve (sem endereço).
 
 ### 6.4 API de Conversões (servidor)
 No webhook do Mercado Pago (`app/api/webhook/mercadopago/route.ts`), após marcar o pedido como `pago`, envia `Purchase` à API de Conversões da Meta com `event_id = id do pedido` (mesmo `event_id` do evento do navegador, para deduplicar), valor e moeda. Falha da API de Conversões **nunca** falha o webhook nem o registro do pagamento (try/catch, log).
@@ -106,7 +108,7 @@ No webhook do Mercado Pago (`app/api/webhook/mercadopago/route.ts`), após marca
 1. A revogação de `SELECT` em tabelas de produto muda como o app lê dados: risco de quebrar telas. Mitigação: testes do `rls-teste.sql`, `npm run build`/`test`, QA manual de vitrine e janela única SQL+deploy.
 2. Mexer em `checkout_iniciar_pedido` (dinheiro e estoque): herdado da spec de 27/10; revisão dedicada obrigatória.
 3. Hash de e-mail/telefone e consentimento: seguir LGPD; revisar texto com o agente `juridico-lgpd-brasil` antes de publicar o aviso.
-4. O webhook do Mercado Pago e o segredo do webhook não mudam; a chamada à API de Conversões é isolada.
+4. O webhook do Mercado Pago continua chamando `mp_register_order_payment`, mas `p_transaction_amount` passa a ser obrigatório (S-06). Migrar essa RPC para a service role (revogando `EXECUTE` de `anon`) é decisão do dono, em aberto (§12). A chamada à API de Conversões é isolada.
 5. O catálogo atual é de demonstração; o cadastro real de produtos continua em andamento e não bloqueia esta spec.
 
 ## 8. Testes e verificação
@@ -116,6 +118,7 @@ No webhook do Mercado Pago (`app/api/webhook/mercadopago/route.ts`), após marca
 - `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build` verdes a cada tarefa.
 - Manual (QA): login de cada papel, vitrine para aprovado/pendente/anônimo, evento no GTM Preview, evento de compra no Gerenciador de Eventos da Meta, sitemap e robots.
 - Code Reviewer na SQL; Reality Checker dá o veredito final (`LIDER.md`).
+- Pré-lançamento: verificar "secure email change" (confirmação na troca de e-mail) no Auth do Supabase. "Confirm email" já está ligado em produção (verificado em 2026-11-05).
 
 ## 9. Ordem de execução
 
@@ -131,3 +134,11 @@ GTM ID, GA4 Measurement ID, Meta Pixel ID e token da API de Conversões, token d
 ## 11. Fora de escopo
 
 Reativar o varejo (só o interruptor), bônus por faixa e acumulativo, cupom no checkout, busca, GTM server-side, remarketing dinâmico por catálogo.
+
+
+## 12. Decisões em aberto do dono
+
+1. **S-05, checkout de convidado.** Revogar `EXECUTE` de `checkout_iniciar_pedido` para `anon` contradiz "reativar o varejo só pelo interruptor". Opções: (a) revogar e exigir uma migração para religar o varejo de convidado; (b) manter o checkout de convidado com limites de tamanho de texto e de itens e `size_id` obrigatório.
+2. **S-07, supervisor em Pedidos.** O supervisor vê valores e telefone em `admin_list_orders`. Opções: (a) manter e registrar na matriz do README; (b) mascarar `valor_*` e `preco_unit` para o supervisor, como já é feito em Vendas.
+3. **S-06, webhook.** Opções: (a) manter `mp_register_order_payment` com a chave anon e segredo longo rotacionado, com `p_transaction_amount` obrigatório; (b) migrar a RPC para a service role e revogar `EXECUTE` de `anon` (muda o app e a variável de ambiente).
+4. **Supervisor e campos de preço.** Ao abrir Produtos ao supervisor (§5.4): (a) ele edita tudo, inclusive `preco`, `preco_atacado`, desconto e `desconto_atacado_percentual`; (b) ele edita o cadastro mas os campos de preço ficam só com `admin` e `superadmin`.
