@@ -12,7 +12,7 @@ function getWebhookSecret(): string {
   const secret = process.env.ADMIN_WEBHOOK_SECRET;
   if (!secret) {
     throw new Error(
-      "ADMIN_WEBHOOK_SECRET não configurado. Adicione essa variável de ambiente no painel da Vercel (Settings → Environment Variables)."
+      "ADMIN_WEBHOOK_SECRET não configurado. Adicione essa variável de ambiente nas variáveis do Worker na Cloudflare (Settings → Variables and secrets)."
     );
   }
   return secret;

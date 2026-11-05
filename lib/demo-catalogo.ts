@@ -1,5 +1,5 @@
 // Catálogo fictício só para pré-visualizar a vitrine localmente, sem tocar no banco.
-// Liga com LOLA_DEMO=1 no .env.local. Nunca definir essa variável na Vercel.
+// Liga com LOLA_DEMO=1 no .env.local. Nunca definir essa variável no Worker da Cloudflare.
 import type { Categoria, Product } from "@/lib/types";
 import { ilustracaoDemo, type Tipo } from "@/lib/demo-ilustracoes";
 

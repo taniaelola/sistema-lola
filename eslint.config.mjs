@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Saídas de build do OpenNext/Cloudflare e worktrees locais:
+    ".open-next/**",
+    ".wrangler/**",
+    ".claude/**",
     // Loja anterior de referência (zip extraído, não é código nosso):
     "reference/**",
   ]),

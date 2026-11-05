@@ -1,7 +1,7 @@
 import "server-only";
 
 // Access Token de PRODUÇÃO da conta Mercado Pago da Loja LOLA.
-// Vem de uma variável de ambiente (configurada no painel da Vercel),
+// Vem de uma variável de ambiente (configurada nas variáveis do Worker na Cloudflare),
 // nunca fica escrito no código-fonte. Este arquivo tem "server-only" e
 // só é importado por Server Actions / Route Handlers, então esse valor
 // nunca é enviado pro navegador do visitante.
@@ -9,7 +9,7 @@ function getAccessToken(): string {
   const token = process.env.MP_ACCESS_TOKEN;
   if (!token) {
     throw new Error(
-      "MP_ACCESS_TOKEN não configurado. Adicione essa variável de ambiente no painel da Vercel (Settings → Environment Variables)."
+      "MP_ACCESS_TOKEN não configurado. Adicione essa variável de ambiente nas variáveis do Worker na Cloudflare (Settings → Variables and secrets)."
     );
   }
   return token;
@@ -27,7 +27,7 @@ import { montarBackUrls, type ItemPreferencia } from "./mercadopago-utils";
 export type CriarPreferenciaInput = {
   itens: ItemPreferencia[];
   externalReference: string;
-  origin: string; // ex: https://loja-lola.vercel.app
+  origin: string; // ex: https://lolaonline.com.br
   successPath?: string; // ex: /pedido/<id> — pra onde o cliente volta depois de pagar
 };
 

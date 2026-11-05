@@ -10,6 +10,11 @@ Acesso aos dados: catálogo e textos públicos por query/RPC anônima (RLS liber
 (`assert_papel`). Papéis: `superadmin`, `admin`, `supervisor`, `revendedor`,
 `cliente` (matriz em `lib/roles.ts` e na spec §4.4). Não existe mais senha única
 de admin nem `p_secret` (exceto o webhook do Mercado Pago).
+Hospedagem: Cloudflare Workers via OpenNext (Worker `sistema-lola`, build pelo
+Git; saiu da Vercel em nov/2026). Variáveis e segredos vivem no Worker, não na
+Vercel; detalhes, limites do plano gratuito e pendências no `README.md`
+("Deploy (Cloudflare Workers)"). `ADMIN_WEBHOOK_SECRET` e
+`admin_config.webhook_secret_hash` sempre mudam juntos.
 Specs e planos: `docs/superpowers/specs/2026-10-02-loja-lola-release-home-login-atacado-design.md`
 e `docs/superpowers/plans/2026-10-02-loja-lola-release-home-login-atacado.md`
 (spec-mãe em `docs/superpowers/specs/2026-09-09-loja-lola-design.md`). Setup,
