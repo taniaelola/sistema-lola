@@ -94,7 +94,12 @@ function testar() {
   const dirTestes = join(raiz, "supabase/testes");
   if (existsSync(dirTestes)) {
     for (const t of readdirSync(dirTestes).filter((f) => f.endsWith(".sql")).sort()) {
-      aplicarSql("postgres", join(dirTestes, t), { transacaoUnica: true });
+      // Convenção: o arquivo termina com `raise exception 'TESTE_..._OK'` (desfaz tudo); qualquer outra saída é falha.
+      const r = psql("postgres", readFileSync(join(dirTestes, t), "utf8"), { transacaoUnica: true });
+      if (!/TESTE_[A-Z0-9_]+_OK/.test(r.saida)) {
+        console.error(`FALHOU testes/${t}\n${r.saida}`);
+        process.exit(1);
+      }
       console.log(`ok  testes/${t}`);
     }
   }
