@@ -68,6 +68,12 @@ describe("validarProdutoBasico", () => {
   it("supervisor ignora o que estiver no campo de preço", () => {
     expect(validarProdutoBasico({ ...base, preco: "999", podeEditarPreco: false, precoAtual: 10 })).toEqual({ ok: true, preco: 10 });
   });
+  it("supervisor com preço mascarado (null) pode ativar: a trava fica com o banco", () => {
+    expect(validarProdutoBasico({ ...base, preco: "", podeEditarPreco: false, precoAtual: null, ativo: true })).toEqual({
+      ok: true,
+      preco: 0,
+    });
+  });
   it("nome e categoria obrigatórios", () => {
     expect(validarProdutoBasico({ ...base, nome: "  " }).ok).toBe(false);
     expect(validarProdutoBasico({ ...base, categoriaId: "", podeEditarPreco: false })).toEqual({

@@ -26,8 +26,11 @@ export type EntradaProduto = {
   preco: string;
   ativo: boolean;
   podeEditarPreco: boolean;
-  /** Preço já gravado (para o supervisor, que não preenche preço). */
-  precoAtual: number;
+  /**
+   * Preço já gravado (para o supervisor, que não preenche preço). null = desconhecido: admin_list_products
+   * mascara o preço do supervisor; a trava "defina o preço antes de ativar" fica com o banco.
+   */
+  precoAtual: number | null;
 };
 
 export type ResultadoProduto = { ok: true; preco: number } | { ok: false; erro: string };
@@ -36,12 +39,12 @@ export function validarProdutoBasico(e: EntradaProduto): ResultadoProduto {
   if (!e.nome.trim() || !e.categoriaId) {
     return { ok: false, erro: e.podeEditarPreco ? "Preencha ao menos nome, categoria e preço." : "Preencha ao menos nome e categoria." };
   }
-  let preco = e.precoAtual;
+  let preco = e.precoAtual ?? 0;
   if (e.podeEditarPreco) {
     if (!e.preco.trim()) return { ok: false, erro: "Preencha ao menos nome, categoria e preço." };
     preco = parseFloat(e.preco.replace(",", "."));
     if (!Number.isFinite(preco) || preco < 0) return { ok: false, erro: "O preço deve ser um número válido." };
   }
-  if (e.ativo && preco === 0) return { ok: false, erro: "Defina o preço antes de ativar o produto." };
+  if (e.ativo && e.precoAtual !== null && preco === 0) return { ok: false, erro: "Defina o preço antes de ativar o produto." };
   return { ok: true, preco };
 }

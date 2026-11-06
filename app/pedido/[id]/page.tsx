@@ -157,6 +157,11 @@ export default async function PedidoPage({
                 );
               })}
             </div>
+            {order.bonus_aplicado === true && (
+              <p style={{ fontSize: 12.5, color: "var(--muted)", margin: "0 0 12px" }}>
+                Este pedido inclui a bonificação.
+              </p>
+            )}
             <div
               style={{
                 borderTop: "1px solid var(--line)",

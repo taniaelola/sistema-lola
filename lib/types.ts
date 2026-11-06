@@ -33,6 +33,7 @@ export type Product = {
   categoria_id: string;
   categoria?: Categoria | null;
   colecao: string | null;
+  // Em runtime vem null para o supervisor (admin_list_products mascara preços); só o admin os usa.
   preco: number;
   desconto_percentual: number | null;
   desconto_efetivo?: number | null;
@@ -70,8 +71,8 @@ export type OrderItem = {
   // null quando o RPC oculta valores (supervisor).
   preco_unit: number | null;
   subtotal: number | null;
-  bonus_aplicado?: boolean;
-  bonus_aviso?: string | null;
+  /** Brinde da bonificação (calculado por _order_json: pedido com bônus e item a preço 0). */
+  bonus?: boolean;
 };
 
 export type EntregaTipo = "retirada" | "entrega" | "entrega_fora";
@@ -92,7 +93,8 @@ export type Order = {
   endereco_cidade: string | null;
   valor_produtos: number | null;
   valor_total: number | null;
-  bonus_aplicado?: boolean;
+  bonus_aplicado?: boolean | null;
+  /** Só em admin_list_orders (nunca em public_get_order). */
   bonus_aviso?: string | null;
   mp_payment_id: string | null;
   forma_pagamento: string | null;

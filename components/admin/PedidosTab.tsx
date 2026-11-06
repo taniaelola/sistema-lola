@@ -7,6 +7,7 @@ import { updateOrderStatus, settleOrder } from "@/app/admin/actions";
 import SwingTag from "@/components/SwingTag";
 import { corStatus } from "@/lib/admin-status";
 import { opcoesStatusPedido } from "@/lib/admin-acesso";
+import { itemEhBonus } from "@/lib/atacado";
 
 type Filtro = "todos" | "varejo" | "atacado";
 
@@ -212,13 +213,18 @@ export default function PedidosTab({
                             {item.quantidade}× {item.produto_nome}
                             {item.produto_cor ? ` — ${item.produto_cor}` : ""}
                             {item.produto_tamanho ? ` / ${item.produto_tamanho}` : ""}
-                            {item.bonus_aplicado || item.preco_unit === 0 ? " (bônus)" : ""}
+                            {itemEhBonus(item) ? " (bônus)" : ""}
                           </div>
                         ))}
                       </div>
-                      {(o.bonus_aplicado || o.bonus_aviso) && (
+                      {o.bonus_aplicado === true && (
                         <p style={{ fontSize: 12, color: "var(--adm-text-secondary)", margin: "8px 0 0" }}>
-                          {o.bonus_aplicado ? "Bônus aplicado neste pedido." : ""} {o.bonus_aviso ?? ""}
+                          Bônus aplicado neste pedido.
+                        </p>
+                      )}
+                      {o.bonus_aviso && (
+                        <p role="note" style={{ fontSize: 12, color: "#b23b3b", margin: "8px 0 0" }}>
+                          Aviso do bônus: {o.bonus_aviso}
                         </p>
                       )}
                     </div>

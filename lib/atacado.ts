@@ -22,6 +22,8 @@ export type PedidoAtacado = {
   status: string;
   valor_total: number;
   skus: number;
+  /** O pedido recebeu a bonificação (orders.bonus_aplicado). */
+  bonus_aplicado?: boolean;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -45,8 +47,18 @@ export function somarPecas(linhas: { quantidade: number }[]): number {
 
 /** Bônus de brinde: ganha uma vez ao chegar em `min` peças (não acumula). */
 export function progressoBonus(pecas: number, min: number, ativo: boolean) {
-  const ganhou = ativo && pecas >= min;
-  return { ativo, ganhou, faltam: ativo ? Math.max(0, min - pecas) : 0, pecas, min };
+  // min inválido (<= 0, NaN) vira 1: evita divisão por zero e "ganhou" com 0 peças.
+  const minimo = Number.isFinite(min) && min >= 1 ? Math.floor(min) : 1;
+  const qtd = Number.isFinite(pecas) && pecas > 0 ? pecas : 0;
+  const ganhou = ativo && qtd >= minimo;
+  return {
+    ativo,
+    ganhou,
+    faltam: ativo ? Math.max(0, minimo - qtd) : 0,
+    pecas: qtd,
+    min: minimo,
+    pct: Math.min(100, Math.round((qtd / minimo) * 100)),
+  };
 }
 
 export function progressoSkus(skus: number) {
@@ -238,7 +250,7 @@ export function normalizarPedidos(data: unknown): PedidoAtacado[] | null {
     const status = r && texto(r.status);
     const valor = r && numero(r.valor_total);
     if (!r || !id || !created_at || !status || valor == null) return [];
-    return [{ id, created_at, status, valor_total: valor, skus: numero(r.skus) ?? 0 }];
+    return [{ id, created_at, status, valor_total: valor, skus: numero(r.skus) ?? 0, bonus_aplicado: r.bonus_aplicado === true }];
   });
 }
 
@@ -384,7 +396,8 @@ export function textoBonus(
   const nome = nomeBonus?.trim() || null;
   const unidades = Number.isInteger(qtd) && qtd > 1 ? `${qtd}× ` : "";
   if (p.ganhou) {
-    return nome ? `Bonificação garantida: você ganha ${unidades}${nome}!` : "Bonificação garantida!";
+    const brinde = nome ? ` (${unidades}${nome})` : "";
+    return `Você atingiu ${p.pecas} peças: a bonificação${brinde} entra no pedido (sujeita a estoque)`;
   }
   const pecas = p.faltam === 1 ? "peça" : "peças";
   const alvo = nome ? `${unidades}${nome}` : "a bonificação";
@@ -403,14 +416,15 @@ export function secaoAtacado(caminho: string): SecaoAtacado {
   return "painel";
 }
 
-/** Item do pedido que é a bonificação: marcado pelo banco ou, sem a marca, gratuito (preço e subtotal 0). */
+/** Item do pedido que é a bonificação: `bonus` do banco (_order_json); sem a marca, fallback pelo preço 0. */
 export function itemEhBonus(i: {
-  bonus_aplicado?: boolean;
+  bonus?: boolean;
   quantidade: number;
   preco_unit: number | null;
   subtotal: number | null;
 }): boolean {
-  if (i.bonus_aplicado === true) return true;
+  if (i.bonus === true) return true;
+  if (i.bonus === false) return false;
   return i.quantidade > 0 && i.preco_unit === 0 && i.subtotal === 0;
 }
 

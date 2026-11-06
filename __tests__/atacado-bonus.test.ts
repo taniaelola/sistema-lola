@@ -3,7 +3,7 @@ import { itemEhBonus, linhaEntrega, progressoBonus, secaoAtacado, somarPecas, te
 
 describe("progressoBonus", () => {
   it("14 peças não ganha e faltam 1", () => {
-    expect(progressoBonus(14, 15, true)).toEqual({ ativo: true, ganhou: false, faltam: 1, pecas: 14, min: 15 });
+    expect(progressoBonus(14, 15, true)).toEqual({ ativo: true, ganhou: false, faltam: 1, pecas: 14, min: 15, pct: 93 });
   });
   it("15 ganha; 30 também (uma vez, não acumula)", () => {
     expect(progressoBonus(15, 15, true).ganhou).toBe(true);
@@ -13,6 +13,20 @@ describe("progressoBonus", () => {
     expect(progressoBonus(99, 15, false)).toMatchObject({ ativo: false, ganhou: false });
   });
 });
+describe("progressoBonus com mínimo inválido", () => {
+  it("min 0, negativo ou NaN vira 1: sem NaN e sem ganhar com 0 peças", () => {
+    for (const min of [0, -3, Number.NaN]) {
+      const p = progressoBonus(0, min, true);
+      expect(p).toMatchObject({ min: 1, ganhou: false, faltam: 1, pct: 0 });
+      expect(Number.isFinite(p.pct)).toBe(true);
+    }
+    expect(progressoBonus(2, 0, true)).toMatchObject({ ganhou: true, faltam: 0, pct: 100 });
+  });
+  it("peças inválidas contam como 0", () => {
+    expect(progressoBonus(Number.NaN, 15, true)).toMatchObject({ pecas: 0, faltam: 15, pct: 0 });
+  });
+});
+
 describe("somarPecas", () => {
   it("soma e ignora lixo", () => {
     expect(somarPecas([{ quantidade: 3 }, { quantidade: 12 }])).toBe(15);
@@ -32,8 +46,14 @@ describe("textoBonus", () => {
     expect(textoBonus(progressoBonus(3, 15, true), null, 1)).toContain("para ganhar a bonificação");
   });
   it("garantida", () => {
-    expect(textoBonus(progressoBonus(15, 15, true), "Chinelo", 1)).toBe("Bonificação garantida: você ganha Chinelo!");
-    expect(textoBonus(progressoBonus(15, 15, true), null, 1)).toBe("Bonificação garantida!");
+    expect(textoBonus(progressoBonus(15, 15, true), "Chinelo", 1)).toBe(
+      "Você atingiu 15 peças: a bonificação (Chinelo) entra no pedido (sujeita a estoque)"
+    );
+    expect(textoBonus(progressoBonus(16, 15, true), "Chinelo", 2)).toContain("(2× Chinelo)");
+    expect(textoBonus(progressoBonus(15, 15, true), null, 1)).toBe(
+      "Você atingiu 15 peças: a bonificação entra no pedido (sujeita a estoque)"
+    );
+    expect(textoBonus(progressoBonus(15, 15, true), "Chinelo", 1)).not.toMatch(/garantida/i);
   });
 });
 
@@ -49,8 +69,15 @@ describe("secaoAtacado", () => {
 
 describe("itemEhBonus", () => {
   it("reconhece a marca do banco e o item gratuito", () => {
-    expect(itemEhBonus({ bonus_aplicado: true, quantidade: 1, preco_unit: null, subtotal: null })).toBe(true);
+    expect(itemEhBonus({ bonus: true, quantidade: 1, preco_unit: null, subtotal: null })).toBe(true);
     expect(itemEhBonus({ quantidade: 1, preco_unit: 0, subtotal: 0 })).toBe(true);
+  });
+  it("a marca do banco manda: bonus false vence o preço 0", () => {
+    expect(itemEhBonus({ bonus: false, quantidade: 1, preco_unit: 0, subtotal: 0 })).toBe(false);
+  });
+  it("supervisor (dinheiro null, bonus true) mostra Bônus", () => {
+    expect(itemEhBonus({ bonus: true, quantidade: 1, preco_unit: null, subtotal: null })).toBe(true);
+    expect(itemEhBonus({ bonus: false, quantidade: 1, preco_unit: null, subtotal: null })).toBe(false);
   });
   it("item normal ou com valores ocultos não é bônus", () => {
     expect(itemEhBonus({ quantidade: 2, preco_unit: 50, subtotal: 100 })).toBe(false);

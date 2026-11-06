@@ -31,9 +31,10 @@ export default function CarrinhoView({
   const progresso = progressoSkus(skus);
   const decisao = decisaoFinalizar(itens);
   const pecas = somarPecas(itens.filter((i) => i.disponivel));
-  const progressoPecas = progressoBonus(pecas, bonus.minPecas, bonus.ativo);
+  // Sem nome de produto (bônus inativo/inexistente no banco) o checkout não entrega brinde: trata como desligado.
+  const bonusVisivel = bonus.ativo && bonus.produtoNome !== null;
+  const progressoPecas = progressoBonus(pecas, bonus.minPecas, bonusVisivel);
   const mensagemBonus = textoBonus(progressoPecas, bonus.produtoNome, bonus.quantidade);
-  const pctBonus = Math.min(100, Math.round((pecas / bonus.minPecas) * 100));
 
   function executar(acao: () => Promise<{ error: string | null }>) {
     setErro(null);
@@ -145,7 +146,7 @@ export default function CarrinhoView({
             {progresso.atual} de {progresso.minimo} produtos
           </div>
         </div>
-        {bonus.ativo && (
+        {bonusVisivel && (
           <div>
             <div
               className="atc-barra"
@@ -153,11 +154,12 @@ export default function CarrinhoView({
               aria-label="peças para a bonificação"
               aria-valuemin={0}
               aria-valuemax={progressoPecas.min}
-              aria-valuenow={Math.min(pecas, progressoPecas.min)}
+              aria-valuenow={Math.min(progressoPecas.pecas, progressoPecas.min)}
+              aria-valuetext={mensagemBonus}
             >
-              <span style={{ width: `${pctBonus}%` }} />
+              <span style={{ width: `${progressoPecas.pct}%` }} />
             </div>
-            <p className="atc-mono" style={{ fontSize: 13, marginTop: 6 }} role="status" aria-live="polite">
+            <p className="atc-mono" style={{ fontSize: 13, marginTop: 6 }} role="status">
               {mensagemBonus}
             </p>
           </div>
