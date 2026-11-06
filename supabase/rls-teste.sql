@@ -156,7 +156,7 @@ begin
         (81, 'supervisor chama admin_list_revendedores', 'sup', u_sup, 'select left(admin_list_revendedores()::text, 20)', 'OK'),
         (82, 'supervisor NÃO chama admin_list_users', 'sup', u_sup, 'select admin_list_users()::text', 'ERRO'),
         (83, 'supervisor NÃO chama admin_get_config', 'sup', u_sup, 'select admin_get_config()::text', 'ERRO'),
-        (84, 'INFO: supervisor admin_list_products (vira OK na Parte A)', 'sup', u_sup, 'select left(admin_list_products()::text, 20)', 'INFO'),
+        (84, 'supervisor chama admin_list_products (cadastro, 0010 seção D)', 'sup', u_sup, 'select left(admin_list_products()::text, 20)', 'OK'),
         (85, 'supervisor NÃO exclui produto', 'sup', u_sup,
              format('select admin_delete_product(%L)::text', gen_random_uuid()), 'ERRO'),
         (86, 'supervisor NÃO altera papel de usuário', 'sup', u_sup,
@@ -187,7 +187,17 @@ begin
         (115, 'revendedor RECUSADO não usa carrinho', 'rev_r', u_rev_r, 'select atacado_cart_get()::text', 'ERRO'),
         (116, 'revendedor aprovado chama get_catalogo_revendedor', 'rev_a', u_rev_a, 'select left(get_catalogo_revendedor()::text, 20)', 'OK'),
         (117, 'revendedor PENDENTE não chama get_catalogo_revendedor', 'rev_p', u_rev_p, 'select get_catalogo_revendedor()::text', 'ERRO'),
-        (118, 'anon get_categoria_imagem',      'anon', null::uuid, 'select get_categoria_imagem(gen_random_uuid())::text', 'OK')
+        (118, 'anon get_categoria_imagem',      'anon', null::uuid, 'select get_categoria_imagem(gen_random_uuid())::text', 'OK'),
+        -- papéis do cadastro (0010 seção D): supervisor sem preço/desconto/surpresa/exclusão; visitante e cliente fora
+        (119, 'supervisor NÃO chama admin_set_desconto', 'sup', u_sup,
+             format('select admin_set_desconto(%L, 10)::text', gen_random_uuid()), 'ERRO'),
+        (120, 'supervisor NÃO chama admin_set_surpresa', 'sup', u_sup,
+             format('select admin_set_surpresa(%L, true)::text', gen_random_uuid()), 'ERRO'),
+        (121, 'supervisor NÃO exclui produto (admin_delete_product)', 'sup', u_sup,
+             format('select admin_delete_product(%L)::text', gen_random_uuid()), 'ERRO'),
+        (122, 'visitante NÃO chama admin_list_products', 'anon', null::uuid, 'select admin_list_products()::text', 'ERRO'),
+        (123, 'cliente NÃO chama admin_list_products', 'cli_a', u_cli_a, 'select admin_list_products()::text', 'ERRO'),
+        (124, 'admin chama admin_list_products', 'adm', u_adm, 'select left(admin_list_products()::text, 20)', 'OK')
       ) as t(ord, caso, quem, uid, sql, esperado)
       order by ord
     loop

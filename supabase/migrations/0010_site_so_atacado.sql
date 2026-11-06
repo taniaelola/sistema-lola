@@ -464,3 +464,236 @@ returns jsonb language sql security definer set search_path = public, extensions
   select _order_json(p_id) - 'endereco_rua' - 'endereco_numero' - 'endereco_bairro'
     - 'endereco_complemento' - 'endereco_cep' - 'endereco_cidade';
 $$;
+
+-- ========== D. PAPÉIS: PEDIDOS SEM VALORES E CADASTRO DE PRODUTO PARA O SUPERVISOR ==========
+-- Supervisor: vê Pedidos sem valores (como admin_list_sales) e cadastra produtos sem mexer em preço.
+-- Preço (preco, preco_atacado, desconto_percentual, desconto_atacado_percentual) segue admin/superadmin.
+-- admin_set_desconto, admin_set_surpresa e admin_delete_* continuam só admin/superadmin (não mudam aqui).
+-- Para qualquer papel: ativar produto com preco = 0 lança 'defina o preço antes de ativar'.
+
+-- Pedidos: o supervisor recebe valor_produtos/valor_total/entrega_taxa e items[].preco_unit/subtotal
+-- como JSON null (telefone e endereço continuam). Chaves reais de _order_json (0002).
+create or replace function admin_list_orders(p_filtro text default 'todos')
+returns jsonb language plpgsql security definer set search_path = public, extensions stable as $$
+declare v_papel text;
+begin
+  v_papel := assert_papel(array['superadmin','admin','supervisor']);
+  return coalesce((
+    select jsonb_agg(
+      case when v_papel = 'supervisor' then
+        (x.j || jsonb_build_object('valor_produtos', null, 'valor_total', null, 'entrega_taxa', null,
+          'items', coalesce((select jsonb_agg(it || jsonb_build_object('preco_unit', null, 'subtotal', null) order by n)
+                             from jsonb_array_elements(x.j->'items') with ordinality as t(it, n)), '[]'::jsonb)))
+      else x.j end
+      order by x.created_at desc)
+    from (
+      select o.created_at,
+        (_order_json(o.id) || jsonb_build_object(
+          'cliente_telefone', o.cliente_telefone, 'mp_payment_id', o.mp_payment_id,
+          'forma_pagamento', o.forma_pagamento, 'revendedor_id', o.revendedor_id)) as j
+      from orders o
+      where (p_filtro = 'todos' or p_filtro is null)
+         or (p_filtro = 'varejo'  and o.is_atacado = false)
+         or (p_filtro = 'atacado' and o.is_atacado = true)
+    ) x
+  ), '[]'::jsonb);
+end $$;
+
+-- Produtos: leitura do cadastro para o supervisor.
+create or replace function admin_list_products()
+returns jsonb language plpgsql security definer set search_path = public, extensions stable as $$
+begin
+  perform assert_papel(array['superadmin','admin','supervisor']);
+  return coalesce((select jsonb_agg(_product_json(p) order by p.ordem, p.nome) from products p), '[]'::jsonb);
+end $$;
+
+-- Novo parâmetro final (p_somente_bonus): muda a assinatura, então a antiga é derrubada.
+drop function if exists admin_upsert_product(uuid, text, uuid, text, numeric, int, numeric, text, text[], boolean, boolean, int, text);
+create or replace function admin_upsert_product(
+  p_id uuid, p_nome text, p_categoria_id uuid, p_colecao text,
+  p_preco numeric, p_desconto_percentual int, p_preco_atacado numeric, p_descricao text,
+  p_caracteristicas text[], p_ativo boolean, p_destaque boolean, p_ordem int, p_slug text,
+  p_somente_bonus boolean default false
+) returns uuid language plpgsql security definer set search_path = public, extensions as $$
+declare v_id uuid; v_slug text; v_papel text; v_preco numeric;
+begin
+  v_papel := assert_papel(array['superadmin','admin','supervisor']);
+  v_slug := coalesce(nullif(trim(p_slug),''), _slugify(p_nome));
+  if p_id is null then
+    if v_papel = 'supervisor' then
+      -- cadastro sem preço: nasce com preco 0 e inativo até um admin definir o preço
+      insert into products(nome,categoria_id,colecao,preco,desconto_percentual,preco_atacado,
+        descricao,caracteristicas,ativo,destaque,ordem,slug,somente_bonus)
+      values (p_nome,p_categoria_id,p_colecao,0,null,null,
+        p_descricao,coalesce(p_caracteristicas,'{}'),false,p_destaque,coalesce(p_ordem,0),v_slug,
+        coalesce(p_somente_bonus,false))
+      returning id into v_id;
+    else
+      if coalesce(p_ativo,false) and coalesce(p_preco,0) = 0 then
+        raise exception 'defina o preço antes de ativar';
+      end if;
+      insert into products(nome,categoria_id,colecao,preco,desconto_percentual,preco_atacado,
+        descricao,caracteristicas,ativo,destaque,ordem,slug,somente_bonus)
+      values (p_nome,p_categoria_id,p_colecao,p_preco,nullif(p_desconto_percentual,0),p_preco_atacado,
+        p_descricao,coalesce(p_caracteristicas,'{}'),p_ativo,p_destaque,coalesce(p_ordem,0),v_slug,
+        coalesce(p_somente_bonus,false))
+      returning id into v_id;
+    end if;
+  else
+    if v_papel = 'supervisor' then
+      -- preco, preco_atacado e desconto_percentual atuais são preservados (argumentos ignorados)
+      select preco into v_preco from products where id = p_id;
+      if v_preco is null then raise exception 'registro não encontrado'; end if;
+      if coalesce(p_ativo,false) and v_preco = 0 then
+        raise exception 'defina o preço antes de ativar';
+      end if;
+      update products set nome=p_nome, categoria_id=p_categoria_id, colecao=p_colecao,
+        descricao=p_descricao, caracteristicas=coalesce(p_caracteristicas,'{}'), ativo=p_ativo,
+        destaque=p_destaque, ordem=coalesce(p_ordem,0), slug=v_slug,
+        somente_bonus=coalesce(p_somente_bonus,false)
+      where id=p_id returning id into v_id;
+    else
+      if coalesce(p_ativo,false) and coalesce(p_preco,0) = 0 then
+        raise exception 'defina o preço antes de ativar';
+      end if;
+      update products set nome=p_nome, categoria_id=p_categoria_id, colecao=p_colecao, preco=p_preco,
+        desconto_percentual=nullif(p_desconto_percentual,0), preco_atacado=p_preco_atacado,
+        descricao=p_descricao, caracteristicas=coalesce(p_caracteristicas,'{}'), ativo=p_ativo,
+        destaque=p_destaque, ordem=coalesce(p_ordem,0), slug=v_slug,
+        somente_bonus=coalesce(p_somente_bonus,false)
+      where id=p_id returning id into v_id;
+    end if;
+    if v_id is null then raise exception 'registro não encontrado'; end if;
+  end if;
+  return v_id;
+end $$;
+
+create or replace function admin_set_ativo(p_id uuid, p_ativo boolean)
+returns void language plpgsql security definer set search_path = public, extensions as $$
+begin
+  perform assert_papel(array['superadmin','admin','supervisor']);
+  if p_ativo and exists (select 1 from products where id = p_id and preco = 0) then
+    raise exception 'defina o preço antes de ativar';
+  end if;
+  update products set ativo = p_ativo where id = p_id;
+end $$;
+
+create or replace function admin_set_destaque(p_id uuid, p_destaque boolean)
+returns void language plpgsql security definer set search_path = public, extensions as $$
+begin
+  perform assert_papel(array['superadmin','admin','supervisor']);
+  update products set destaque = p_destaque where id = p_id;
+end $$;
+
+create or replace function admin_upsert_color(
+  p_id uuid, p_product_id uuid, p_nome text, p_hex text,
+  p_imagens text[], p_ordem int
+) returns uuid language plpgsql security definer set search_path = public, extensions as $$
+declare v_id uuid;
+begin
+  perform assert_papel(array['superadmin','admin','supervisor']);
+  if p_id is null then
+    insert into product_colors(product_id, nome, hex, imagens, ordem)
+    values (p_product_id, p_nome, p_hex, coalesce(p_imagens,'{}'), coalesce(p_ordem,0))
+    returning id into v_id;
+  else
+    update product_colors set product_id=p_product_id, nome=p_nome, hex=p_hex,
+      imagens=coalesce(p_imagens,'{}'), ordem=coalesce(p_ordem,0)
+    where id=p_id returning id into v_id;
+    if v_id is null then raise exception 'registro não encontrado'; end if;
+  end if;
+  return v_id;
+end $$;
+
+create or replace function admin_upsert_size(
+  p_id uuid, p_color_id uuid, p_tamanho text, p_estoque int
+) returns uuid language plpgsql security definer set search_path = public, extensions as $$
+declare v_id uuid;
+begin
+  perform assert_papel(array['superadmin','admin','supervisor']);
+  if p_estoque is null or p_estoque < 0 then raise exception 'estoque inválido'; end if;
+  if p_id is null then
+    insert into product_sizes(color_id, tamanho, estoque)
+    values (p_color_id, p_tamanho, p_estoque)
+    returning id into v_id;
+  else
+    update product_sizes set color_id=p_color_id, tamanho=p_tamanho,
+      estoque=p_estoque
+    where id=p_id returning id into v_id;
+    if v_id is null then raise exception 'registro não encontrado'; end if;
+  end if;
+  return v_id;
+end $$;
+
+create or replace function admin_list_categorias()
+returns jsonb language plpgsql security definer set search_path = public, extensions stable as $$
+begin
+  perform assert_papel(array['superadmin','admin','supervisor']);
+  return coalesce((select jsonb_agg(to_jsonb(c) order by c.grupo, c.ordem, c.nome) from categorias c), '[]'::jsonb);
+end $$;
+
+-- Supervisor: update não toca desconto_atacado_percentual; insert grava null.
+create or replace function admin_upsert_categoria(
+  p_id uuid, p_grupo text, p_nome text, p_slug text, p_ordem int,
+  p_ativo boolean, p_desconto_atacado_percentual int, p_imagem text default null
+) returns uuid language plpgsql security definer set search_path = public, extensions as $$
+declare v_id uuid; v_slug text; v_papel text; v_imagem text := nullif(trim(coalesce(p_imagem, '')), '');
+begin
+  v_papel := assert_papel(array['superadmin','admin','supervisor']);
+  if v_imagem is not null and (left(v_imagem, 11) <> 'data:image/'
+     or lower(left(v_imagem, 14)) = 'data:image/svg') then
+    raise exception 'imagem da categoria inválida';
+  end if;
+  if length(v_imagem) > 1500000 then
+    raise exception 'imagem da categoria muito grande';
+  end if;
+  v_slug := coalesce(nullif(trim(p_slug),''), _slugify(p_nome));
+  if p_id is null then
+    insert into categorias(grupo, nome, slug, ordem, ativo, desconto_atacado_percentual, imagem)
+    values (p_grupo, p_nome, v_slug, coalesce(p_ordem,0), coalesce(p_ativo,true),
+      case when v_papel = 'supervisor' then null else p_desconto_atacado_percentual end, v_imagem)
+    returning id into v_id;
+  elsif v_papel = 'supervisor' then
+    update categorias set grupo=p_grupo, nome=p_nome, slug=v_slug, ordem=coalesce(p_ordem,0),
+      ativo=coalesce(p_ativo,true), imagem=v_imagem
+    where id=p_id returning id into v_id;
+    if v_id is null then raise exception 'registro não encontrado'; end if;
+  else
+    update categorias set grupo=p_grupo, nome=p_nome, slug=v_slug, ordem=coalesce(p_ordem,0),
+      ativo=coalesce(p_ativo,true), desconto_atacado_percentual=p_desconto_atacado_percentual,
+      imagem=v_imagem
+    where id=p_id returning id into v_id;
+    if v_id is null then raise exception 'registro não encontrado'; end if;
+  end if;
+  return v_id;
+end $$;
+
+-- Privilégios: só authenticated executa (o papel é checado dentro de cada função). create or replace
+-- preserva o ACL, exceto admin_upsert_product (assinatura nova, que nasce com o padrão do Supabase).
+revoke all on function
+  admin_list_orders(text),
+  admin_list_products(),
+  admin_upsert_product(uuid, text, uuid, text, numeric, int, numeric, text, text[], boolean, boolean, int, text, boolean),
+  admin_set_ativo(uuid, boolean),
+  admin_set_destaque(uuid, boolean),
+  admin_upsert_color(uuid, uuid, text, text, text[], int),
+  admin_upsert_size(uuid, uuid, text, int),
+  admin_list_categorias(),
+  admin_upsert_categoria(uuid, text, text, text, int, boolean, int, text)
+from public, anon, authenticated;
+grant execute on function
+  admin_list_orders(text),
+  admin_list_products(),
+  admin_upsert_product(uuid, text, uuid, text, numeric, int, numeric, text, text[], boolean, boolean, int, text, boolean),
+  admin_set_ativo(uuid, boolean),
+  admin_set_destaque(uuid, boolean),
+  admin_upsert_color(uuid, uuid, text, text, text[], int),
+  admin_upsert_size(uuid, uuid, text, int),
+  admin_list_categorias(),
+  admin_upsert_categoria(uuid, text, text, text, int, boolean, int, text)
+to authenticated;
+
+-- ========== E. HIGIENE (S-08): search_path fixo nas funções puras ==========
+alter function _slugify(text) set search_path = public, extensions;
+alter function _preco_atacado(numeric, numeric, int) set search_path = public, extensions;
+alter function _preco_varejo(numeric, int) set search_path = public, extensions;
