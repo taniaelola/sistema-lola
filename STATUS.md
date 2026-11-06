@@ -1,22 +1,19 @@
 # STATUS — Lola (lolaonline.com.br)
 Atualizado: 2026-11-05
-Fase: Fase 1 (varejo) migrada da Vercel para Cloudflare Workers (OpenNext); só as páginas públicas carregam, faltam variáveis secretas, webhook e checkout de teste; cadastro de produtos e login de cliente (Fase 2) em andamento
+Fase: Loja rodando na Cloudflare Workers (venda Pix validada ponta a ponta); auditoria de segurança B0 concluída; spec do "site só atacado" aprovada, plano da Parte A ainda não escrito
 Progresso: 
-Próximo passo: Colar as variáveis no Worker (e em Build > Variables), gerar o novo ADMIN_WEBHOOK_SECRET com o SQL do hash no Supabase e testar um checkout real no Pix
+Próximo passo: Escrever o plano da Parte A (migração 0010: catálogo só por função, papéis, LP) e depois a Parte C (GTM, Pixel, GA4, SEO)
 Prazo do próximo passo: 
-Trava: Login, checkout, painel admin e webhook dão erro até as variáveis secretas serem coladas no Worker (ação do Dudu)
+Trava: Entradas do dono para a Parte C: GTM ID, GA4, Meta Pixel e token da API de Conversões, token do Cloudflare Web Analytics; data para ligar o "varejo off" e da janela SQL+deploy
 
 ## Feito na última sessão
-- Loja saiu da Vercel (Pro gerava cobrança; time rebaixado para Hobby em 03/11/2026) e roda no Worker "sistema-lola" na Cloudflare, build pelo Git (repo taniaelola/sistema-lola, branch cloudflare, ainda sem merge na main)
-- lolaonline.com.br com nameservers da Cloudflare e domínio personalizado do Worker; DNS do Resend (send, rsend) preservado como DNS only; lojatania, consultoriaalmar e komissao migraram para a mesma conta
-- Documentação atualizada (README, docs/QA.md, AGENTS.md) e textos de erro do código trocados de Vercel para Cloudflare; lint, tsc, 526 testes e build passam
+- Migração para Cloudflare concluída: PR #10 mergeado na main; variáveis e secrets no Worker; novo segredo do webhook + hash no Supabase; checkout real testado (Pix R$ 1,00: pedido pago, venda registrada, estoque baixou, ntfy chegou); preço do produto de teste restaurado para R$ 19,90
+- Auditoria de segurança B0 (somente leitura, produção): 8 achados (0 crítico incondicional, 2 alto, 3 médio, 3 baixo); roteiro de isolamento 60/62 (falhas esperadas: visitante lê products e product_sizes); nada persistiu. Relatório em docs/auditoria-seguranca-2026-11.md; roteiro em supabase/rls-teste.sql
+- Spec do site só atacado, segurança e rastreamento (docs/superpowers/specs/2026-11-05-...) com as 4 decisões do dono na §12; PR #11 aberto (só documentação e SQL de leitura)
 
 ## Para o conselheiro
-- Hospedagem: Cloudflare Workers (plano gratuito: bundle de 3 MB gzip e 10 ms de CPU por requisição). Se estourar, Workers Paid custa cerca de US$ 5/mês. Decisão de assinar fica com o Dudu.
-- ADMIN_WEBHOOK_SECRET novo precisa andar junto com o SQL de admin_config.webhook_secret_hash; um lado sem o outro quebra o webhook.
-- Feito em 05/11: variáveis públicas e secrets (MP_ACCESS_TOKEN, NTFY_TOPIC, ADMIN_WEBHOOK_SECRET) no Worker; novo segredo do webhook + hash no Supabase conferido (hash_confere = true).
-- Webhook do Mercado Pago: o checkout envia notification_url em cada pagamento, então não precisa de configuração no painel do cliente (o Dudu não tem acesso a essa conta).
-- Checkout real testado em 05/11 (Pix R$ 1,00 no Scrunchie Cetim, preço restaurado para R$ 19,90): pedido pago, venda em sales, estoque baixou, webhook ok. Sobraram pedidos de teste pendentes (R$ 19,90) para cancelar no admin.
-- Pendentes: confirmar ntfy no celular; merge da cloudflare na main e voltar a branch de produção para main; apagar o projeto sistema-lola na Vercel só depois de validar.
-- Repositório é público: revisar o histórico do git atrás de segredos expostos e considerar torná-lo privado.
+- Decisões do dono (05/11): (1) revogar o checkout de convidado para visitante; religar o varejo exigirá migração futura; (2) supervisor vê Pedidos sem valores; (3) webhook do Mercado Pago mantido com segredo rotacionado e valor pago obrigatório; (4) supervisor cadastra produto mas preço só admin/superadmin (produto novo do supervisor nasce inativo e com preço 0; hipótese a confirmar).
+- Regras do dono para o site: sem venda no varejo, vitrine só para revendedor aprovado e logado, vitrine com preço de varejo e de atacado, cadastro de produto por admin ou supervisor (o "gerente"), RLS sem acesso entre usuários, SEO/Pixel/GA4/GTM/Cloudflare Web Analytics.
+- Pendências de infraestrutura: trocar a Production branch do Worker de cloudflare para main (o merge já foi feito); apagar o projeto sistema-lola na Vercel depois de alguns dias estável; cancelar pedidos de teste pendentes no admin; considerar tornar o repositório privado; trocar o par segredo do webhook + SQL, pois o valor apareceu em texto no chat; verificar "secure email change" no Auth do Supabase (Confirm email já está ligado).
+- O webhook do Mercado Pago dispensa cadastro no painel do cliente (o checkout envia notification_url); o Dudu não tem acesso à conta do Mercado Pago do cliente.
 - Arquivo da fonte Bacony Script é "uso pessoal apenas"; não foi versionado. Precisa de licença comercial se for usada no site.
