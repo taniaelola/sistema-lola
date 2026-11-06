@@ -8,7 +8,7 @@ const NOME = "lola-pg";
 const IMAGEM = "public.ecr.aws/supabase/postgres:17.11.0.004";
 const raiz = process.cwd();
 // Mínimo de casos que o roteiro rls-teste.sql deve imprimir; aumente quando o roteiro crescer.
-const CASOS_MINIMOS = Number(process.env.CASOS_MINIMOS ?? 62);
+const CASOS_MINIMOS = Number(process.env.CASOS_MINIMOS ?? 81);
 
 function docker(args, opts = {}) {
   return execFileSync("docker", args, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], ...opts });
