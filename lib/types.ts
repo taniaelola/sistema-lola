@@ -43,6 +43,7 @@ export type Product = {
   destaque: boolean;
   ordem: number;
   surpresa_ativo: boolean;
+  somente_bonus?: boolean;
   colors: ProductColor[];
 };
 
@@ -66,8 +67,11 @@ export type OrderItem = {
   color_id: string | null;
   size_id: string | null;
   quantidade: number;
-  preco_unit: number;
-  subtotal: number;
+  // null quando o RPC oculta valores (supervisor).
+  preco_unit: number | null;
+  subtotal: number | null;
+  bonus_aplicado?: boolean;
+  bonus_aviso?: string | null;
 };
 
 export type EntregaTipo = "retirada" | "entrega" | "entrega_fora";
@@ -79,15 +83,17 @@ export type Order = {
   cliente_nome: string;
   cliente_telefone: string | null;
   entrega_tipo: EntregaTipo;
-  entrega_taxa: number;
+  entrega_taxa: number | null;
   endereco_rua: string | null;
   endereco_numero: string | null;
   endereco_bairro: string | null;
   endereco_complemento: string | null;
   endereco_cep: string | null;
   endereco_cidade: string | null;
-  valor_produtos: number;
-  valor_total: number;
+  valor_produtos: number | null;
+  valor_total: number | null;
+  bonus_aplicado?: boolean;
+  bonus_aviso?: string | null;
   mp_payment_id: string | null;
   forma_pagamento: string | null;
   is_atacado: boolean;
@@ -153,6 +159,7 @@ export type Revendedor = {
 
 export type EstoqueBaixoItem = { id: string; nome: string; estoque: number };
 
+// removido na Task 9
 // Preço já com o desconto interno de varejo aplicado (o que de fato é
 // cobrado do cliente no varejo). Sem desconto ativo, é igual ao preço de
 // tabela.
@@ -165,6 +172,7 @@ export function precoVarejo(p: Pick<Product, "preco" | "desconto_percentual">): 
   return Math.round(cents / 100) / 100;
 }
 
+// removido na Task 9 (o banco já devolve o preço de atacado calculado)
 // Preço de atacado: override explícito do produto tem prioridade; senão
 // deriva do % da subcategoria; sem nenhum dos dois, cai no preço de tabela.
 // Nunca aplica a promo de varejo (desconto_percentual não entra na conta).
@@ -178,6 +186,14 @@ export function precoAtacado(
   // Mesma math em centavos inteiros do `precoVarejo` — bate com `_preco_atacado`.
   const cents = Math.round(p.preco * 100) * (100 - pct);
   return Math.round(cents / 100) / 100;
+}
+
+const TRACO = "—";
+
+/** Reais em pt-BR; "—" quando o valor é ocultado (null/undefined) ou inválido. */
+export function brlOuTraco(n: number | null | undefined): string {
+  if (typeof n !== "number" || !Number.isFinite(n)) return TRACO;
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 export function precisaNumeracao(grupo: Categoria["grupo"] | undefined): boolean {

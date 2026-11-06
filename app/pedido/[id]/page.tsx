@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Order } from "@/lib/types";
-import { ORDER_STATUS_LABEL, entregaTipoLabel } from "@/lib/types";
+import { ORDER_STATUS_LABEL, brlOuTraco, entregaTipoLabel } from "@/lib/types";
 import { BRAND } from "@/lib/brand.config";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooterServer from "@/components/SiteFooterServer";
@@ -44,8 +44,7 @@ export async function generateMetadata() {
   return { title: `Acompanhar pedido — ${BRAND.nome}` };
 }
 
-const brl = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const brl = brlOuTraco;
 
 const cardStyle: React.CSSProperties = {
   background: "var(--surface)",
@@ -170,7 +169,7 @@ export default async function PedidoPage({
                   <span>Frete</span>
                   <span>A combinar</span>
                 </div>
-              ) : order.entrega_taxa > 0 ? (
+              ) : (order.entrega_taxa ?? 0) > 0 ? (
                 <div style={linhaResumoStyle}>
                   <span>Taxa de entrega</span>
                   <span>{brl(order.entrega_taxa)}</span>

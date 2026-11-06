@@ -10,7 +10,7 @@ import {
   type CarrinhoAtacado,
   type PedidoAtacado,
 } from "@/lib/atacado";
-import type { Product } from "@/lib/types";
+import { precoVarejo, type Product } from "@/lib/types";
 import { DEMO, PRODUTOS_DEMO } from "@/lib/demo-catalogo";
 
 export type CadastroRevendedor = {
@@ -30,6 +30,9 @@ export type ProdutoCatalogo = {
   id: string;
   nome: string;
   categoria: string;
+  /** Preço de varejo de referência para a revenda. */
+  precoVarejo: number;
+  /** Preço de atacado (hoje derivado em TS; o banco passa a entregá-lo pronto na Task 9). */
   preco: number;
   cores: CorCatalogo[];
 };
@@ -113,6 +116,7 @@ export async function carregarCatalogo(
       id: p.id,
       nome: p.nome,
       categoria: p.categoria?.nome ?? "",
+      precoVarejo: precoVarejo(p), // removido na Task 9
       preco: precoAtacado(p, p.categoria),
       cores: p.colors.map((c) => ({
         id: c.id,
@@ -140,6 +144,7 @@ export async function carregarCatalogo(
     id: p.id,
     nome: p.nome,
     categoria: p.categoria?.nome ?? "",
+    precoVarejo: precoVarejo(p), // removido na Task 9
     preco: precoAtacado(p, p.categoria),
     cores: cores(p),
   }));

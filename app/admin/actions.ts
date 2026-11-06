@@ -71,12 +71,12 @@ async function cliente(acao: AcaoAdmin): Promise<SupabaseClient | null> {
 }
 
 export async function fetchProducts(): Promise<Product[]> {
-  const sb = await cliente("catalogo");
+  const sb = await cliente("cadastro");
   return sb ? listarProdutos(sb) : [];
 }
 
 export async function fetchCategorias(): Promise<Categoria[]> {
-  const sb = await cliente("catalogo");
+  const sb = await cliente("cadastro");
   return sb ? listarCategorias(sb) : [];
 }
 
@@ -112,7 +112,7 @@ export async function saveProduct(payload: {
   desconto_percentual: number | null;
   preco_atacado: number | null;
 }): Promise<{ error?: string; id?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   const { data, error } = await g.sb.rpc("admin_upsert_product", {
     p_id: payload.id,
@@ -134,7 +134,7 @@ export async function saveProduct(payload: {
 }
 
 export async function deleteProduct(id: string): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("exclusao");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_delete_product", { p_id: id });
   if (error) return { error: error.message };
@@ -142,7 +142,7 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
 }
 
 export async function setAtivo(id: string, ativo: boolean): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_set_ativo", { p_id: id, p_ativo: ativo });
   if (error) return { error: error.message };
@@ -154,7 +154,7 @@ export async function setDesconto(
   id: string,
   pct: number | null
 ): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("preco");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_set_desconto", {
     p_id: id,
@@ -166,7 +166,7 @@ export async function setDesconto(
 
 // Ativar um produto na Live Surpresa desativa os demais no servidor.
 export async function setSurpresa(id: string, ativo: boolean): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("preco");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_set_surpresa", { p_id: id, p_ativo: ativo });
   if (error) return { error: error.message };
@@ -177,7 +177,7 @@ export async function setDestaque(
   id: string,
   destaque: boolean
 ): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_set_destaque", { p_id: id, p_destaque: destaque });
   if (error) return { error: error.message };
@@ -192,7 +192,7 @@ export async function saveColor(payload: {
   imagens: string[];
   ordem: number;
 }): Promise<{ error?: string; id?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   const { data, error } = await g.sb.rpc("admin_upsert_color", {
     p_id: payload.id,
@@ -207,7 +207,7 @@ export async function saveColor(payload: {
 }
 
 export async function deleteColor(id: string): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("exclusao");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_delete_color", { p_id: id });
   if (error) return { error: error.message };
@@ -220,7 +220,7 @@ export async function saveSize(payload: {
   tamanho: string;
   estoque: number;
 }): Promise<{ error?: string; id?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   const { data, error } = await g.sb.rpc("admin_upsert_size", {
     p_id: payload.id,
@@ -233,7 +233,7 @@ export async function saveSize(payload: {
 }
 
 export async function deleteSize(id: string): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("exclusao");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_delete_size", { p_id: id });
   if (error) return { error: error.message };
@@ -254,7 +254,7 @@ export async function saveCategoria(payload: {
   desconto_atacado_percentual: number | null;
   imagem?: string | null;
 }): Promise<{ error?: string; id?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   if (!textosValidos(payload, ["grupo", "nome", "slug"]) || (payload.id !== null && typeof payload.id !== "string")) {
     return { error: MSG_DADOS_INVALIDOS };
@@ -288,7 +288,7 @@ export async function saveCategoria(payload: {
 }
 
 export async function deleteCategoria(id: string): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("exclusao");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_delete_categoria", { p_id: id });
   if (error) return { error: traduzirErroCategoria(error.message) };

@@ -37,7 +37,7 @@ const MENU: Tela[] = [
 const ACESSO: Record<Papel, Tela[]> = {
   superadmin: MENU.filter((t) => t !== "vendas"),
   admin: MENU.filter((t) => t !== "config" && t !== "vendas"),
-  supervisor: ["visao-geral", "pedidos", "vendas", "revendedores"],
+  supervisor: ["visao-geral", "pedidos", "vendas", "produtos", "revendedores"],
   revendedor: [],
   cliente: [],
 };

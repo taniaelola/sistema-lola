@@ -54,7 +54,9 @@ export function screenPermitida(papel: Papel, atual: AdminScreen): AdminScreen |
  * (assert_papel em cada RPC); isto evita chamadas inúteis e dá mensagem clara.
  */
 export type AcaoAdmin =
-  | "catalogo"
+  | "cadastro"
+  | "preco"
+  | "exclusao"
   | "vendas-escrita"
   | "liquidar"
   | "pedidos"
@@ -72,7 +74,10 @@ const ADMINS: Papel[] = ["superadmin", "admin"];
 const EQUIPE_TODA: Papel[] = ["superadmin", "admin", "supervisor"];
 
 const PAPEIS_DA_ACAO: Record<AcaoAdmin, Papel[]> = {
-  catalogo: ADMINS,
+  // Cadastro de produto/cor/tamanho/categoria; preço e exclusão ficam só com admin.
+  cadastro: EQUIPE_TODA,
+  preco: ADMINS,
+  exclusao: ADMINS,
   "vendas-escrita": ADMINS,
   liquidar: ADMINS,
   pedidos: EQUIPE_TODA,
@@ -89,6 +94,11 @@ const PAPEIS_DA_ACAO: Record<AcaoAdmin, Papel[]> = {
 
 export function podeExecutar(papel: Papel, acao: AcaoAdmin): boolean {
   return PAPEIS_DA_ACAO[acao].includes(papel);
+}
+
+/** Campos de preço (preco, preco_atacado, desconto_percentual, desconto da categoria) só para superadmin/admin. */
+export function camposPrecoEditaveis(papel: Papel): boolean {
+  return podeExecutar(papel, "preco");
 }
 
 export const MSG_SEM_PERMISSAO = "Sem permissão.";
@@ -140,14 +150,15 @@ export type CargasAdmin = {
 };
 
 export function cargasIniciais(papel: Papel): CargasAdmin {
-  const catalogo = podeExecutar(papel, "catalogo");
+  const cadastro = podeExecutar(papel, "cadastro");
   return {
-    produtos: catalogo,
-    categorias: catalogo,
+    produtos: cadastro,
+    categorias: cadastro,
     pedidos: podeExecutar(papel, "pedidos"),
     vendas: podeExecutar(papel, "vendas-leitura"),
     config: podeExecutar(papel, "config"),
-    estoqueBaixo: !catalogo && podeExecutar(papel, "estoque-baixo"),
+    // Quem edita preço calcula o KPI a partir dos produtos; o supervisor usa o RPC dedicado.
+    estoqueBaixo: !camposPrecoEditaveis(papel) && podeExecutar(papel, "estoque-baixo"),
   };
 }
 

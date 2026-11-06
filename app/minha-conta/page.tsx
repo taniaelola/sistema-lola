@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { authedSupabase, exigirPapel } from "@/lib/auth";
-import { ORDER_STATUS_LABEL, entregaTipoLabel, type Order } from "@/lib/types";
+import { ORDER_STATUS_LABEL, brlOuTraco, entregaTipoLabel, type Order } from "@/lib/types";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooterServer from "@/components/SiteFooterServer";
 
 export const dynamic = "force-dynamic";
 
-const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const brl = brlOuTraco;
 
 async function carregarPedidos(): Promise<Order[] | null> {
   const db = await authedSupabase();

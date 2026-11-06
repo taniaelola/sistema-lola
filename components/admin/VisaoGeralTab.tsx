@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Product, Order, Sale, EstoqueBaixoItem } from "@/lib/types";
-import { totalEstoque } from "@/lib/types";
+import { brlOuTraco, totalEstoque } from "@/lib/types";
 import SwingTag from "@/components/SwingTag";
 import { corStatus } from "@/lib/admin-status";
 
@@ -13,7 +13,7 @@ const FILTROS: { key: Filtro; label: string }[] = [
   { key: "atacado", label: "Atacado" },
 ];
 
-const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const brl = brlOuTraco;
 
 export default function VisaoGeralTab({
   products,

@@ -5,6 +5,7 @@ import {
   MSG_PERFIL_INDISPONIVEL,
   MSG_SEM_PERMISSAO,
   TELA_DA_SCREEN,
+  camposPrecoEditaveis,
   cargasIniciais,
   dicaRevogarAtacado,
   decidirAcesso,
@@ -19,7 +20,9 @@ import {
 import type { Papel } from "@/lib/roles";
 
 const ACOES: AcaoAdmin[] = [
-  "catalogo",
+  "cadastro",
+  "preco",
+  "exclusao",
   "vendas-escrita",
   "liquidar",
   "pedidos",
@@ -47,8 +50,9 @@ describe("podeExecutar", () => {
     expect(permitidas("admin")).toEqual(ACOES.filter((a) => a !== "config"));
   });
 
-  it("supervisor só pedidos, leitura de vendas, estoque baixo e cadastro de revendedores", () => {
+  it("supervisor só cadastro de produto, pedidos, leitura de vendas, estoque baixo e cadastro de revendedores", () => {
     expect(permitidas("supervisor")).toEqual([
+      "cadastro",
       "pedidos",
       "vendas-leitura",
       "estoque-baixo",
@@ -98,8 +102,8 @@ describe("screens do admin", () => {
     expect(screensVisiveis("admin")).toEqual(todas);
   });
 
-  it("supervisor vê visão geral, pedidos, vendas (só leitura) e revendedores, sem financeiro", () => {
-    expect(screensVisiveis("supervisor")).toEqual(["visao-geral", "pedidos", "vendas", "revendedores"]);
+  it("supervisor vê visão geral, pedidos, vendas (só leitura), produtos e revendedores, sem financeiro", () => {
+    expect(screensVisiveis("supervisor")).toEqual(["visao-geral", "pedidos", "vendas", "produtos", "revendedores"]);
     expect(screensVisiveis("supervisor")).not.toContain("financeiro");
     expect(screensVisiveis("superadmin")).not.toContain("vendas");
     expect(screensVisiveis("admin")).not.toContain("vendas");
@@ -124,7 +128,22 @@ describe("screens do admin", () => {
     expect(screensVisiveis("supervisor")).not.toContain("usuarios");
     expect(podeExecutar("supervisor", "promocoes")).toBe(false);
     expect(podeExecutar("supervisor", "usuarios")).toBe(false);
-    expect(podeExecutar("supervisor", "catalogo")).toBe(false);
+  });
+
+  it("supervisor cadastra produto mas não mexe em preço nem exclui", () => {
+    expect(podeExecutar("supervisor", "cadastro")).toBe(true);
+    expect(podeExecutar("supervisor", "preco")).toBe(false);
+    expect(podeExecutar("supervisor", "exclusao")).toBe(false);
+    for (const p of ["superadmin", "admin"] as const) {
+      expect(podeExecutar(p, "cadastro")).toBe(true);
+      expect(podeExecutar(p, "preco")).toBe(true);
+      expect(podeExecutar(p, "exclusao")).toBe(true);
+    }
+  });
+
+  it("camposPrecoEditaveis: só superadmin e admin", () => {
+    const todos: Papel[] = ["superadmin", "admin", "supervisor", "revendedor", "cliente"];
+    expect(todos.filter(camposPrecoEditaveis)).toEqual(["superadmin", "admin"]);
   });
 
   it("admin e superadmin executam promoções e usuários", () => {
@@ -146,7 +165,7 @@ describe("screens do admin", () => {
 
   it("screenPermitida cai na primeira visível quando a atual não é permitida", () => {
     expect(screenPermitida("supervisor", "financeiro")).toBe("visao-geral");
-    expect(screenPermitida("supervisor", "produtos")).toBe("visao-geral");
+    expect(screenPermitida("supervisor", "usuarios")).toBe("visao-geral");
   });
 
   it("screenPermitida devolve null sem nenhuma screen visível", () => {
@@ -177,10 +196,10 @@ describe("cargasIniciais", () => {
     });
   });
 
-  it("supervisor não carrega catálogo nem config; usa estoque baixo do banco", () => {
+  it("supervisor carrega produtos e categorias (cadastro), não config; mantém estoque baixo do banco", () => {
     expect(cargasIniciais("supervisor")).toEqual({
-      produtos: false,
-      categorias: false,
+      produtos: true,
+      categorias: true,
       pedidos: true,
       vendas: true,
       config: false,
@@ -252,7 +271,7 @@ describe("decidirAcesso", () => {
   const perfil = (papel: Papel, ativo = true) => ({ papel, ativo });
 
   it("perfil ativo com papel permitido libera", () => {
-    expect(decidirAcesso(perfil("admin"), "catalogo")).toEqual({ ok: true });
+    expect(decidirAcesso(perfil("admin"), "preco")).toEqual({ ok: true });
     expect(decidirAcesso(perfil("supervisor"), "pedidos")).toEqual({ ok: true });
   });
 

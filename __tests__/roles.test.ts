@@ -32,7 +32,7 @@ const TODAS: Tela[] = [
 const MATRIZ: Record<Papel, Tela[]> = {
   superadmin: TODAS.filter((t) => t !== "vendas"),
   admin: TODAS.filter((t) => t !== "config" && t !== "vendas"),
-  supervisor: ["visao-geral", "pedidos", "vendas", "revendedores"],
+  supervisor: ["visao-geral", "pedidos", "vendas", "produtos", "revendedores"],
   revendedor: [],
   cliente: [],
 };

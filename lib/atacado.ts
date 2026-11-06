@@ -37,6 +37,17 @@ function inteiroNaoNegativo(v: number): number {
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
 }
 
+/** Soma as quantidades válidas (finitas e positivas); lixo e negativos são ignorados. */
+export function somarPecas(linhas: { quantidade: number }[]): number {
+  return linhas.reduce((t, l) => (Number.isFinite(l.quantidade) && l.quantidade > 0 ? t + l.quantidade : t), 0);
+}
+
+/** Bônus de brinde: ganha uma vez ao chegar em `min` peças (não acumula). */
+export function progressoBonus(pecas: number, min: number, ativo: boolean) {
+  const ganhou = ativo && pecas >= min;
+  return { ativo, ganhou, faltam: ativo ? Math.max(0, min - pecas) : 0, pecas, min };
+}
+
 export function progressoSkus(skus: number) {
   const atual = inteiroNaoNegativo(skus);
   return {

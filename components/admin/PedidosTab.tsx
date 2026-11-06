@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Order, OrderStatus } from "@/lib/types";
-import { ORDER_STATUS_LABEL, entregaTipoLabel } from "@/lib/types";
+import { ORDER_STATUS_LABEL, brlOuTraco, entregaTipoLabel } from "@/lib/types";
 import { updateOrderStatus, settleOrder } from "@/app/admin/actions";
 import SwingTag from "@/components/SwingTag";
 import { corStatus } from "@/lib/admin-status";
@@ -31,8 +31,7 @@ const STATUS_TAG_LABEL: Record<OrderStatus, string> = {
 
 const COLS = "110px 1.5fr 90px 70px 110px 170px 100px 280px";
 
-const brl = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const brl = brlOuTraco;
 
 export default function PedidosTab({
   orders,

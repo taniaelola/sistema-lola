@@ -7,7 +7,14 @@ import { addAoCarrinho } from "@/app/atacado/actions";
 
 type Tamanho = { id: string; tamanho: string; estoque: number };
 type Cor = { id: string; nome: string; hex: string | null; imagem: string | null; tamanhos: Tamanho[] };
-export type ProdutoGrade = { id: string; nome: string; categoria: string; preco: number; cores: Cor[] };
+export type ProdutoGrade = {
+  id: string;
+  nome: string;
+  categoria: string;
+  precoVarejo: number;
+  preco: number;
+  cores: Cor[];
+};
 type ItemCarrinhoGrade = { size_id: string; quantidade: number };
 
 function estoqueDaCor(cor: Cor | undefined): number {

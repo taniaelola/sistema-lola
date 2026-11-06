@@ -8,6 +8,7 @@ import {
   precisaNumeracao,
   contarSkusDistintos,
   entregaTipoLabel,
+  brlOuTraco,
 } from "@/lib/types";
 import { montarItensMP } from "@/lib/mercadopago-utils";
 
@@ -128,5 +129,19 @@ describe("entregaTipoLabel", () => {
     expect(entregaTipoLabel("retirada")).toMatch(/retirada/i);
     expect(entregaTipoLabel("entrega")).toMatch(/entrega/i);
     expect(entregaTipoLabel("entrega_fora")).toMatch(/fora/i);
+  });
+});
+
+describe("brlOuTraco", () => {
+  it("formata número em reais", () => {
+    expect(brlOuTraco(1234.5).replace(/\s/g, " ")).toBe("R$ 1.234,50");
+    expect(brlOuTraco(0).replace(/\s/g, " ")).toBe("R$ 0,00");
+  });
+  it("devolve travessão para null e undefined", () => {
+    expect(brlOuTraco(null)).toBe("—");
+    expect(brlOuTraco(undefined)).toBe("—");
+  });
+  it("devolve travessão para número não finito", () => {
+    expect(brlOuTraco(Number.NaN)).toBe("—");
   });
 });
