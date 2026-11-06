@@ -1,6 +1,8 @@
 -- rollback-0010.sql — devolve o que a 0010 fechou e quebra o app ANTIGO.
 -- Use junto com o rollback do deploy. Idempotente (pode rodar mais de uma vez).
 -- NÃO desfaz colunas/funções novas (têm default seguro) nem restaura mp_register_order_payment/admin_*.
+-- _order_json, atacado_my_orders e admin_list_orders/admin_list_products só ganharam chaves extras (bonus*) ou
+-- máscara do supervisor: o app antigo ignora as chaves; nada a desfazer para o app antigo.
 set search_path = public, extensions;
 
 grant select on products, product_colors, product_sizes, categorias to anon, authenticated;

@@ -458,6 +458,50 @@ end $$;
 revoke all on function mp_register_order_payment(text, uuid, text, text, numeric) from public;
 grant execute on function mp_register_order_payment(text, uuid, text, text, numeric) to anon, authenticated;
 
+-- _order_json (0002 + bônus): top-level bonus_aplicado e, por item, bonus (brinde = pedido com bônus e item
+-- a preço 0). NÃO expõe bonus_aviso: public_get_order é legível por uuid; o aviso é só do admin.
+-- A máscara do supervisor só zera dinheiro, então 'bonus' sobrevive a ela.
+create or replace function _order_json(p_id uuid)
+returns jsonb language sql set search_path = public, extensions stable as $$
+  select jsonb_build_object(
+    'id', o.id, 'created_at', o.created_at, 'status', o.status,
+    'cliente_nome', o.cliente_nome, 'entrega_tipo', o.entrega_tipo,
+    'entrega_taxa', o.entrega_taxa,
+    'endereco_rua', o.endereco_rua, 'endereco_numero', o.endereco_numero,
+    'endereco_bairro', o.endereco_bairro, 'endereco_complemento', o.endereco_complemento,
+    'endereco_cep', o.endereco_cep, 'endereco_cidade', o.endereco_cidade,
+    'valor_produtos', o.valor_produtos, 'valor_total', o.valor_total,
+    'is_atacado', o.is_atacado,
+    'bonus_aplicado', o.bonus_aplicado,
+    'items', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', i.id, 'produto_nome', i.produto_nome, 'produto_cor', i.produto_cor,
+        'produto_tamanho', i.produto_tamanho, 'quantidade', i.quantidade,
+        'preco_unit', i.preco_unit, 'subtotal', i.subtotal,
+        'bonus', (o.bonus_aplicado and i.preco_unit = 0 and i.subtotal = 0)) order by i.produto_nome)
+      from order_items i where i.order_id = o.id), '[]'::jsonb))
+  from orders o where o.id = p_id;
+$$;
+
+-- Histórico do revendedor (0006 + bonus_aplicado). Mesmas regras de acesso de 0006.
+create or replace function atacado_my_orders()
+returns jsonb language plpgsql security definer set search_path = public, extensions stable as $$
+declare v_rev uuid;
+begin
+  if auth.uid() is null then return '[]'::jsonb; end if;
+  select r.id into v_rev from revendedores r where r.user_id = auth.uid();
+  if v_rev is null then return '[]'::jsonb; end if;
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', o.id, 'created_at', o.created_at, 'status', o.status,
+      'valor_total', o.valor_total, 'bonus_aplicado', o.bonus_aplicado,
+      'skus', (select count(distinct (i.produto_id, i.color_id, i.size_id))::int
+               from order_items i where i.order_id = o.id))
+      order by o.created_at desc)
+    from orders o
+    where o.is_atacado and o.revendedor_id = v_rev
+  ), '[]'::jsonb);
+end $$;
+
 -- Leitura pública de pedido por id: sem os campos de endereço (chaves reais de _order_json, 0002).
 create or replace function public_get_order(p_id uuid)
 returns jsonb language sql security definer set search_path = public, extensions stable as $$
@@ -495,7 +539,8 @@ begin
       select o.created_at,
         (_order_json(o.id) || jsonb_build_object(
           'cliente_telefone', o.cliente_telefone, 'mp_payment_id', o.mp_payment_id,
-          'forma_pagamento', o.forma_pagamento, 'revendedor_id', o.revendedor_id)) as j
+          'forma_pagamento', o.forma_pagamento, 'revendedor_id', o.revendedor_id,
+          'bonus_aviso', o.bonus_aviso)) as j
       from orders o
       where (p_filtro = 'todos' or p_filtro is null)
          or (p_filtro = 'varejo'  and o.is_atacado = false)
@@ -542,11 +587,24 @@ returns jsonb language sql set search_path = public stable as $$
 $$;
 
 -- Produtos: leitura do cadastro para o supervisor.
+-- Decisão 4(b): preço é só de admin/superadmin. O supervisor recebe preco, preco_atacado, desconto_percentual,
+-- desconto_efetivo e categoria.desconto_atacado_percentual como JSON null (o editor já os mostra desabilitados;
+-- admin_upsert_product preserva o valor gravado, então o null nunca é regravado).
 create or replace function admin_list_products()
 returns jsonb language plpgsql security definer set search_path = public, extensions stable as $$
+declare v_papel text;
 begin
-  perform assert_papel(array['superadmin','admin','supervisor']);
-  return coalesce((select jsonb_agg(_product_json(p) order by p.ordem, p.nome) from products p), '[]'::jsonb);
+  v_papel := assert_papel(array['superadmin','admin','supervisor']);
+  return coalesce((select jsonb_agg(
+      case when v_papel = 'supervisor'
+           then x.j || jsonb_build_object('preco', null, 'preco_atacado', null,
+                  'desconto_percentual', null, 'desconto_efetivo', null,
+                  'categoria', case when jsonb_typeof(x.j->'categoria') = 'object'
+                                    then (x.j->'categoria') || jsonb_build_object('desconto_atacado_percentual', null)
+                                    else x.j->'categoria' end)
+           else x.j end
+      order by p.ordem, p.nome)
+    from products p cross join lateral (select _product_json(p) as j) x), '[]'::jsonb);
 end $$;
 
 -- Novo parâmetro final (p_somente_bonus): muda a assinatura, então a antiga é derrubada.
