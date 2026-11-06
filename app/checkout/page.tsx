@@ -3,6 +3,7 @@ import { authedSupabase, exigirPapel } from "@/lib/auth";
 import type { ItemCarrinhoAtacado } from "@/lib/checkout";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooterServer from "@/components/SiteFooterServer";
+import { exigirVarejo } from "@/lib/loja-rotas-server";
 import CheckoutVarejo from "./CheckoutVarejo";
 import CheckoutAtacado from "./CheckoutAtacado";
 
@@ -14,7 +15,11 @@ export default async function CheckoutPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { modo } = await searchParams;
-  if (modo !== "atacado") return <CheckoutVarejo />;
+  // Ramo de varejo só existe com o varejo ligado; o de atacado segue para revendedoras aprovadas.
+  if (modo !== "atacado") {
+    await exigirVarejo();
+    return <CheckoutVarejo />;
+  }
 
   await exigirPapel(["revendedor"], CAMINHO_ATACADO);
   const db = await authedSupabase();

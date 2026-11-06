@@ -5,6 +5,7 @@ import { comDescontoEfetivo } from "@/lib/pricing";
 import { getPromocoesAtivas } from "@/lib/promocoes";
 import type { Product } from "@/lib/types";
 import { BRAND } from "@/lib/brand.config";
+import { exigirVarejo } from "@/lib/loja-rotas-server";
 import SurpresaOffer from "@/components/SurpresaOffer";
 
 export const revalidate = 0;
@@ -22,6 +23,7 @@ async function getSurpresa(): Promise<Product | null> {
 }
 
 export default async function SurpresaPage() {
+  await exigirVarejo();
   const base = await getSurpresa();
   const product = base
     ? comDescontoEfetivo([base], await getPromocoesAtivas())[0]

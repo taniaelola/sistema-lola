@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { authedSupabase, exigirPapel } from "@/lib/auth";
 import { ORDER_STATUS_LABEL, brlOuTraco, entregaTipoLabel, type Order } from "@/lib/types";
+import { exigirVarejo } from "@/lib/loja-rotas-server";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooterServer from "@/components/SiteFooterServer";
 
@@ -16,6 +17,7 @@ async function carregarPedidos(): Promise<Order[] | null> {
 }
 
 export default async function MinhaContaPage() {
+  await exigirVarejo();
   const perfil = await exigirPapel(["cliente", "revendedor", "supervisor", "admin", "superadmin"], "/minha-conta");
   const pedidos = await carregarPedidos();
 

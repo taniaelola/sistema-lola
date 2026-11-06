@@ -1,11 +1,11 @@
 "use server";
 
 import { headers } from "next/headers";
-import { authedSupabase } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { redirect } from "next/navigation";
+import { getSessao } from "@/lib/auth";
+import { supabaseComToken } from "@/lib/supabase";
 import { criarPreferencia, montarItensMP, resolverOrigem } from "@/lib/mercadopago";
 import {
-  deveTentarComoConvidado,
   mensagemErroCheckout,
   validarEntrega,
   type DadosEntrega,
@@ -23,6 +23,8 @@ export type ItemCarrinhoInput = {
   quantidade: number;
   precoUnit: number;
 };
+
+const LOGIN_REVENDEDOR = "/entrar?modo=revendedor&next=/atacado";
 
 type Resultado = { url?: string; error?: string };
 
@@ -58,9 +60,11 @@ async function iniciarPedido(
   pItems: { produto_id: string; color_id: string; size_id: string | null; quantidade: number }[],
   atacado: boolean
 ): Promise<Resultado> {
-  // Com sessão, o JWT vai junto e o banco deriva customer_id/revendedor_id de
-  // auth.uid(); sem sessão, cliente anônimo (compra de convidado).
-  const db = await authedSupabase({ renovar: true });
+  // O banco só aceita checkout de usuário autenticado (deriva customer_id/revendedor_id
+  // de auth.uid()); sem sessão não há convidado: volta para o login de revendedora.
+  const sessao = await getSessao({ renovar: true });
+  if (!sessao) redirect(LOGIN_REVENDEDOR);
+  const db = supabaseComToken(sessao.accessToken);
   const args = {
     p_cliente_nome: dados.nome.trim(),
     p_cliente_telefone: dados.telefone.trim(),
@@ -75,14 +79,7 @@ async function iniciarPedido(
     p_items: pItems,
     p_is_atacado: atacado,
   };
-  let resposta = await db.rpc("checkout_iniciar_pedido", args);
-  const erroAuth = resposta.error
-    ? { status: resposta.status, code: resposta.error.code, message: resposta.error.message }
-    : null;
-  // JWT rejeitado no varejo: compra segue como convidado (atacado nunca).
-  if (deveTentarComoConvidado(erroAuth, atacado)) {
-    resposta = await supabase().rpc("checkout_iniciar_pedido", args);
-  }
+  const resposta = await db.rpc("checkout_iniciar_pedido", args);
   const { data, error } = resposta;
 
   if (error || !data) {

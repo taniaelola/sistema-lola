@@ -37,7 +37,11 @@ export default function Header() {
       ) : (
         <div className="aviso-bar aviso-bar-reserva" aria-hidden="true" />
       )}
-      <HeaderClient categorias={dados?.categorias ?? []} perfil={perfil} />
+      <HeaderClient
+        categorias={dados?.categorias ?? []}
+        perfil={perfil}
+        varejoAtivo={dados?.varejoAtivo ?? false}
+      />
     </>
   );
 }

@@ -264,13 +264,11 @@ export async function saveCategoria(payload: {
 
   let imagem = payload.imagem || null;
   if (payload.imagem === undefined && payload.id) {
-    const { data, error } = await g.sb
-      .from("categorias")
-      .select("imagem")
-      .eq("id", payload.id)
-      .maybeSingle();
-    if (error) return { error: "Não foi possível ler a imagem atual da categoria." };
-    imagem = (data as { imagem: string | null } | null)?.imagem ?? null;
+    // A tabela categorias está fechada: a imagem atual vem da RPC de equipe admin_list_categorias.
+    const { data, error } = await g.sb.rpc("admin_list_categorias");
+    if (error || !Array.isArray(data)) return { error: "Não foi possível ler a imagem atual da categoria." };
+    const atual = (data as { id: string; imagem?: string | null }[]).find((c) => c.id === payload.id);
+    imagem = atual?.imagem ?? null;
   }
 
   const { data, error } = await g.sb.rpc("admin_upsert_categoria", {

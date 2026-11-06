@@ -73,3 +73,10 @@ export function destinoPosLogin(papel: Papel, next?: string | null): string {
   if (papel === "revendedor") return "/atacado";
   return nextSeguro(next);
 }
+
+/** URL do login para quem tentou abrir uma rota protegida; só revendedora cai direto no cadastro/login de revendedora. */
+export function urlEntrar(papeis: Papel[], caminho: string): string {
+  const next = encodeURIComponent(nextSeguro(caminho));
+  const soRevendedor = papeis.length === 1 && papeis[0] === "revendedor";
+  return soRevendedor ? `/entrar?modo=revendedor&next=${next}` : `/entrar?next=${next}`;
+}

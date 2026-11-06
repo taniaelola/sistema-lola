@@ -7,7 +7,7 @@ export default async function SiteHeader() {
   return (
     <>
       <AvisoBar texto={dados.avisoTexto} ativo={dados.avisoAtivo} />
-      <HeaderClient categorias={dados.categorias} perfil={dados.perfil} />
+      <HeaderClient categorias={dados.categorias} perfil={dados.perfil} varejoAtivo={dados.varejoAtivo} />
     </>
   );
 }

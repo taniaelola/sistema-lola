@@ -129,11 +129,17 @@ describe("dadosPublicosHeader", () => {
   it("remove o perfil e mantém só dados públicos", () => {
     const r = dadosPublicosHeader({
       categorias: [{ slug: "a", nome: "A" }],
+      varejoAtivo: false,
       perfil: { nome: "Ana", papel: "admin" },
       avisoTexto: "oi",
       avisoAtivo: "true",
     });
-    expect(r).toEqual({ categorias: [{ slug: "a", nome: "A" }], avisoTexto: "oi", avisoAtivo: "true" });
+    expect(r).toEqual({
+      categorias: [{ slug: "a", nome: "A" }],
+      varejoAtivo: false,
+      avisoTexto: "oi",
+      avisoAtivo: "true",
+    });
     expect("perfil" in r).toBe(false);
     expect(JSON.stringify(r)).not.toContain("Ana");
   });

@@ -1,13 +1,13 @@
 import "server-only";
 
-import { supabase } from "@/lib/supabase";
 import { getPerfil } from "@/lib/auth";
+import { getLojaFlags } from "@/lib/loja-flags-server";
 import { getTextos, TEXTOS_PADRAO } from "@/lib/textos";
-import { totalEstoque, type Product } from "@/lib/types";
 import type { CategoriaNav, PerfilNav } from "@/lib/header-menu";
 
 export type DadosHeader = {
   categorias: CategoriaNav[];
+  varejoAtivo: boolean;
   perfil: PerfilNav | null;
   avisoTexto: string;
   avisoAtivo: string;
@@ -15,28 +15,14 @@ export type DadosHeader = {
 
 export type DadosRodape = {
   categorias: CategoriaNav[];
+  varejoAtivo: boolean;
   textos: Record<string, string>;
 };
 
+// Categorias de varejo só voltam com a migração que religar o varejo: as tabelas do catálogo
+// estão fechadas para anon/authenticated e o cabeçalho/rodapé não consulta mais produto.
 export async function getCategoriasNav(): Promise<CategoriaNav[]> {
-  try {
-    const { data, error } = await supabase()
-      .from("categorias")
-      .select(
-        "id, nome, slug, ordem, products!inner(id, colors:product_colors(sizes:product_sizes(estoque)))"
-      )
-      .eq("ativo", true)
-      .eq("products.ativo", true);
-    if (error || !data) return [];
-    return (
-      data as unknown as { nome: string; slug: string; ordem: number; products: unknown[] }[]
-    )
-      .filter((c) => c.products.some((p) => totalEstoque(p as Product) > 0))
-      .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, "pt-BR"))
-      .map((c) => ({ slug: c.slug, nome: c.nome }));
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 async function getPerfilNav(): Promise<PerfilNav | null> {
@@ -50,13 +36,15 @@ async function getPerfilNav(): Promise<PerfilNav | null> {
 }
 
 export async function carregarDadosHeader(): Promise<DadosHeader> {
-  const [categorias, perfil, textos] = await Promise.all([
+  const [categorias, perfil, textos, flags] = await Promise.all([
     getCategoriasNav(),
     getPerfilNav(),
     getTextos().catch(() => TEXTOS_PADRAO),
+    getLojaFlags(),
   ]);
   return {
     categorias,
+    varejoAtivo: flags.varejoAtivo,
     perfil,
     avisoTexto: textos["aviso.texto"],
     avisoAtivo: textos["aviso.ativo"],
@@ -64,9 +52,10 @@ export async function carregarDadosHeader(): Promise<DadosHeader> {
 }
 
 export async function carregarDadosRodape(): Promise<DadosRodape> {
-  const [categorias, textos] = await Promise.all([
+  const [categorias, textos, flags] = await Promise.all([
     getCategoriasNav(),
     getTextos().catch(() => TEXTOS_PADRAO),
+    getLojaFlags(),
   ]);
-  return { categorias, textos };
+  return { categorias, varejoAtivo: flags.varejoAtivo, textos };
 }

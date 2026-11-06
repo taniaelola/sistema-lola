@@ -6,9 +6,11 @@ import { TEXTOS_PADRAO } from "@/lib/textos";
 export default function RodapeView({
   textos,
   categorias,
+  varejoAtivo = false,
 }: {
   textos: Record<string, string>;
   categorias: CategoriaNav[];
+  varejoAtivo?: boolean;
 }) {
   const t = (chave: string) => textos[chave] ?? TEXTOS_PADRAO[chave] ?? "";
   const ajuda = [1, 2, 3].map((n) => ({
@@ -48,15 +50,17 @@ export default function RodapeView({
           </div>
         </div>
 
-        <div className="site-footer-col">
-          <span className="site-footer-rotulo">LOJA</span>
-          {categorias.map((c) => (
-            <Link key={c.slug} href={`/#cat-${c.slug}`}>
-              {c.nome}
-            </Link>
-          ))}
-          <Link href="/#lancamentos">Lançamentos</Link>
-        </div>
+        {varejoAtivo && (
+          <div className="site-footer-col">
+            <span className="site-footer-rotulo">LOJA</span>
+            {categorias.map((c) => (
+              <Link key={c.slug} href={`/#cat-${c.slug}`}>
+                {c.nome}
+              </Link>
+            ))}
+            <Link href="/#lancamentos">Lançamentos</Link>
+          </div>
+        )}
 
         <div className="site-footer-col">
           <span className="site-footer-rotulo">AJUDA</span>
@@ -80,7 +84,7 @@ export default function RodapeView({
         <div className="site-footer-col">
           <span className="site-footer-rotulo">CONTA</span>
           <Link href="/entrar">Entrar</Link>
-          <Link href="/entrar?modo=revendedor">Seja revendedor</Link>
+          <Link href="/entrar?modo=revendedor">Seja revendedora</Link>
         </div>
       </div>
       <div className="site-footer-copy">{`© ${new Date().getFullYear()} ${BRAND.nome}`}</div>

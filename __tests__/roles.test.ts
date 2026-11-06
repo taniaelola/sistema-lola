@@ -9,6 +9,7 @@ import {
   podeEditarRevendedor,
   podeGerirPapel,
   destinoPosLogin,
+  urlEntrar,
   type Papel,
   type Tela,
 } from "@/lib/roles";
@@ -103,4 +104,20 @@ describe("destinoPosLogin", () => {
       expect(destinoPosLogin("cliente", next)).toBe("/");
     }
   );
+});
+
+describe("urlEntrar", () => {
+  it("só revendedora vai para o modo revendedor, com next codificado", () => {
+    expect(urlEntrar(["revendedor"], "/atacado/catalogo")).toBe("/entrar?modo=revendedor&next=%2Fatacado%2Fcatalogo");
+    expect(urlEntrar(["revendedor"], "/checkout?modo=atacado")).toBe(
+      "/entrar?modo=revendedor&next=%2Fcheckout%3Fmodo%3Datacado"
+    );
+  });
+  it("outros papéis mantêm o login padrão", () => {
+    expect(urlEntrar(EQUIPE, "/admin")).toBe("/entrar?next=%2Fadmin");
+    expect(urlEntrar(["cliente", "revendedor"], "/minha-conta")).toBe("/entrar?next=%2Fminha-conta");
+  });
+  it("next inseguro vira /", () => {
+    expect(urlEntrar(["revendedor"], "//evil.com")).toBe("/entrar?modo=revendedor&next=%2F");
+  });
 });

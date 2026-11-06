@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { apagarSessao, encerrarNoSupabase, getSessao, gravarSessao, perfilPorToken } from "@/lib/auth";
 import { analisarToken, mensagemErroAuth, origemSite, resultadoCadastro } from "@/lib/auth-cookies";
+import { getLojaFlags } from "@/lib/loja-flags-server";
 import { destinoPosLogin } from "@/lib/roles";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseComToken, supabaseEfemero } from "@/lib/supabase";
 import { cnpjValido, emailValido, nextSeguro } from "@/lib/validators";
@@ -59,6 +60,10 @@ export async function entrarAction(_prev: ResultadoEntrar | undefined, formData:
 }
 
 export async function cadastrarAction(_prev: ResultadoEnvio | undefined, formData: FormData): Promise<ResultadoEnvio> {
+  // Sem varejo não há conta de cliente: só revendedora se cadastra.
+  if (!(await getLojaFlags()).varejoAtivo) {
+    return { error: "O cadastro de clientes está desativado. Cadastre-se como revendedora." };
+  }
   const nome = campo(formData, "nome");
   const email = emailCampo(formData);
   const senha = senhaCampo(formData, "senha");

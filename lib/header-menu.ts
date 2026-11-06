@@ -38,6 +38,7 @@ export function destinoAjuda(link: string | null | undefined, whatsappUrl: strin
 
 export type DadosPublicosHeader = {
   categorias: CategoriaNav[];
+  varejoAtivo: boolean;
   avisoTexto: string;
   avisoAtivo: string;
 };
@@ -45,7 +46,12 @@ export type DadosPublicosHeader = {
 export function dadosPublicosHeader(
   d: DadosPublicosHeader & { perfil?: unknown }
 ): DadosPublicosHeader {
-  return { categorias: d.categorias, avisoTexto: d.avisoTexto, avisoAtivo: d.avisoAtivo };
+  return {
+    categorias: d.categorias,
+    varejoAtivo: d.varejoAtivo,
+    avisoTexto: d.avisoTexto,
+    avisoAtivo: d.avisoAtivo,
+  };
 }
 
 export function primeiroNome(nome: string): string {
