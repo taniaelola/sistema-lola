@@ -16,6 +16,14 @@ const ORDEM = [
   '0008_checkout_atacado.sql',
 ]
 
+// Só grava se o CONTEÚDO (fim de linha normalizado) mudar: evita sujar o git por CRLF/LF.
+function gravarSeMudou(caminho, conteudo) {
+  const atual = existsSync(caminho) ? readFileSync(caminho, 'utf8').replace(/\r\n/g, '\n') : null
+  if (atual === conteudo) return false
+  writeFileSync(caminho, conteudo, 'utf8')
+  return true
+}
+
 function falhar(msg) {
   console.error(`release:sql ERRO: ${msg}`)
   process.exit(1)
@@ -138,8 +146,8 @@ end $$;
 `
 
 const corpo = partes.map((p) => banner(p.nome) + p.conteudo + '\n').join('')
-writeFileSync(saida, cabecalho + corpo + blocoDono, 'utf8')
-console.log(`release:sql OK: ${saida} (${ORDEM.length} migrações + bloco do dono)`)
+const mudou = gravarSeMudou(saida, cabecalho + corpo + blocoDono)
+console.log(`release:sql OK: ${saida} (${ORDEM.length} migrações + bloco do dono${mudou ? '' : '; sem mudanças'})`)
 
 // ---------------------------------------------------------------------
 // release-0010.sql: pacote da migração 0010 (site só atacado). As migrações
@@ -156,11 +164,15 @@ const cabecalho0010 = `-- release-0010.sql — APLICAR NA MESMA JANELA DO DEPLOY
 --   (GERADO por scripts/build-release-sql.mjs; NÃO edite à mão. Contém somente a migração ${arq0010};
 --    as migrações 0001 a 0009 já estão aplicadas em produção.)
 --   0. Antes: confira Authentication > Providers > Email: "Confirm email" LIGADO e troca segura de e-mail.
---   1. Cole o arquivo inteiro no SQL Editor do projeto LOLA e rode uma vez.
---   2. Rode supabase/smoke.sql (todas as linhas ok = true) e supabase/rls-teste.sql.
---   3. Mergeie/deploye o app imediatamente (o app antigo perde o catálogo e o checkout de convidado).
---   Rollback: supabase/rollback-0010.sql + rollback do deploy.
+--   1. Cole o arquivo inteiro no SQL Editor do projeto LOLA e rode UMA vez, em horário de pouco movimento.
+--      Se der erro, nada foi aplicado (transação única): corrija e rode o arquivo inteiro de novo.
+--   2. Rode supabase/smoke.sql (todas as linhas ok = true, exceto "superadmin ativo" se a conta do dono ainda não existir).
+--   3. Mergeie/deploye o app IMEDIATAMENTE: até o deploy terminar (o build leva minutos) o app antigo
+--      fica sem catálogo e sem compra de convidado, e /pedido/[id] perde o endereço.
+--   4. DURANTE o build, rode supabase/rls-teste.sql (as falhas aparecem primeiro; todas as linhas com ok = true).
+--   Rollback: supabase/rollback-0010.sql + rollback do deploy. O rollback também religa o varejo
+--   (admin_config.varejo_ativo = true), que a 0010 deixa desligado por padrão.
 
 `
-writeFileSync(saida0010, cabecalho0010 + conteudo0010 + '\n', 'utf8')
-console.log(`release:sql OK: ${saida0010} (somente ${arq0010})`)
+const mudou0010 = gravarSeMudou(saida0010, cabecalho0010 + conteudo0010 + '\n')
+console.log(`release:sql OK: ${saida0010} (somente ${arq0010}${mudou0010 ? '' : '; sem mudanças'})`)

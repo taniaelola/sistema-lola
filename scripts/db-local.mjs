@@ -64,7 +64,25 @@ function aplicarSql(usuario, arquivo, opts) {
   return r.saida;
 }
 
+// release-0010.sql (sem o cabeçalho de comentários) precisa ser idêntico à migração 0010.
+function conferirRelease0010() {
+  const norm = (s) => s.replace(/\r\n/g, "\n").trim();
+  const rel = join(raiz, "supabase/release-0010.sql");
+  const mig = join(raiz, "supabase/migrations/0010_site_so_atacado.sql");
+  if (!existsSync(rel)) {
+    console.error("supabase/release-0010.sql ausente: rode npm run release:sql");
+    process.exit(1);
+  }
+  const r = norm(readFileSync(rel, "utf8"));
+  const corpo = r.slice(r.indexOf("\n\n") + 2).trim();
+  if (corpo !== norm(readFileSync(mig, "utf8"))) {
+    console.error("supabase/release-0010.sql difere de migrations/0010_site_so_atacado.sql: rode npm run release:sql");
+    process.exit(1);
+  }
+}
+
 function testar() {
+  conferirRelease0010();
   subir();
   esperarInit();
   // shim exige dono de auth.users; reset e migrações rodam como postgres

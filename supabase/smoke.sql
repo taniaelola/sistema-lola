@@ -290,7 +290,7 @@ select nome, ok, detalhe from (
                              and (has_function_privilege('anon', p.oid, 'EXECUTE')
                                   or has_function_privilege('authenticated', p.oid, 'EXECUTE'))),
          'helper interno: deve existir e estar fechado'
-  from unnest(array['_mascarar_dinheiro_pedido','_assert_catalogo_acesso']) as f
+  from unnest(array['_mascarar_dinheiro_pedido','_assert_catalogo_acesso','_catalogo_produto']) as f
 
   union all
 

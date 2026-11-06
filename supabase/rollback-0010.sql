@@ -18,3 +18,7 @@ grant execute on function
   checkout_iniciar_pedido(text, text, entrega_tipo, text, text, text, text, text, text, jsonb, boolean)
 to anon, authenticated;
 grant execute on function public_get_surpresa() to anon, authenticated;
+
+-- O app antigo é uma loja de varejo; a 0010 cria admin_config.varejo_ativo com default false e o
+-- checkout passaria a lançar 'varejo desativado'. Religa o varejo para a compra voltar a funcionar.
+update admin_config set varejo_ativo = true where id = 1;

@@ -2,10 +2,14 @@
 --   (GERADO por scripts/build-release-sql.mjs; NÃO edite à mão. Contém somente a migração 0010_site_so_atacado.sql;
 --    as migrações 0001 a 0009 já estão aplicadas em produção.)
 --   0. Antes: confira Authentication > Providers > Email: "Confirm email" LIGADO e troca segura de e-mail.
---   1. Cole o arquivo inteiro no SQL Editor do projeto LOLA e rode uma vez.
---   2. Rode supabase/smoke.sql (todas as linhas ok = true) e supabase/rls-teste.sql.
---   3. Mergeie/deploye o app imediatamente (o app antigo perde o catálogo e o checkout de convidado).
---   Rollback: supabase/rollback-0010.sql + rollback do deploy.
+--   1. Cole o arquivo inteiro no SQL Editor do projeto LOLA e rode UMA vez, em horário de pouco movimento.
+--      Se der erro, nada foi aplicado (transação única): corrija e rode o arquivo inteiro de novo.
+--   2. Rode supabase/smoke.sql (todas as linhas ok = true, exceto "superadmin ativo" se a conta do dono ainda não existir).
+--   3. Mergeie/deploye o app IMEDIATAMENTE: até o deploy terminar (o build leva minutos) o app antigo
+--      fica sem catálogo e sem compra de convidado, e /pedido/[id] perde o endereço.
+--   4. DURANTE o build, rode supabase/rls-teste.sql (as falhas aparecem primeiro; todas as linhas com ok = true).
+--   Rollback: supabase/rollback-0010.sql + rollback do deploy. O rollback também religa o varejo
+--   (admin_config.varejo_ativo = true), que a 0010 deixa desligado por padrão.
 
 -- =====================================================================
 -- 0010_site_so_atacado.sql — site só atacado, catálogo fechado, bônus, papéis
