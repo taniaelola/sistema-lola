@@ -370,3 +370,60 @@ export function descontoMaximoDosProdutos(
 export function produtoTemEstoque(p: Pick<ProdutoRevendedor, "cores">): boolean {
   return p.cores.some((c) => c.tamanhos.some((t) => t.estoque > 0));
 }
+
+/**
+ * Mensagem do indicador de bonificação do carrinho. "" quando o bônus está desligado.
+ * Os números vêm da configuração da loja (`min` e `pecas` já estão em `p`), nunca fixos aqui.
+ */
+export function textoBonus(
+  p: ReturnType<typeof progressoBonus>,
+  nomeBonus: string | null,
+  qtd: number
+): string {
+  if (!p.ativo) return "";
+  const nome = nomeBonus?.trim() || null;
+  const unidades = Number.isInteger(qtd) && qtd > 1 ? `${qtd}× ` : "";
+  if (p.ganhou) {
+    return nome ? `Bonificação garantida: você ganha ${unidades}${nome}!` : "Bonificação garantida!";
+  }
+  const pecas = p.faltam === 1 ? "peça" : "peças";
+  const alvo = nome ? `${unidades}${nome}` : "a bonificação";
+  return `${p.pecas} de ${p.min} peças: faltam ${p.faltam} ${pecas} para ganhar ${alvo}`;
+}
+
+export type SecaoAtacado = "painel" | "catalogo" | "produto" | "carrinho" | "pedidos";
+
+/** Seção da área do revendedor para o título do cabeçalho e o item ativo do menu. */
+export function secaoAtacado(caminho: string): SecaoAtacado {
+  const dentro = (base: string) => caminho === base || caminho.startsWith(`${base}/`);
+  if (dentro("/atacado/produto")) return "produto";
+  if (dentro("/atacado/catalogo")) return "catalogo";
+  if (dentro("/atacado/carrinho")) return "carrinho";
+  if (dentro("/atacado/pedidos")) return "pedidos";
+  return "painel";
+}
+
+/** Item do pedido que é a bonificação: marcado pelo banco ou, sem a marca, gratuito (preço e subtotal 0). */
+export function itemEhBonus(i: {
+  bonus_aplicado?: boolean;
+  quantidade: number;
+  preco_unit: number | null;
+  subtotal: number | null;
+}): boolean {
+  if (i.bonus_aplicado === true) return true;
+  return i.quantidade > 0 && i.preco_unit === 0 && i.subtotal === 0;
+}
+
+/**
+ * Linha de entrega do resumo do pedido. null = não mostrar (por exemplo, valores ocultos para o
+ * supervisor: taxa null não pode virar "Grátis").
+ */
+export function linhaEntrega(
+  tipo: string,
+  taxa: number | null | undefined
+): { rotulo: string; valor: number | "A combinar" | "Grátis" } | null {
+  if (tipo === "entrega_fora") return { rotulo: "Frete", valor: "A combinar" };
+  if (typeof taxa !== "number" || !Number.isFinite(taxa)) return null;
+  if (taxa > 0) return { rotulo: "Taxa de entrega", valor: taxa };
+  return tipo === "entrega" ? { rotulo: "Entrega", valor: "Grátis" } : null;
+}

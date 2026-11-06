@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import type { Order } from "@/lib/types";
 import { ORDER_STATUS_LABEL, brlOuTraco, entregaTipoLabel } from "@/lib/types";
 import { BRAND } from "@/lib/brand.config";
+import { itemEhBonus, linhaEntrega } from "@/lib/atacado";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooterServer from "@/components/SiteFooterServer";
 
@@ -85,6 +86,7 @@ export default async function PedidoPage({
       : null;
 
   const mostrarEndereco = order.entrega_tipo !== "retirada";
+  const entrega = linhaEntrega(order.entrega_tipo, order.entrega_taxa);
 
   return (
     <>
@@ -135,21 +137,25 @@ export default async function PedidoPage({
           <div style={cardStyle}>
             <h3 style={cardTitleStyle}>Itens</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
-              {order.items.map((item) => (
-                <div
-                  key={item.id}
-                  style={{ display: "flex", justifyContent: "space-between", gap: 16, fontSize: 13 }}
-                >
-                  <span>
-                    {item.quantidade}× {item.produto_nome}
-                    {item.produto_cor ? ` — ${item.produto_cor}` : ""}
-                    {item.produto_tamanho ? ` / ${item.produto_tamanho}` : ""}
-                  </span>
-                  <span style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>
-                    {brl(item.subtotal)}
-                  </span>
-                </div>
-              ))}
+              {order.items.map((item) => {
+                const bonus = itemEhBonus(item);
+                return (
+                  <div
+                    key={item.id}
+                    style={{ display: "flex", justifyContent: "space-between", gap: 16, fontSize: 13 }}
+                  >
+                    <span>
+                      {item.quantidade}× {item.produto_nome}
+                      {item.produto_cor ? ` — ${item.produto_cor}` : ""}
+                      {item.produto_tamanho ? ` / ${item.produto_tamanho}` : ""}
+                      {bonus && <strong style={{ marginLeft: 8, color: "var(--ink-soft)" }}>Bônus</strong>}
+                    </span>
+                    <span style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>
+                      {brl(item.subtotal)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
             <div
               style={{
@@ -164,22 +170,12 @@ export default async function PedidoPage({
                 <span>Produtos</span>
                 <span>{brl(order.valor_produtos)}</span>
               </div>
-              {order.entrega_tipo === "entrega_fora" ? (
+              {entrega && (
                 <div style={linhaResumoStyle}>
-                  <span>Frete</span>
-                  <span>A combinar</span>
+                  <span>{entrega.rotulo}</span>
+                  <span>{typeof entrega.valor === "number" ? brl(entrega.valor) : entrega.valor}</span>
                 </div>
-              ) : (order.entrega_taxa ?? 0) > 0 ? (
-                <div style={linhaResumoStyle}>
-                  <span>Taxa de entrega</span>
-                  <span>{brl(order.entrega_taxa)}</span>
-                </div>
-              ) : order.entrega_tipo === "entrega" ? (
-                <div style={linhaResumoStyle}>
-                  <span>Entrega</span>
-                  <span>Grátis</span>
-                </div>
-              ) : null}
+              )}
               <div
                 style={{
                   display: "flex",

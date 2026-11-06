@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { BRAND } from "@/lib/brand.config";
-import { progressoSkus } from "@/lib/atacado";
+import { progressoSkus, secaoAtacado } from "@/lib/atacado";
 import { sairAction } from "@/app/entrar/actions";
 
 type Item = {
@@ -57,9 +57,18 @@ const ITENS: Item[] = [
   },
 ];
 
+const HREF_SECAO = {
+  painel: "/atacado",
+  catalogo: "/atacado/catalogo",
+  produto: "/atacado/catalogo",
+  carrinho: "/atacado/carrinho",
+  pedidos: "/atacado/pedidos",
+} as const;
+
+const TITULO_PRODUTO = { titulo: "Produto", subtitulo: "Cores, tamanhos e preços de revenda" };
+
 function ativo(href: string, caminho: string): boolean {
-  if (href === "/atacado") return caminho === "/atacado";
-  return caminho === href || caminho.startsWith(`${href}/`);
+  return HREF_SECAO[secaoAtacado(caminho)] === href;
 }
 
 function Logo() {
@@ -83,7 +92,8 @@ export default function AtacadoShell({
   const [menuAberto, setMenuAberto] = useState(false);
   const [saindo, iniciarSaida] = useTransition();
   const progresso = progressoSkus(skus);
-  const atual = ITENS.find((i) => ativo(i.href, caminho)) ?? ITENS[0];
+  const atual =
+    secaoAtacado(caminho) === "produto" ? TITULO_PRODUTO : (ITENS.find((i) => ativo(i.href, caminho)) ?? ITENS[0]);
 
   useEffect(() => {
     if (!menuAberto) return;

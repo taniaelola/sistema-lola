@@ -55,6 +55,9 @@ export default function GateStatus({ estado }: { estado: EstadoGate }) {
         <p className="atc-gate-texto" role="status">
           {texto}
         </p>
+        <a href={BRAND.whatsappUrl} target="_blank" rel="noopener noreferrer" className="atc-gate-link">
+          Falar com a equipe no WhatsApp
+        </a>
         <Link href="/" className="atc-gate-link">
           Voltar para a loja
         </Link>
