@@ -3,7 +3,6 @@ import {
   MIN_SKUS_ATACADO,
   comDescontoEfetivo,
   descontoEfetivo,
-  precoAtacado,
   precoVarejoEfetivo,
   skusDistintos,
 } from "@/lib/pricing";
@@ -95,30 +94,6 @@ describe("precoVarejoEfetivo", () => {
     expect(precoVarejoEfetivo({ preco: 99.99, desconto_efetivo: 15 }).final).toBe(84.99);
     expect(precoVarejoEfetivo({ preco: 10.05, desconto_efetivo: 10 }).final).toBe(9.05);
     expect(precoVarejoEfetivo({ preco: 33.33, desconto_efetivo: 33 }).final).toBe(22.33);
-  });
-});
-
-describe("precoAtacado", () => {
-  const cat = { desconto_atacado_percentual: 40 };
-
-  it("override do produto vence o percentual da categoria", () => {
-    expect(precoAtacado({ preco: 100, preco_atacado: 55 }, cat)).toBe(55);
-  });
-
-  it("sem override usa o percentual da categoria", () => {
-    expect(precoAtacado({ preco: 100, preco_atacado: null }, cat)).toBe(60);
-  });
-
-  it("sem override nem categoria cai no preço de tabela", () => {
-    expect(precoAtacado({ preco: 100, preco_atacado: null }, null)).toBe(100);
-    expect(
-      precoAtacado({ preco: 100, preco_atacado: null }, { desconto_atacado_percentual: null })
-    ).toBe(100);
-  });
-
-  it("ignora desconto de varejo", () => {
-    const produto = { preco: 100, preco_atacado: null, desconto_percentual: 50, desconto_efetivo: 50 };
-    expect(precoAtacado(produto, null)).toBe(100);
   });
 });
 

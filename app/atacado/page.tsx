@@ -11,9 +11,10 @@ import SwingTag from "@/components/SwingTag";
 import {
   agora,
   carregarCarrinho,
-  carregarDescontoMaximo,
-  carregarNovidades,
+  carregarCatalogo,
   carregarPedidos,
+  descontoMaximoDoCatalogo,
+  novidadesDoCatalogo,
 } from "./dados";
 import { exigirRevendedorAprovado } from "./gate";
 
@@ -21,12 +22,13 @@ export default async function PainelAtacadoPage() {
   const g = await exigirRevendedorAprovado("/atacado");
   if (!g.ok) return g.gate;
   const { db } = g;
-  const [carrinho, pedidos, lancamentos, desconto] = await Promise.all([
+  const [carrinho, pedidos, catalogo] = await Promise.all([
     carregarCarrinho(db),
     carregarPedidos(db),
-    carregarNovidades(db),
-    carregarDescontoMaximo(db),
+    carregarCatalogo(db),
   ]);
+  const lancamentos = catalogo ? novidadesDoCatalogo(catalogo) : null;
+  const desconto = catalogo ? descontoMaximoDoCatalogo(catalogo) : null;
 
   const progresso = progressoSkus(carrinho?.sku_distintos ?? 0);
   const kpis = calcularKpis({ pedidos, descontoMaximo: desconto, agora: agora() });
@@ -136,7 +138,7 @@ export default async function PainelAtacadoPage() {
               return (
                 <Link
                   key={p.id}
-                  href="/atacado/catalogo"
+                  href={`/atacado/produto/${p.slug}`}
                   className="atc-novidade"
                   style={{ textDecoration: "none", color: "inherit" }}
                 >

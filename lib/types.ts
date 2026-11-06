@@ -159,7 +159,6 @@ export type Revendedor = {
 
 export type EstoqueBaixoItem = { id: string; nome: string; estoque: number };
 
-// removido na Task 9
 // Preço já com o desconto interno de varejo aplicado (o que de fato é
 // cobrado do cliente no varejo). Sem desconto ativo, é igual ao preço de
 // tabela.
@@ -169,22 +168,6 @@ export function precoVarejo(p: Pick<Product, "preco" | "desconto_percentual">): 
   // half-up do Postgres (`_preco_varejo`). Float direto diverge em ~1 centavo
   // numa faixa grande de preço×desconto.
   const cents = Math.round(p.preco * 100) * (100 - p.desconto_percentual);
-  return Math.round(cents / 100) / 100;
-}
-
-// removido na Task 9 (o banco já devolve o preço de atacado calculado)
-// Preço de atacado: override explícito do produto tem prioridade; senão
-// deriva do % da subcategoria; sem nenhum dos dois, cai no preço de tabela.
-// Nunca aplica a promo de varejo (desconto_percentual não entra na conta).
-export function precoAtacado(
-  p: Pick<Product, "preco" | "preco_atacado">,
-  categoria: Pick<Categoria, "desconto_atacado_percentual"> | null | undefined
-): number {
-  if (p.preco_atacado != null) return p.preco_atacado;
-  const pct = categoria?.desconto_atacado_percentual;
-  if (pct == null) return p.preco;
-  // Mesma math em centavos inteiros do `precoVarejo` — bate com `_preco_atacado`.
-  const cents = Math.round(p.preco * 100) * (100 - pct);
   return Math.round(cents / 100) / 100;
 }
 

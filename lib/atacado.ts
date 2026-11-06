@@ -1,3 +1,4 @@
+import { economiaPercentual } from "@/lib/lp";
 import { MIN_SKUS_ATACADO } from "@/lib/pricing";
 import { avaliarCarrinhoAtacado, type ItemCarrinhoAtacado } from "@/lib/checkout";
 import { formatarReais } from "@/lib/home";
@@ -169,6 +170,9 @@ export function mensagemErroAtacado(erro: { message?: string } | null | undefine
   if (msg.includes("revendedor não aprovado")) {
     return "Seu cadastro de revendedor não está aprovado ou sua sessão expirou. Entre novamente.";
   }
+  if (msg.includes("sem permissão")) {
+    return "Seu acesso ao catálogo não está liberado ou a sessão expirou. Entre novamente.";
+  }
   if (msg.includes("carrinho cheio")) return "Seu carrinho está cheio. Remova algum item antes de adicionar outro.";
   if (msg.includes("produto indisponível")) return "Esse produto está indisponível no momento.";
   if (msg.includes("item inválido")) return "Item inválido. Atualize a página e tente de novo.";
@@ -261,4 +265,108 @@ export function dataPtBr(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return TRACO;
   return d.toLocaleDateString("pt-BR", { timeZone: FUSO });
+}
+
+/**
+ * Margem informativa da revenda: diferença entre o preço de referência (varejo) e o
+ * preço do revendedor (atacado). Nunca é gravada. 0/0 quando algum preço é inválido
+ * ou quando o atacado não é menor que o varejo.
+ */
+export function margemRevenda(
+  precoVarejo: number,
+  precoAtacado: number
+): { valor: number; percentual: number } {
+  const valido = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
+  if (!valido(precoVarejo) || !valido(precoAtacado) || precoAtacado >= precoVarejo) {
+    return { valor: 0, percentual: 0 };
+  }
+  const valor = Math.round((precoVarejo - precoAtacado) * 100) / 100;
+  return { valor, percentual: Math.round((valor / precoVarejo) * 100) };
+}
+
+export type TamanhoRevendedor = { id: string; tamanho: string; estoque: number };
+export type CorRevendedor = {
+  id: string;
+  nome: string;
+  hex: string | null;
+  imagem: string | null;
+  imagens: string[];
+  tamanhos: TamanhoRevendedor[];
+};
+/** Produto como o banco entrega ao revendedor (preços já calculados). */
+export type ProdutoRevendedor = {
+  id: string;
+  slug: string;
+  nome: string;
+  descricao: string;
+  caracteristicas: string[];
+  categoria: string;
+  /** Preço de referência para revenda (varejo, já com o desconto de varejo). */
+  precoVarejo: number;
+  /** Preço do revendedor (atacado). */
+  precoAtacado: number;
+  cores: CorRevendedor[];
+};
+
+/** Converte um `Produto` de get_catalogo_revendedor/get_produto_revendedor; null se inválido. */
+export function normalizarProdutoRevendedor(v: unknown): ProdutoRevendedor | null {
+  const r = registro(v);
+  if (!r) return null;
+  const id = texto(r.id);
+  const slug = texto(r.slug);
+  const nome = texto(r.nome);
+  const varejo = numero(r.preco_varejo);
+  const atacado = numero(r.preco_atacado);
+  if (!id || !slug || nome === null || varejo == null || atacado == null) return null;
+  const cat = registro(r.categoria);
+  const cores = (Array.isArray(r.cores) ? r.cores : []).flatMap<CorRevendedor>((cv) => {
+    const c = registro(cv);
+    const cid = c && texto(c.id);
+    if (!c || !cid) return [];
+    const imagens = (Array.isArray(c.imagens) ? c.imagens : []).filter(
+      (i): i is string => typeof i === "string" && i !== ""
+    );
+    const tamanhos = (Array.isArray(c.tamanhos) ? c.tamanhos : []).flatMap<TamanhoRevendedor>((tv) => {
+      const t = registro(tv);
+      const tid = t && texto(t.id);
+      if (!t || !tid) return [];
+      return [{ id: tid, tamanho: texto(t.tamanho) ?? "", estoque: numero(t.estoque) ?? 0 }];
+    });
+    return [{ id: cid, nome: texto(c.nome) ?? "", hex: texto(c.hex), imagem: imagens[0] ?? null, imagens, tamanhos }];
+  });
+  return {
+    id,
+    slug,
+    nome,
+    descricao: texto(r.descricao) ?? "",
+    caracteristicas: (Array.isArray(r.caracteristicas) ? r.caracteristicas : []).filter(
+      (x): x is string => typeof x === "string" && x.trim() !== ""
+    ),
+    categoria: (cat && texto(cat.nome)) ?? "",
+    precoVarejo: varejo,
+    precoAtacado: atacado,
+    cores,
+  };
+}
+
+/** `{ categorias, produtos }` de get_catalogo_revendedor; null quando o formato não é o esperado. */
+export function normalizarCatalogoRevendedor(data: unknown): ProdutoRevendedor[] | null {
+  const r = registro(data);
+  if (!r || !Array.isArray(r.produtos)) return null;
+  return r.produtos.flatMap((p) => {
+    const n = normalizarProdutoRevendedor(p);
+    return n ? [n] : [];
+  });
+}
+
+/** Maior economia percentual (varejo vs. atacado) entre os produtos; null sem produtos. */
+export function descontoMaximoDosProdutos(
+  produtos: Pick<ProdutoRevendedor, "precoVarejo" | "precoAtacado">[]
+): number | null {
+  if (produtos.length === 0) return null;
+  return Math.max(...produtos.map((p) => economiaPercentual(p.precoVarejo, p.precoAtacado)));
+}
+
+export function produtoTemEstoque(p: Pick<ProdutoRevendedor, "cores">): boolean {
+  return p.cores.some((c) => c.tamanhos.some((t) => t.estoque > 0));
 }

@@ -1,7 +1,6 @@
 import "server-only";
 import { supabase } from "@/lib/supabase";
-import { DEMO, PRODUTOS_DEMO } from "@/lib/demo-catalogo";
-import { precoAtacado } from "@/lib/pricing";
+import { DEMO, PRODUTOS_DEMO, precosDemo } from "@/lib/demo-catalogo";
 import { selecionarAmostra, type AmostraLP } from "@/lib/lp";
 
 // Vitrine pública da landing: só o RPC anônimo get_destaques_atacado (tabelas do catálogo fechadas).
@@ -16,7 +15,7 @@ export async function getAmostraLP(): Promise<AmostraLP[]> {
         nome: p.nome,
         imagem: p.colors?.[0]?.imagens?.[0] ?? null,
         preco_varejo: p.preco,
-        preco_atacado: precoAtacado(p, p.categoria),
+        preco_atacado: precosDemo(p).precoAtacado,
       }))
     );
   }

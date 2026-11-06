@@ -1,7 +1,5 @@
 import { precoVarejo } from "@/lib/types";
 
-export { precoAtacado } from "@/lib/types";
-
 export const MIN_SKUS_ATACADO = 12;
 
 export type PromocaoAtiva = {
