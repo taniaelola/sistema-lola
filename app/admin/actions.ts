@@ -39,6 +39,12 @@ import {
   listarVendas,
   type ConfigAdmin,
 } from "./consultas";
+import {
+  lojaConfigValida,
+  traduzirErroLojaConfig,
+  type ConfigEntrega,
+  type LojaConfig,
+} from "@/lib/admin-config";
 
 export type { Revendedor } from "@/lib/types";
 
@@ -111,6 +117,8 @@ export async function saveProduct(payload: {
   slug: string;
   desconto_percentual: number | null;
   preco_atacado: number | null;
+  // Sempre reenviado pelo editor; null = manter o valor atual (o banco usa coalesce).
+  somente_bonus: boolean | null;
 }): Promise<{ error?: string; id?: string }> {
   const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
@@ -128,6 +136,7 @@ export async function saveProduct(payload: {
     p_destaque: payload.destaque,
     p_ordem: payload.ordem,
     p_slug: payload.slug,
+    p_somente_bonus: payload.somente_bonus,
   });
   if (error) return { error: error.message };
   return { id: data as string };
@@ -365,7 +374,7 @@ export async function fetchConfig(): Promise<ConfigAdmin | null> {
   return sb ? lerConfig(sb) : null;
 }
 
-export async function saveConfig(payload: ConfigAdmin): Promise<{ error?: string }> {
+export async function saveConfig(payload: ConfigEntrega): Promise<{ error?: string }> {
   const g = await autorizar("config");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_set_config", {
@@ -374,6 +383,22 @@ export async function saveConfig(payload: ConfigAdmin): Promise<{ error?: string
     p_cidade: payload.cidade_taxa,
   });
   if (error) return { error: error.message };
+  return {};
+}
+
+// Varejo ligado/desligado e bonificação (só superadmin; o banco confere com assert_papel).
+export async function salvarLojaConfig(payload: LojaConfig): Promise<{ error?: string }> {
+  const g = await autorizar("config");
+  if ("error" in g) return { error: g.error };
+  if (!lojaConfigValida(payload)) return { error: MSG_DADOS_INVALIDOS };
+  const { error } = await g.sb.rpc("admin_set_loja_config", {
+    p_varejo_ativo: payload.varejo_ativo,
+    p_bonus_ativo: payload.bonus_ativo,
+    p_bonus_min_pecas: payload.bonus_min_pecas,
+    p_bonus_produto_id: payload.bonus_produto_id,
+    p_bonus_quantidade: payload.bonus_quantidade,
+  });
+  if (error) return { error: traduzirErroLojaConfig(error.message) };
   return {};
 }
 

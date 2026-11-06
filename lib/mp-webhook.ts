@@ -24,3 +24,11 @@ export function parsePaymentId(url: URL, body: unknown): string | null {
 
   return null;
 }
+
+/**
+ * Valor pago consultado no Mercado Pago, pronto para `p_transaction_amount` (obrigatório no RPC).
+ * Só número finito e positivo vale; qualquer outra coisa vira `null` e o webhook não chama o RPC.
+ */
+export function valorPagoValido(valor: unknown): number | null {
+  return typeof valor === "number" && Number.isFinite(valor) && valor > 0 ? valor : null;
+}

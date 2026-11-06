@@ -315,3 +315,23 @@ describe("dicaRevogarAtacado", () => {
     }
   });
 });
+
+describe("ação de config (salvarLojaConfig)", () => {
+  it("só o superadmin liga/desliga o varejo e configura o bônus", () => {
+    const todos: Papel[] = ["superadmin", "admin", "supervisor", "revendedor", "cliente"];
+    expect(todos.filter((p) => podeExecutar(p, "config"))).toEqual(["superadmin"]);
+  });
+
+  it("admin é barrado com mensagem clara", () => {
+    expect(decidirAcesso({ papel: "admin", ativo: true }, "config")).toEqual({
+      ok: false,
+      error: MSG_SEM_PERMISSAO,
+      encerrarSessao: false,
+    });
+  });
+
+  it("supervisor carrega produtos e estoque baixo ao mesmo tempo", () => {
+    const c = cargasIniciais("supervisor");
+    expect(c.produtos && c.estoqueBaixo).toBe(true);
+  });
+});

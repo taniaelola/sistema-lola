@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import type { Product, Categoria, Order, Sale, EstoqueBaixoItem, Revendedor } from "@/lib/types";
 import type { Papel } from "@/lib/roles";
 import { podeAprovarRevendedor } from "@/lib/roles";
-import { podeExecutar, screenPermitida, screensVisiveis } from "@/lib/admin-acesso";
+import { camposPrecoEditaveis, podeExecutar, screenPermitida, screensVisiveis } from "@/lib/admin-acesso";
+import type { ConfigAdmin } from "@/lib/admin-config";
 import { sairAction } from "@/app/entrar/actions";
 import {
   fetchProducts,
@@ -40,17 +41,13 @@ import Toast, { useToast } from "./Toast";
 
 type Filtro = "todos" | "varejo" | "atacado";
 
-type Config = {
-  taxa_entrega_local: number;
-  whatsapp: string;
-  cidade_taxa: string;
-} | null;
+type Config = ConfigAdmin | null;
 
 const SCREEN_TITLES: Record<AdminScreen, [string, string]> = {
   "visao-geral": ["Visão geral", "Acompanhe o desempenho da loja em tempo real"],
   pedidos: ["Pedidos", "Todos os pedidos de varejo e atacado"],
   vendas: ["Vendas", "Lista de vendas, somente leitura"],
-  produtos: ["Produtos", "Gerencie visibilidade, destaque e desconto"],
+  produtos: ["Produtos", "Cadastro, visibilidade, destaque, desconto e bônus"],
   financeiro: ["Financeiro", "Receita, repasses e lançamentos"],
   promocoes: ["Promoções", "Descontos por categoria, período e cupom"],
   revendedores: ["Revendedores", "Cadastros e solicitações de atacado"],
@@ -81,7 +78,11 @@ export default function AdminApp({
   const screens = screensVisiveis(papel);
   const podeAprovar = podeAprovarRevendedor(papel);
   const ehSuperadmin = podeExecutar(papel, "config");
-  const supervisor = papel === "supervisor";
+  // Quem não edita preço (supervisor) também não vê receita nem valores de pedido; o KPI de estoque
+  // baixo dele vem do banco (admin_estoque_baixo), os demais calculam a partir dos produtos.
+  const podeEditarPreco = camposPrecoEditaveis(papel);
+  const semValores = !podeEditarPreco;
+  const podeExcluir = podeExecutar(papel, "exclusao");
   const [screenEscolhida, setScreen] = useState<AdminScreen>("visao-geral");
   const screen = screenPermitida(papel, screenEscolhida) ?? "visao-geral";
   const [estoqueBaixo, setEstoqueBaixo] = useState(initialEstoqueBaixo);
@@ -269,8 +270,8 @@ export default function AdminApp({
               products={products}
               orders={orders}
               sales={sales}
-              semReceita={supervisor}
-              estoqueBaixoServidor={supervisor ? estoqueBaixo : undefined}
+              semReceita={semValores}
+              estoqueBaixoServidor={semValores ? estoqueBaixo : undefined}
               revendedoresPendentes={revendedores
                 .filter((r) => r.status === "pendente")
                 .slice(0, 3)
@@ -289,15 +290,17 @@ export default function AdminApp({
               onFiltro={handleOrderFiltro}
               onChange={async () => {
                 await refreshOrders();
-                if (supervisor) await refreshEstoqueBaixo();
+                if (semValores) await refreshEstoqueBaixo();
               }}
               podeLiquidar={podeExecutar(papel, "liquidar")}
+              semValores={semValores}
             />
           )}
           {screen === "produtos" &&
             (produtosSubTab === "produtos" ? (
               <ProdutosTab
                 products={products}
+                podeEditarPreco={podeEditarPreco}
                 busyId={busyId}
                 descontoOpenId={descontoOpenId}
                 descontoInput={descontoInput}
@@ -363,7 +366,12 @@ export default function AdminApp({
                     Categorias
                   </button>
                 </div>
-                <CategoriasTab categorias={categorias} onChange={refreshCategorias} />
+                <CategoriasTab
+                  categorias={categorias}
+                  podeEditarPreco={podeEditarPreco}
+                  podeExcluir={podeExcluir}
+                  onChange={refreshCategorias}
+                />
               </div>
             ))}
           {screen === "produtos" && editingId !== null && (
@@ -371,6 +379,8 @@ export default function AdminApp({
               key={editingId}
               product={produtoEmEdicao}
               categorias={categorias}
+              podeEditarPreco={podeEditarPreco}
+              podeExcluir={podeExcluir}
               onChange={refreshProducts}
               onDone={async () => {
                 setEditingId(null);
@@ -410,6 +420,7 @@ export default function AdminApp({
       {configOpen && ehSuperadmin && (
         <ConfigTab
           config={config}
+          products={products}
           onSaved={refreshConfig}
           onClose={() => setConfigOpen(false)}
         />

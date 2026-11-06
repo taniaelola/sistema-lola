@@ -1,8 +1,12 @@
 # Checklist de QA manual
 
 Cobre a loja de varejo (spec-mãe `docs/superpowers/specs/2026-09-09-loja-lola-design.md`,
-§16) e o release de Home, Login, Admin CMS e Atacado
-(`docs/superpowers/specs/2026-10-02-loja-lola-release-home-login-atacado-design.md`).
+§16), o release de Home, Login, Admin CMS e Atacado
+(`docs/superpowers/specs/2026-10-02-loja-lola-release-home-login-atacado-design.md`)
+e o **site só atacado** (migração 0010,
+`docs/superpowers/specs/2026-11-05-loja-lola-site-so-atacado-seguranca-rastreamento-design.md`).
+Com a 0010 o varejo fica desligado: os itens da seção "Varejo (fluxo existente)"
+só valem se o varejo for religado por uma migração futura.
 
 ## Como rodar
 
@@ -16,8 +20,10 @@ de **produção**, os itens de pagamento (Pix / cartão) exigem um pagamento rea
 valor pequeno; não há sandbox. Registre o resultado de cada item no PR.
 Qualquer falha vira correção antes de liberar a loja.
 
-Antes de começar: `supabase/release-unico.sql` aplicado, `supabase/smoke.sql`
-com tudo `ok = true` e a conta do dono criada (ver "Lançamento" no `README.md`).
+Antes de começar: `supabase/release-unico.sql` (primeiro lançamento) e
+`supabase/release-0010.sql` (janela da 0010) aplicados, `supabase/smoke.sql` com
+tudo `ok = true` e a conta do dono criada (ver "Lançamento" e "Janela da migração
+0010" no `README.md`).
 
 ## Bloqueante
 
@@ -48,6 +54,78 @@ confirmar em produção, mas não são o foco da passada manual:
 - Regras de preço de varejo/atacado, preço efetivo com promoção, regra de 12 SKUs,
   filtro de menu por papel, chave de carrinho e totais (testes Vitest em `__tests__/`).
 
+## Site só atacado (migração 0010)
+
+Visitante (sem login):
+
+- [ ] `/` mostra só a landing page de revendedoras: destaques (até 8) com preço de
+      **varejo e de atacado**, textos editáveis, CTA para entrar. Sem carrinho de
+      varejo, sem estoque e sem `preco_atacado` cru no HTML ou nas respostas de rede.
+- [ ] `/produto/<slug>`, `/carrinho`, `/surpresa`, `/minha-conta` e o checkout de
+      varejo não vendem nada ao visitante com o varejo desligado (a rota
+      redireciona; `/produto/<slug>` volta para `/`).
+- [ ] `/atacado`, `/atacado/catalogo` e `/atacado/produto/<slug>` pedem login
+      (`/entrar?next=...`), inclusive por endereço direto.
+- [ ] No navegador (aba Rede), uma consulta direta à tabela `products`,
+      `product_colors`, `product_sizes` ou `categorias` com a chave anon retorna
+      erro de permissão/vazio.
+- [ ] Checkout de convidado: chamar `checkout_iniciar_pedido` sem sessão falha
+      (`anon` sem EXECUTE).
+- [ ] `/pedido/<id>` de um pedido real não mostra endereço.
+
+Revendedor:
+
+- [ ] **Pendente**: o login leva à tela "Cadastro pendente"; nenhum produto nem
+      preço aparece, nem por endereço direto.
+- [ ] **Recusado**: o login leva à tela "Cadastro não aprovado"; nenhum produto nem
+      preço aparece.
+- [ ] **Aprovado**: vitrine com preço de **varejo e de atacado** por produto e
+      página de produto; produtos "Somente bônus" **não** aparecem na vitrine.
+- [ ] Carrinho de atacado com **14 peças** (bonificação ligada, mínimo 15): o
+      indicador diz quantas peças faltam e o pedido sai sem brinde. Com **15
+      peças** (produto de brinde ativo e com estoque): o indicador diz
+      "Bonificação garantida" e o brinde entra no pedido com preço zero.
+- [ ] Brinde indisponível (sem estoque ou inativo): o pedido é criado sem o brinde,
+      com aviso no pedido (`bonus_aviso`); nada quebra.
+- [ ] Revendedor aprovado não ativa o varejo: o botão de checkout só cria pedido
+      de atacado (`is_atacado = true`).
+
+Config e bônus (superadmin):
+
+- [ ] Config mostra os cards "Varejo e bonificação"; **varejo vem desligado** e o
+      aviso de que religar exige migração está visível; admin e supervisor não veem
+      a engrenagem de Config.
+- [ ] Ligar a bonificação sem escolher o produto do brinde é recusado com mensagem
+      clara; peças mínimas 0 ou quantidade 0 também.
+- [ ] O produto do brinde só pode ser escolhido entre os marcados "Somente bônus";
+      um produto de bônus com preço zero não consegue ser ativado.
+- [ ] Editar um produto "Somente bônus" e salvar **não** desmarca "Somente bônus".
+
+Supervisor (sem preço e sem valores):
+
+- [ ] Pedidos: sem coluna **VALOR**; total, frete e preços dos itens não aparecem
+      (nem na resposta de rede de `admin_list_orders`: vêm `null`); telefone e
+      endereço continuam visíveis. A Visão geral não mostra valores de pedido.
+- [ ] Produtos: vê a lista sem colunas de preço, desconto e Live; cadastra produto,
+      cores, tamanhos e estoque; o **produto novo nasce inativo e com preço zero**.
+- [ ] Editor de produto: Preço, Preço de atacado e Desconto aparecem desabilitados
+      com a explicação; salvar uma edição não altera o preço gravado (conferir com
+      um admin).
+- [ ] Não consegue ativar produto com preço zero ("defina o preço antes de
+      ativar").
+- [ ] Não vê "Excluir" em produto, categoria, cor ou tamanho; o RPC também recusa.
+- [ ] Categorias: o campo de desconto de atacado fica oculto e o valor existente é
+      preservado ao salvar; mudar a categoria de um produto cujo preço de atacado
+      depende do desconto da categoria é recusado pelo banco.
+- [ ] Admin: vê todas as colunas e campos de preço, define o preço do produto
+      criado pelo supervisor e consegue ativá-lo.
+
+Webhook:
+
+- [ ] Pagamento aprovado liquida o pedido com o valor pago conferido; valor
+      diferente do total (abaixo ou acima) **não** liquida: o webhook responde
+      `200` com `ok:false` e o pedido segue pendente (veja o log do Worker).
+
 ## Login e contas
 
 - [ ] Cadastro de cliente em `/entrar` (modo cadastro) → mensagem "Confirme seu
@@ -77,11 +155,12 @@ confirmar em produção, mas não são o foco da passada manual:
 ## Admin: usuários e permissões por papel
 
 - [ ] **Supervisor**: vê Visão geral só com contagens e estoque baixo (sem valores
-      de receita), Pedidos, Vendas sem totais financeiros e Revendedores
-      (cadastrar/editar, sem aprovar/recusar). Tem a tela **Vendas** (somente
-      leitura, **sem valores**) no menu; **sem Financeiro**, sem Produtos,
-      Promoções, Banner, Textos, Usuários e Config; o RPC também recusa se
-      chamado direto.
+      de receita), Pedidos **sem valores**, Vendas sem totais financeiros,
+      **Produtos** (cadastro sem preço e sem excluir; ver a seção "Site só
+      atacado") e Revendedores (cadastrar/editar, sem aprovar/recusar). Tem a
+      tela **Vendas** (somente leitura, **sem valores**) no menu; **sem
+      Financeiro**, Promoções, Banner, Textos, Usuários e Config; o RPC também
+      recusa se chamado direto.
 - [ ] **Admin**: tudo de cadastro e conteúdo (inclui Financeiro, Usuários não
       superadmin, aprovar/recusar revendedor); **sem Config** (ícone do rodapé ausente).
 - [ ] **Superadmin**: acessa tudo, inclusive Config; cria/edita outros superadmins.

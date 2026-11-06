@@ -119,9 +119,15 @@ function fromCategoria(c: Categoria): FormState {
 
 export default function CategoriasTab({
   categorias,
+  podeEditarPreco,
+  podeExcluir,
   onChange,
 }: {
   categorias: Categoria[];
+  /** false para o supervisor: o desconto de atacado da categoria fica oculto (o banco o preserva). */
+  podeEditarPreco: boolean;
+  /** false para o supervisor: não exclui categoria. */
+  podeExcluir: boolean;
   onChange: () => void;
 }) {
   const [form, setForm] = useState<FormState | null>(null);
@@ -172,7 +178,7 @@ export default function CategoriasTab({
       return;
     }
     let desconto: number | null = null;
-    if (form.desconto.trim()) {
+    if (podeEditarPreco && form.desconto.trim()) {
       desconto = parseInt(form.desconto.trim(), 10);
       if (isNaN(desconto) || desconto < 0 || desconto > 100) {
         alert("O desconto de atacado deve ser um número entre 0 e 100.");
@@ -336,6 +342,7 @@ export default function CategoriasTab({
               gap: 20,
             }}
           >
+            {podeEditarPreco && (
             <div>
               <label style={labelStyle}>
                 Desconto de atacado (%, opcional)
@@ -353,6 +360,7 @@ export default function CategoriasTab({
               />
               <div style={hintStyle}>usado no preço de atacado (Fase 3)</div>
             </div>
+            )}
           </div>
 
           <div style={{ marginBottom: 20 }}>
@@ -514,10 +522,10 @@ export default function CategoriasTab({
                         </div>
                         <div style={{ fontSize: 12, color: "var(--adm-text-secondary)" }}>
                           /{c.slug} · ordem {c.ordem} · ativa:{" "}
-                          {c.ativo ? "sim" : "não"} · atacado:{" "}
-                          {c.desconto_atacado_percentual != null
-                            ? `${c.desconto_atacado_percentual}%`
-                            : "—"}{" "}
+                          {c.ativo ? "sim" : "não"}
+                          {podeEditarPreco
+                            ? ` · atacado: ${c.desconto_atacado_percentual != null ? `${c.desconto_atacado_percentual}%` : "—"}`
+                            : ""}{" "}
                           · imagem: {c.imagem ? "sim" : "não"}
                         </div>
                       </div>
@@ -535,6 +543,7 @@ export default function CategoriasTab({
                       >
                         Editar
                       </button>
+                      {podeExcluir && (
                       <button
                         onClick={() => handleDelete(c)}
                         disabled={busy}
@@ -550,6 +559,7 @@ export default function CategoriasTab({
                       >
                         Excluir
                       </button>
+                      )}
                     </div>
                   );
                 })}

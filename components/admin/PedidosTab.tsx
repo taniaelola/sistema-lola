@@ -30,6 +30,8 @@ const STATUS_TAG_LABEL: Record<OrderStatus, string> = {
 };
 
 const COLS = "110px 1.5fr 90px 70px 110px 170px 100px 280px";
+// Supervisor recebe os valores como null: a coluna VALOR some em vez de mostrar traços.
+const COLS_SEM_VALORES = "110px 1.5fr 90px 70px 170px 100px 280px";
 
 const brl = brlOuTraco;
 
@@ -39,13 +41,18 @@ export default function PedidosTab({
   onFiltro,
   onChange,
   podeLiquidar,
+  semValores = false,
 }: {
   orders: Order[];
   filtro: Filtro;
   onFiltro: (f: Filtro) => void;
   onChange: () => void;
   podeLiquidar: boolean;
+  /** true para o supervisor: valores e preços chegam null do banco. */
+  semValores?: boolean;
 }) {
+  const cols = semValores ? COLS_SEM_VALORES : COLS;
+  const minLargura = semValores ? 990 : 1100;
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -100,12 +107,12 @@ export default function PedidosTab({
       </div>
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, overflowX: "auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: COLS, minWidth: 1100, padding: "14px 20px", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--adm-text-secondary)", letterSpacing: "0.04em", borderBottom: "1px solid var(--line)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: cols, minWidth: minLargura, padding: "14px 20px", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--adm-text-secondary)", letterSpacing: "0.04em", borderBottom: "1px solid var(--line)" }}>
           <div>PEDIDO</div>
           <div>CLIENTE / REVENDEDOR</div>
           <div>TIPO</div>
           <div>ITENS</div>
-          <div>VALOR</div>
+          {!semValores && <div>VALOR</div>}
           <div>ENTREGA</div>
           <div>DATA</div>
           <div>AÇÕES</div>
@@ -126,8 +133,8 @@ export default function PedidosTab({
                   onClick={() => setExpandedId(aberto ? null : o.id)}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: COLS,
-                    minWidth: 1100,
+                    gridTemplateColumns: cols,
+                    minWidth: minLargura,
                     padding: "14px 20px",
                     alignItems: "center",
                     borderBottom: "1px solid var(--line)",
@@ -144,7 +151,9 @@ export default function PedidosTab({
                     {o.is_atacado ? "Atacado" : "Varejo"}
                   </div>
                   <div style={{ fontSize: 12.5, color: "var(--adm-text-secondary)" }}>{o.items.length}</div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}>{brl(o.valor_total)}</div>
+                  {!semValores && (
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}>{brl(o.valor_total)}</div>
+                  )}
                   <div>
                     <SwingTag color={cor.bg} textColor={cor.text} size="sm">
                       {STATUS_TAG_LABEL[o.status]}
@@ -203,9 +212,15 @@ export default function PedidosTab({
                             {item.quantidade}× {item.produto_nome}
                             {item.produto_cor ? ` — ${item.produto_cor}` : ""}
                             {item.produto_tamanho ? ` / ${item.produto_tamanho}` : ""}
+                            {item.bonus_aplicado || item.preco_unit === 0 ? " (bônus)" : ""}
                           </div>
                         ))}
                       </div>
+                      {(o.bonus_aplicado || o.bonus_aviso) && (
+                        <p style={{ fontSize: 12, color: "var(--adm-text-secondary)", margin: "8px 0 0" }}>
+                          {o.bonus_aplicado ? "Bônus aplicado neste pedido." : ""} {o.bonus_aviso ?? ""}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--adm-text-secondary)", marginBottom: 8 }}>

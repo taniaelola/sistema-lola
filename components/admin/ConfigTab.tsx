@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { saveConfig } from "@/app/admin/actions";
+import { saveConfig, salvarLojaConfig } from "@/app/admin/actions";
+import type { Product } from "@/lib/types";
+import {
+  AVISO_VAREJO,
+  lojaConfigDe,
+  produtosBrinde,
+  validarLojaConfig,
+  type ConfigAdmin,
+} from "@/lib/admin-config";
 
-type Config = {
-  taxa_entrega_local: number;
-  whatsapp: string;
-  cidade_taxa: string;
-} | null;
+type Config = ConfigAdmin | null;
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -42,10 +46,12 @@ const okStyle: React.CSSProperties = {
 
 export default function ConfigTab({
   config,
+  products,
   onSaved,
   onClose,
 }: {
   config: Config;
+  products: Product[];
   onSaved: () => void;
   onClose?: () => void;
 }) {
@@ -56,6 +62,35 @@ export default function ConfigTab({
   const [whatsapp, setWhatsapp] = useState(base.whatsapp ?? "");
   const [savingConfig, setSavingConfig] = useState(false);
   const [configOk, setConfigOk] = useState(false);
+
+  const loja = lojaConfigDe(config);
+  const brindes = produtosBrinde(products);
+  const [varejoAtivo, setVarejoAtivo] = useState(loja.varejo_ativo);
+  const [bonusAtivo, setBonusAtivo] = useState(loja.bonus_ativo);
+  const [minPecas, setMinPecas] = useState(String(loja.bonus_min_pecas));
+  const [quantidade, setQuantidade] = useState(String(loja.bonus_quantidade));
+  const [produtoId, setProdutoId] = useState(loja.bonus_produto_id ?? "");
+  const [savingLoja, setSavingLoja] = useState(false);
+  const [lojaOk, setLojaOk] = useState(false);
+
+  async function handleSaveLoja() {
+    const r = validarLojaConfig({ varejoAtivo, bonusAtivo, minPecas, quantidade, produtoId });
+    if (!r.ok) {
+      alert(r.erro);
+      return;
+    }
+    if (r.valor.varejo_ativo && !loja.varejo_ativo && !confirm(`${AVISO_VAREJO}\n\nLigar mesmo assim?`)) return;
+    setLojaOk(false);
+    setSavingLoja(true);
+    const { error } = await salvarLojaConfig(r.valor);
+    setSavingLoja(false);
+    if (error) {
+      alert(`Não deu pra salvar a configuração da loja: ${error}`);
+      return;
+    }
+    setLojaOk(true);
+    onSaved();
+  }
 
   async function handleSaveConfig() {
     const taxaNum = parseFloat(taxa.replace(",", "."));
@@ -187,6 +222,76 @@ export default function ConfigTab({
         </button>
         {configOk && <div style={okStyle}>Configurações salvas.</div>}
       </div>
+
+        <div style={cardStyle}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Varejo e bonificação</h3>
+          <div style={{ ...hintStyle, marginBottom: 16 }}>
+            Salvar grava o varejo e a bonificação juntos.
+          </div>
+
+          <label style={{ fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <input type="checkbox" checked={varejoAtivo} onChange={(e) => setVarejoAtivo(e.target.checked)} />
+            Varejo ligado
+          </label>
+          <div
+            role="note"
+            style={{
+              fontSize: 12,
+              lineHeight: 1.5,
+              border: "1px solid var(--line)",
+              borderLeft: "3px solid var(--peach-deep)",
+              padding: "8px 10px",
+              marginBottom: 20,
+              color: "var(--ink)",
+            }}
+          >
+            <strong>Atenção:</strong> {AVISO_VAREJO}
+          </div>
+
+          <label style={{ fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <input type="checkbox" checked={bonusAtivo} onChange={(e) => setBonusAtivo(e.target.checked)} />
+            Bonificação ligada (brinde no pedido de atacado)
+          </label>
+
+          <label style={labelStyle}>Peças mínimas no pedido</label>
+          <input
+            style={inputStyle}
+            inputMode="numeric"
+            value={minPecas}
+            onChange={(e) => setMinPecas(e.target.value)}
+          />
+          <div style={hintStyle}>quantas peças o pedido precisa ter para ganhar o brinde</div>
+
+          <label style={labelStyle}>Quantidade do brinde</label>
+          <input
+            style={inputStyle}
+            inputMode="numeric"
+            value={quantidade}
+            onChange={(e) => setQuantidade(e.target.value)}
+          />
+          <div style={hintStyle}>unidades do produto brinde adicionadas ao pedido</div>
+
+          <label style={labelStyle}>Produto do brinde</label>
+          <select style={inputStyle} value={produtoId} onChange={(e) => setProdutoId(e.target.value)}>
+            <option value="">Nenhum</option>
+            {brindes.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+                {p.ativo ? "" : " (inativo)"}
+              </option>
+            ))}
+          </select>
+          <div style={hintStyle}>
+            {brindes.length === 0
+              ? "Nenhum produto marcado como \"Somente bônus\". Marque um em Produtos para poder escolher."
+              : "só aparecem produtos marcados como \"Somente bônus\" (preço nominal maior que zero e ativo)"}
+          </div>
+
+          <button className="btn" onClick={handleSaveLoja} disabled={savingLoja}>
+            {savingLoja ? "Salvando…" : "Salvar"}
+          </button>
+          {lojaOk && <div style={okStyle}>Configuração da loja salva.</div>}
+        </div>
 
       </div>
     </div>

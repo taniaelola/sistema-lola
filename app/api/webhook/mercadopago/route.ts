@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { buscarPagamento, mapFormaPagamento } from "@/lib/mercadopago";
 import { BRAND } from "@/lib/brand.config";
-import { parsePaymentId } from "@/lib/mp-webhook";
+import { parsePaymentId, valorPagoValido } from "@/lib/mp-webhook";
 
 export const dynamic = "force-dynamic";
 
@@ -114,12 +114,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, skipped: "sem order_id" });
     }
 
+    // p_transaction_amount é obrigatório no banco (0010). Sem valor confiável, não liquida: 200 para o MP
+    // não retentar; o pedido segue pendente e o log é o sinal.
+    const valorPago = valorPagoValido(pagamento.transaction_amount);
+    if (valorPago === null) {
+      console.error("Pagamento aprovado sem transaction_amount válido — pedido", ref.order_id);
+      return NextResponse.json({ ok: false, reason: "valor_ausente" }, { status: 200 });
+    }
+
     const { data: rpcData, error } = await supabase().rpc("mp_register_order_payment", {
       p_secret: getWebhookSecret(),
       p_order_id: ref.order_id,
       p_mp_payment_id: String(pagamento.id),
       p_forma_pagamento: mapFormaPagamento(pagamento.payment_method_id, pagamento.payment_type_id),
-      p_transaction_amount: pagamento.transaction_amount,
+      p_transaction_amount: valorPago,
     });
 
     if (error) {

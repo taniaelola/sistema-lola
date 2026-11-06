@@ -190,7 +190,9 @@ export default function VisaoGeralTab({
                     <div style={{ fontSize: 13, fontWeight: 600 }}>#{o.id.slice(0, 8)} · {o.cliente_nome}</div>
                     <div style={{ fontSize: 11, color: "var(--adm-text-secondary)" }}>{o.is_atacado ? "Atacado" : "Varejo"}</div>
                   </div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}>{brl(o.valor_total)}</div>
+                  {!semReceita && (
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}>{brl(o.valor_total)}</div>
+                  )}
                 </div>
               );
             })
