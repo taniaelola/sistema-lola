@@ -135,9 +135,8 @@ select nome, ok, detalhe from (
   union all
 
   -- ---------- conteúdo público ----------
-  -- ajustar na Task 8 (15 chaves da LP)
-  select 80, 'get_textos() devolve 19 chaves',
-         (select count(*) from jsonb_object_keys(public.get_textos())) = 19,
+  select 80, 'get_textos() devolve 34 chaves',
+         (select count(*) from jsonb_object_keys(public.get_textos())) = 34,
          'chaves: ' || (select count(*) from jsonb_object_keys(public.get_textos()))::text
 
   union all

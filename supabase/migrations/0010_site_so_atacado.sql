@@ -745,3 +745,25 @@ to authenticated;
 alter function _slugify(text) set search_path = public, extensions;
 alter function _preco_atacado(numeric, numeric, int) set search_path = public, extensions;
 alter function _preco_varejo(numeric, int) set search_path = public, extensions;
+
+-- ========== F. TEXTOS DA LP ==========
+-- admin_set_textos só atualiza chaves que já existem em textos_loja: as 15 da landing de
+-- revendedores precisam ser semeadas aqui. Valores idênticos a TEXTOS_PADRAO (lib/textos.ts);
+-- __tests__/textos-lp-sql.test.ts garante que não divergem. Não sobrescreve edições do painel.
+insert into textos_loja (chave, valor) values
+  ('lp_hero_titulo',     'Revenda calçados e acessórios LOLA.'),
+  ('lp_hero_subtitulo',  'Preço de atacado, aprovação rápida e um painel só seu para montar o pedido.'),
+  ('lp_hero_botao',      'Quero ser revendedora'),
+  ('lp_regras_titulo',   'Como funciona o atacado'),
+  ('lp_regra_skus',      '12 modelos diferentes por pedido.'),
+  ('lp_regra_bonus',     'A partir de 15 peças você ganha uma bonificação.'),
+  ('lp_regra_preco',     'Preço de atacado em todos os modelos, direto no painel.'),
+  ('lp_passos_titulo',   'Em três passos'),
+  ('lp_passo_1',         'Crie o seu cadastro de revendedora.'),
+  ('lp_passo_2',         'Aguarde a aprovação da nossa equipe.'),
+  ('lp_passo_3',         'Monte o pedido no painel e pague.'),
+  ('lp_amostra_titulo',  'Uma amostra do catálogo'),
+  ('lp_amostra_aviso',   'Valores de referência. O catálogo completo abre depois da aprovação do cadastro.'),
+  ('lp_final_titulo',    'Pronta para revender LOLA?'),
+  ('lp_final_botao',     'Criar meu cadastro')
+on conflict (chave) do nothing;

@@ -3,10 +3,29 @@ import { TEXTOS_PADRAO, mesclarTextos } from "@/lib/textos";
 
 describe("TEXTOS_PADRAO", () => {
   it("contém as chaves do seed", () => {
-    expect(Object.keys(TEXTOS_PADRAO)).toHaveLength(19);
+    expect(Object.keys(TEXTOS_PADRAO)).toHaveLength(34);
     expect(TEXTOS_PADRAO["home.categorias_etiqueta"]).toBe("");
     expect(TEXTOS_PADRAO["login.titulo"]).toBe("Pisa confiante.");
     expect(TEXTOS_PADRAO["aviso.ativo"]).toBe("true");
+  });
+});
+
+describe("textos da Landing de revendedores", () => {
+  const CHAVES_LP = [
+    "lp_hero_titulo", "lp_hero_subtitulo", "lp_hero_botao", "lp_regras_titulo", "lp_regra_skus",
+    "lp_regra_bonus", "lp_regra_preco", "lp_passos_titulo", "lp_passo_1", "lp_passo_2", "lp_passo_3",
+    "lp_amostra_titulo", "lp_amostra_aviso", "lp_final_titulo", "lp_final_botao",
+  ];
+  it("as 15 chaves existem com texto não vazio", () => {
+    for (const k of CHAVES_LP) {
+      expect(typeof TEXTOS_PADRAO[k], k).toBe("string");
+      expect(TEXTOS_PADRAO[k].trim(), k).not.toBe("");
+    }
+    expect(TEXTOS_PADRAO["lp_regra_skus"]).toContain("12 modelos diferentes por pedido");
+    expect(TEXTOS_PADRAO["lp_regra_bonus"]).toMatch(/a partir de 15 peças você ganha uma bonificação/i);
+  });
+  it("padrões sem preço", () => {
+    for (const k of CHAVES_LP) expect(TEXTOS_PADRAO[k], k).not.toMatch(/R\$/);
   });
 });
 

@@ -51,3 +51,41 @@ export function dadosPublicosHeader(
 export function primeiroNome(nome: string): string {
   return nome.trim().split(/\s+/)[0] ?? "";
 }
+
+export type ItemMenu = {
+  tipo: "link" | "categoria" | "sacola";
+  rotulo: string;
+  href: string;
+};
+
+export type EntradaMenu = {
+  varejoAtivo: boolean;
+  logado: boolean;
+  papel?: Papel | null;
+  categorias?: CategoriaNav[];
+};
+
+// Itens da navegação do header. Com o varejo desligado nunca há sacola nem categorias:
+// só o caminho de entrada (visitante) ou o painel do papel. Com o varejo ligado, soma
+// categorias, sacola e, para o cliente logado, "Minha conta".
+export function itensMenu({ varejoAtivo, logado, papel, categorias = [] }: EntradaMenu): ItemMenu[] {
+  const conta: ItemMenu[] = [];
+  if (!logado) {
+    conta.push(
+      { tipo: "link", rotulo: "Entrar", href: "/entrar" },
+      { tipo: "link", rotulo: "Seja revendedora", href: "/entrar?modo=revendedor" }
+    );
+  } else if (papel && ehEquipe(papel)) {
+    conta.push({ tipo: "link", rotulo: "Painel", href: "/admin" });
+  } else if (papel === "revendedor") {
+    conta.push({ tipo: "link", rotulo: "Painel de atacado", href: "/atacado" });
+  } else if (varejoAtivo) {
+    conta.push({ tipo: "link", rotulo: "Minha conta", href: "/minha-conta" });
+  }
+  if (!varejoAtivo) return conta;
+  return [
+    ...linksCategorias(categorias).map((l): ItemMenu => ({ tipo: "categoria", ...l })),
+    { tipo: "sacola", rotulo: "Sacola", href: "/carrinho" },
+    ...conta,
+  ];
+}
