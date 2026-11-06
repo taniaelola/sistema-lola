@@ -471,8 +471,17 @@ $$;
 -- admin_set_desconto, admin_set_surpresa e admin_delete_* continuam só admin/superadmin (não mudam aqui).
 -- Para qualquer papel: ativar produto com preco = 0 lança 'defina o preço antes de ativar'.
 
--- Pedidos: o supervisor recebe valor_produtos/valor_total/entrega_taxa e items[].preco_unit/subtotal
--- como JSON null (telefone e endereço continuam). Chaves reais de _order_json (0002).
+-- Máscara de dinheiro de um pedido (formato de _order_json): valor_produtos/valor_total/entrega_taxa e
+-- items[].preco_unit/subtotal viram JSON null; pedido sem itens devolve items []. Helper interno, sem grant.
+create or replace function _mascarar_dinheiro_pedido(p jsonb)
+returns jsonb language sql immutable set search_path = public, extensions as $$
+  select p || jsonb_build_object('valor_produtos', null, 'valor_total', null, 'entrega_taxa', null,
+    'items', coalesce((select jsonb_agg(it || jsonb_build_object('preco_unit', null, 'subtotal', null) order by n)
+                       from jsonb_array_elements(coalesce(p->'items', '[]'::jsonb)) with ordinality as t(it, n)), '[]'::jsonb));
+$$;
+revoke all on function _mascarar_dinheiro_pedido(jsonb) from public, anon, authenticated;
+
+-- Pedidos: o supervisor recebe a máscara acima (telefone e endereço continuam). Chaves reais de _order_json (0002).
 create or replace function admin_list_orders(p_filtro text default 'todos')
 returns jsonb language plpgsql security definer set search_path = public, extensions stable as $$
 declare v_papel text;
@@ -480,11 +489,7 @@ begin
   v_papel := assert_papel(array['superadmin','admin','supervisor']);
   return coalesce((
     select jsonb_agg(
-      case when v_papel = 'supervisor' then
-        (x.j || jsonb_build_object('valor_produtos', null, 'valor_total', null, 'entrega_taxa', null,
-          'items', coalesce((select jsonb_agg(it || jsonb_build_object('preco_unit', null, 'subtotal', null) order by n)
-                             from jsonb_array_elements(x.j->'items') with ordinality as t(it, n)), '[]'::jsonb)))
-      else x.j end
+      case when v_papel = 'supervisor' then _mascarar_dinheiro_pedido(x.j) else x.j end
       order by x.created_at desc)
     from (
       select o.created_at,
@@ -498,6 +503,43 @@ begin
     ) x
   ), '[]'::jsonb);
 end $$;
+
+-- Leitura pública de pedido: sem endereço; se quem chama é supervisor ativo, sem dinheiro (senão os ids
+-- de admin_list_orders anulariam a máscara). Mesma assinatura e grants da seção C (anon e authenticated).
+create or replace function public_get_order(p_id uuid)
+returns jsonb language plpgsql security definer set search_path = public, extensions stable as $$
+declare v_j jsonb;
+begin
+  v_j := _order_json(p_id) - 'endereco_rua' - 'endereco_numero' - 'endereco_bairro'
+    - 'endereco_complemento' - 'endereco_cep' - 'endereco_cidade';
+  if v_j is not null and exists (select 1 from profiles where id = auth.uid() and ativo and papel = 'supervisor') then
+    v_j := _mascarar_dinheiro_pedido(v_j);
+  end if;
+  return v_j;
+end $$;
+revoke all on function public_get_order(uuid) from public;
+grant execute on function public_get_order(uuid) to anon, authenticated;
+
+-- _product_json passa a expor somente_bonus (o editor reenvia o valor atual). Cópia de 0007:380 + a chave.
+create or replace function _product_json(p products)
+returns jsonb language sql set search_path = public stable as $$
+  select jsonb_build_object(
+    'id', p.id, 'slug', p.slug, 'nome', p.nome, 'categoria_id', p.categoria_id,
+    'colecao', p.colecao, 'preco', p.preco, 'desconto_percentual', p.desconto_percentual,
+    'desconto_efetivo', _desconto_efetivo(p), 'created_at', p.created_at,
+    'preco_atacado', p.preco_atacado, 'descricao', p.descricao,
+    'caracteristicas', to_jsonb(p.caracteristicas), 'ativo', p.ativo,
+    'destaque', p.destaque, 'ordem', p.ordem, 'surpresa_ativo', p.surpresa_ativo,
+    'somente_bonus', p.somente_bonus,
+    'categoria', (select to_jsonb(c) - 'imagem' from categorias c where c.id = p.categoria_id),
+    'colors', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', col.id, 'product_id', col.product_id, 'nome', col.nome, 'hex', col.hex,
+        'imagens', to_jsonb(col.imagens), 'ordem', col.ordem,
+        'sizes', coalesce((select jsonb_agg(jsonb_build_object(
+            'id', s.id, 'color_id', s.color_id, 'tamanho', s.tamanho, 'estoque', s.estoque)
+            order by s.tamanho) from product_sizes s where s.color_id = col.id), '[]'::jsonb))
+      order by col.ordem) from product_colors col where col.product_id = p.id), '[]'::jsonb));
+$$;
 
 -- Produtos: leitura do cadastro para o supervisor.
 create or replace function admin_list_products()
@@ -513,9 +555,9 @@ create or replace function admin_upsert_product(
   p_id uuid, p_nome text, p_categoria_id uuid, p_colecao text,
   p_preco numeric, p_desconto_percentual int, p_preco_atacado numeric, p_descricao text,
   p_caracteristicas text[], p_ativo boolean, p_destaque boolean, p_ordem int, p_slug text,
-  p_somente_bonus boolean default false
+  p_somente_bonus boolean default null
 ) returns uuid language plpgsql security definer set search_path = public, extensions as $$
-declare v_id uuid; v_slug text; v_papel text; v_preco numeric;
+declare v_id uuid; v_slug text; v_papel text; v_preco numeric; v_cat_atual uuid; v_pa numeric;
 begin
   v_papel := assert_papel(array['superadmin','admin','supervisor']);
   v_slug := coalesce(nullif(trim(p_slug),''), _slugify(p_nome));
@@ -542,15 +584,21 @@ begin
   else
     if v_papel = 'supervisor' then
       -- preco, preco_atacado e desconto_percentual atuais são preservados (argumentos ignorados)
-      select preco into v_preco from products where id = p_id;
-      if v_preco is null then raise exception 'registro não encontrado'; end if;
+      select preco, categoria_id, preco_atacado into v_preco, v_cat_atual, v_pa from products where id = p_id;
+      if not found then raise exception 'registro não encontrado'; end if;
+      -- mudar de categoria muda o preço de atacado efetivo (desconto da categoria) quando não há override
+      if p_categoria_id is distinct from v_cat_atual and v_pa is null
+         and (select desconto_atacado_percentual from categorias where id = v_cat_atual)
+             is distinct from (select desconto_atacado_percentual from categorias where id = p_categoria_id) then
+        raise exception 'sem permissão para mudar a categoria: altera o preço de atacado' using errcode = '42501';
+      end if;
       if coalesce(p_ativo,false) and v_preco = 0 then
         raise exception 'defina o preço antes de ativar';
       end if;
       update products set nome=p_nome, categoria_id=p_categoria_id, colecao=p_colecao,
         descricao=p_descricao, caracteristicas=coalesce(p_caracteristicas,'{}'), ativo=p_ativo,
         destaque=p_destaque, ordem=coalesce(p_ordem,0), slug=v_slug,
-        somente_bonus=coalesce(p_somente_bonus,false)
+        somente_bonus=coalesce(p_somente_bonus, products.somente_bonus)
       where id=p_id returning id into v_id;
     else
       if coalesce(p_ativo,false) and coalesce(p_preco,0) = 0 then
@@ -560,7 +608,7 @@ begin
         desconto_percentual=nullif(p_desconto_percentual,0), preco_atacado=p_preco_atacado,
         descricao=p_descricao, caracteristicas=coalesce(p_caracteristicas,'{}'), ativo=p_ativo,
         destaque=p_destaque, ordem=coalesce(p_ordem,0), slug=v_slug,
-        somente_bonus=coalesce(p_somente_bonus,false)
+        somente_bonus=coalesce(p_somente_bonus, products.somente_bonus)
       where id=p_id returning id into v_id;
     end if;
     if v_id is null then raise exception 'registro não encontrado'; end if;

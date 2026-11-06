@@ -11,6 +11,7 @@ declare
   v_o1 uuid; v_o2 uuid;
   r jsonb; e jsonb; it jsonb; n int; who text;
   rp record;
+  v_cA uuid; v_cB uuid; v_cC uuid; v_pnov uuid; v_pov uuid; v_o3 uuid;
 begin
   -- ---------- fixtures ----------
   insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at, created_at, updated_at)
@@ -308,12 +309,113 @@ begin
   if not rp.somente_bonus then raise exception 'FALHOU 9b: somente_bonus não persistiu'; end if;
   select * into rp from products where id = v_novo2;
   if rp.preco <> 80 or not rp.ativo or rp.somente_bonus then raise exception 'FALHOU 9b: insert do admin incorreto (default de somente_bonus = false)'; end if;
-  -- omitir p_somente_bonus (chamada antiga com 13 argumentos) desliga a flag: default false
+  -- ---------- 9c. somente_bonus: update SEM o parâmetro (como a UI atual) preserva; com o parâmetro muda ----------
   perform set_config('request.jwt.claims', json_build_object('sub', u_sa, 'role', 'authenticated')::text, true);
   set local role authenticated;
   perform admin_upsert_product(v_p100, 'TD Cem Admin', v_cat, null, 150, 20, 90, null, null, true, false, 1, 'td-p100');
   reset role;
-  if (select somente_bonus from products where id = v_p100) then raise exception 'FALHOU 9b: default de p_somente_bonus deveria ser false'; end if;
+  if not (select somente_bonus from products where id = v_p100) then raise exception 'FALHOU 9c: update sem p_somente_bonus zerou a flag (admin)'; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  perform admin_upsert_product(v_p100, 'TD Cem Sup', v_cat, null, 1, 1, 1, null, null, true, false, 1, 'td-p100');
+  reset role;
+  if not (select somente_bonus from products where id = v_p100) then raise exception 'FALHOU 9c: update sem p_somente_bonus zerou a flag (supervisor)'; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', u_adm, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  perform admin_upsert_product(v_p100, 'TD Cem Admin', v_cat, null, 150, 20, 90, null, null, true, false, 1, 'td-p100', false);
+  reset role;
+  if (select somente_bonus from products where id = v_p100) then raise exception 'FALHOU 9c: p_somente_bonus=false não desligou a flag'; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', u_adm, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  perform admin_upsert_product(v_p100, 'TD Cem Admin', v_cat, null, 150, 20, 90, null, null, true, false, 1, 'td-p100', true);
+  perform admin_upsert_product(v_p100, 'TD Cem Admin', v_cat, null, 150, 20, 90, null, null, true, false, 1, 'td-p100');
+  r := admin_list_products();
+  reset role;
+  if not (select somente_bonus from products where id = v_p100) then raise exception 'FALHOU 9c: flag deveria continuar true'; end if;
+  select x into e from jsonb_array_elements(r) x where (x->>'id')::uuid = v_p100;
+  if jsonb_typeof(e->'somente_bonus') is distinct from 'boolean' or (e->>'somente_bonus')::boolean is not true then
+    raise exception 'FALHOU 9c: admin_list_products não devolve somente_bonus (%)', e->'somente_bonus';
+  end if;
+
+  -- ---------- 11. public_get_order: supervisor sem dinheiro; demais com valores; ninguém vê endereço ----------
+  insert into orders (cliente_nome, cliente_telefone, entrega_tipo, entrega_taxa, valor_produtos, valor_total)
+    values ('TD Sem Itens', '11999990003', 'entrega', 5, 0, 5) returning id into v_o3;
+  perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  r := public_get_order(v_o1);
+  e := public_get_order(v_o3);
+  reset role;
+  if jsonb_typeof(r->'valor_total') is distinct from 'null' or jsonb_typeof(r->'valor_produtos') is distinct from 'null'
+     or jsonb_typeof(r->'entrega_taxa') is distinct from 'null' then
+    raise exception 'FALHOU 11: supervisor vê valores em public_get_order: %', r;
+  end if;
+  if jsonb_array_length(r->'items') <> 2 then raise exception 'FALHOU 11: itens do pedido (supervisor)'; end if;
+  for it in select * from jsonb_array_elements(r->'items') loop
+    if jsonb_typeof(it->'preco_unit') is distinct from 'null' or jsonb_typeof(it->'subtotal') is distinct from 'null' then
+      raise exception 'FALHOU 11: supervisor vê preco_unit/subtotal em public_get_order';
+    end if;
+    if it->>'produto_nome' is null then raise exception 'FALHOU 11: item perdeu nome'; end if;
+  end loop;
+  if r->>'cliente_nome' is null or r ? 'endereco_rua' then raise exception 'FALHOU 11: nome ausente ou endereço presente'; end if;
+  if e->'items' is distinct from '[]'::jsonb then raise exception 'FALHOU 11: pedido sem itens deveria dar items [] (%)', e->'items'; end if;
+  if jsonb_typeof(e->'valor_total') is distinct from 'null' then raise exception 'FALHOU 11: pedido sem itens vazou valor_total'; end if;
+  foreach who in array array['adm','sa','cli','anon'] loop
+    if who = 'anon' then
+      perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+      set local role anon;
+    else
+      perform set_config('request.jwt.claims', json_build_object('sub',
+        case who when 'adm' then u_adm when 'sa' then u_sa else u_cli end, 'role', 'authenticated')::text, true);
+      set local role authenticated;
+    end if;
+    r := public_get_order(v_o1);
+    reset role;
+    if (r->>'valor_total')::numeric <> 210 or (r->>'valor_produtos')::numeric <> 200 or (r->>'entrega_taxa')::numeric <> 10 then
+      raise exception 'FALHOU 11 (%): valores do pedido sumiram: %', who, r;
+    end if;
+    if not exists (select 1 from jsonb_array_elements(r->'items') i where (i->>'preco_unit')::numeric = 100 and (i->>'subtotal')::numeric = 200) then
+      raise exception 'FALHOU 11 (%): preco_unit/subtotal sumiram', who;
+    end if;
+    if r ? 'endereco_rua' or r ? 'endereco_cep' then raise exception 'FALHOU 11 (%): endereço vazou', who; end if;
+  end loop;
+  -- o helper interno não é chamável por quem está logado
+  perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  begin
+    perform _mascarar_dinheiro_pedido('{}'::jsonb);
+    raise exception 'FALHOU 11: supervisor executou o helper interno';
+  exception when insufficient_privilege then null; end;
+  reset role;
+
+  -- ---------- 12. supervisor: troca de categoria não pode mudar o preço de atacado efetivo ----------
+  insert into categorias (grupo, nome, slug, desconto_atacado_percentual) values ('calcados', 'TD A', 'td-a', 10) returning id into v_cA;
+  insert into categorias (grupo, nome, slug, desconto_atacado_percentual) values ('calcados', 'TD B', 'td-b', 20) returning id into v_cB;
+  insert into categorias (grupo, nome, slug, desconto_atacado_percentual) values ('calcados', 'TD C', 'td-c', 10) returning id into v_cC;
+  insert into products (slug, nome, categoria_id, preco, ativo) values ('td-pnov', 'TD Sem Override', v_cA, 100, true) returning id into v_pnov;
+  insert into products (slug, nome, categoria_id, preco, preco_atacado, ativo) values ('td-pov', 'TD Com Override', v_cA, 100, 50, true) returning id into v_pov;
+  perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  begin
+    perform admin_upsert_product(v_pnov, 'TD Sem Override', v_cB, null, 1, null, null, null, null, true, false, 0, 'td-pnov');
+    raise exception 'FALHOU 12: supervisor mudou categoria para desconto diferente sem override';
+  exception when insufficient_privilege then null; end;
+  reset role;
+  if (select categoria_id from products where id = v_pnov) <> v_cA then raise exception 'FALHOU 12: categoria mudou apesar do erro'; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  perform admin_upsert_product(v_pnov, 'TD Sem Override', v_cC, null, 1, null, null, null, null, true, false, 0, 'td-pnov');   -- mesmo desconto (10)
+  perform admin_upsert_product(v_pov, 'TD Com Override', v_cB, null, 1, null, null, null, null, true, false, 0, 'td-pov');     -- override
+  v_novo := admin_upsert_product(null, 'TD Sup Cat Livre', v_cB, null, 1, null, null, null, null, true, false, 0, 'td-sup-livre'); -- insert
+  reset role;
+  if (select categoria_id from products where id = v_pnov) <> v_cC then raise exception 'FALHOU 12: troca para desconto igual deveria valer'; end if;
+  if (select categoria_id from products where id = v_pov) <> v_cB then raise exception 'FALHOU 12: troca com override deveria valer'; end if;
+  if (select categoria_id from products where id = v_novo) <> v_cB then raise exception 'FALHOU 12: insert do supervisor deveria aceitar qualquer categoria'; end if;
+  if (select preco_atacado from products where id = v_pov) is distinct from 50 then raise exception 'FALHOU 12: override mudou'; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', u_adm, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  perform admin_upsert_product(v_pnov, 'TD Sem Override', v_cB, null, 100, null, null, null, null, true, false, 0, 'td-pnov');
+  reset role;
+  if (select categoria_id from products where id = v_pnov) <> v_cB then raise exception 'FALHOU 12: admin deveria mudar a categoria livremente'; end if;
 
   -- ---------- 10. fim ----------
   raise exception 'TESTE_D_OK';
