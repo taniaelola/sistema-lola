@@ -1350,3 +1350,111 @@ input[type="checkbox"].swtoggle:checked::after { left:18px; }
   }
   .home-hero-beneficios li { padding: 8px 14px; font-size: 13px; margin: 0 !important; border-radius: 999px; }
 }
+
+/* Landing de revendedoras (components/lp) */
+.lp-hero {
+  background:
+    radial-gradient(circle at 82% 22%, rgba(255, 164, 92, 0.55), transparent 48%),
+    radial-gradient(circle at 70% 90%, rgba(199, 168, 255, 0.5), transparent 45%),
+    radial-gradient(circle at 8% 10%, rgba(143, 227, 200, 0.45), transparent 40%),
+    linear-gradient(135deg, #FFE4EC 0%, #FFD3C2 100%);
+  padding: clamp(48px, 9vw, 112px) clamp(20px, 6vw, 80px);
+}
+.lp-hero-miolo { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; align-items: flex-start; }
+.lp-etiqueta { font-family: var(--font-mono), monospace; font-size: 12px; letter-spacing: 0.08em; color: var(--ink); }
+.lp-hero-titulo {
+  max-width: 14ch;
+  font-size: clamp(40px, 7vw, 84px);
+  line-height: 0.98;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.lp-hero-sub { margin: 0; max-width: 480px; font-size: clamp(16px, 1.6vw, 19px); line-height: 1.5; text-wrap: pretty; }
+.lp-secao {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(40px, 6vw, 80px) clamp(20px, 4vw, 48px) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.lp-titulo { font-size: var(--fs-h2); line-height: 1.05; font-weight: 700; letter-spacing: -0.02em; }
+.lp-regras, .lp-passos, .lp-amostra { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.lp-regras { grid-template-columns: 1fr; }
+.lp-regra, .lp-passo {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.lp-regra p, .lp-passo p { margin: 0; line-height: 1.45; text-wrap: pretty; }
+.lp-regra-marca {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  background: var(--brand-pink);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.lp-regra:nth-child(2) .lp-regra-marca { background: var(--mint); }
+.lp-regra:nth-child(3) .lp-regra-marca { background: var(--accent); }
+.lp-regra-marca strong { font-size: 26px; line-height: 1; }
+.lp-regra-marca small { font-family: var(--font-mono), monospace; font-size: 10px; letter-spacing: 0.04em; margin-top: 4px; }
+.lp-passos { counter-reset: passo; grid-template-columns: 1fr; }
+.lp-passo-n {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.lp-amostra { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.lp-prod { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.lp-prod-foto {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: var(--surface-muted);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.lp-prod-foto img { width: 100%; height: 100%; object-fit: cover; }
+.lp-prod-inicial { font-family: var(--font-display), cursive; font-size: 72px; color: var(--ink-soft); }
+.lp-prod-selo {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--mint);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+.lp-prod-nome { font-size: 15px; font-weight: 600; line-height: 1.25; }
+.lp-prod-venda, .lp-prod-seu { margin: 0; font-size: 13px; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: baseline; }
+.lp-prod-venda s { color: var(--ink-soft); }
+.lp-prod-seu strong { font-size: 20px; color: var(--ink); }
+.lp-aviso { margin: 0; font-size: 14px; color: var(--ink-soft); max-width: 640px; }
+.lp-final { align-items: flex-start; padding-bottom: clamp(48px, 7vw, 96px); }
+@media (min-width: 720px) {
+  .lp-regras { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .lp-regra { flex-direction: column; align-items: flex-start; }
+  .lp-passos { grid-template-columns: repeat(3, 1fr); }
+  .lp-amostra { grid-template-columns: repeat(4, 1fr); gap: 20px; }
+}

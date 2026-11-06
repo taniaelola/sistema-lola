@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { economiaPercentual, selecionarAmostra } from "@/lib/lp";
+import { ctaLP, economiaPercentual, selecionarAmostra, textoRegraBonus } from "@/lib/lp";
+import { FLAGS_SEGURAS } from "@/lib/loja-flags";
 
 const item = (n: number, extra: Record<string, unknown> = {}) => ({
   id: `id-${n}`,
@@ -94,5 +95,50 @@ describe("economiaPercentual", () => {
     expect(economiaPercentual(Number.NaN, 10)).toBe(0);
     expect(economiaPercentual(100, Number.NaN)).toBe(0);
     expect(economiaPercentual(-5, 1)).toBe(0);
+  });
+});
+
+describe("textoRegraBonus", () => {
+  const on = { ...FLAGS_SEGURAS, bonusAtivo: true, bonusMinPecas: 15, bonusQuantidade: 1, bonusProdutoNome: "Bolsa Pop" };
+  it("desligado: null", () => {
+    expect(textoRegraBonus(FLAGS_SEGURAS, "Texto.")).toBeNull();
+  });
+  it("mínimo 15 com produto", () => {
+    expect(textoRegraBonus(on, "Bônus no pedido.")).toBe("Bônus no pedido. A partir de 15 peças, você leva Bolsa Pop.");
+  });
+  it("quantidade 2", () => {
+    expect(textoRegraBonus({ ...on, bonusQuantidade: 2 }, "Bônus.")).toBe(
+      "Bônus. A partir de 15 peças, você leva 2 unidades de Bolsa Pop."
+    );
+  });
+  it("sem nome de produto", () => {
+    expect(textoRegraBonus({ ...on, bonusProdutoNome: null }, "Bônus.")).toBe("Bônus. A partir de 15 peças.");
+  });
+  it("mínimo 1 no singular", () => {
+    expect(textoRegraBonus({ ...on, bonusMinPecas: 1, bonusProdutoNome: null }, "Bônus.")).toBe("Bônus. A partir de 1 peça.");
+  });
+  it("texto sem ponto final ganha ponto, sem espaço duplo", () => {
+    expect(textoRegraBonus(on, "  Bônus no pedido  ")).toBe("Bônus no pedido. A partir de 15 peças, você leva Bolsa Pop.");
+  });
+  it("texto vazio: só a frase", () => {
+    expect(textoRegraBonus(on, "  ")).toBe("A partir de 15 peças, você leva Bolsa Pop.");
+  });
+});
+
+describe("ctaLP", () => {
+  it("visitante: cadastro de revendedora", () => {
+    expect(ctaLP({ logado: false, papel: null })).toEqual({ href: "/entrar?modo=revendedor", rotulo: null });
+  });
+  it("cliente logado: mesmo destino", () => {
+    expect(ctaLP({ logado: true, papel: "cliente" })).toEqual({ href: "/entrar?modo=revendedor", rotulo: null });
+  });
+  it("revendedor: painel do atacado", () => {
+    expect(ctaLP({ logado: true, papel: "revendedor" })).toEqual({ href: "/atacado", rotulo: "Ir para o painel" });
+  });
+  it.each(["superadmin", "admin", "supervisor"] as const)("%s: admin", (papel) => {
+    expect(ctaLP({ logado: true, papel })).toEqual({ href: "/admin", rotulo: "Ir para o admin" });
+  });
+  it("não logado ignora o papel", () => {
+    expect(ctaLP({ logado: false, papel: "admin" })).toEqual({ href: "/entrar?modo=revendedor", rotulo: null });
   });
 });

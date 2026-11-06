@@ -1,4 +1,7 @@
 // Núcleo puro da landing de revendedores (sem server-only, sem supabase).
+import type { LojaFlags } from "@/lib/loja-flags";
+import { EQUIPE, type Papel } from "@/lib/roles";
+
 export type AmostraLP = {
   id: string;
   slug: string;
@@ -47,4 +50,27 @@ export function economiaPercentual(precoVarejo: number, precoAtacado: number): n
   if (!precoValido(precoVarejo) || !precoValido(precoAtacado)) return 0;
   if (precoVarejo <= 0 || precoAtacado >= precoVarejo) return 0;
   return Math.round(((precoVarejo - precoAtacado) / precoVarejo) * 100);
+}
+
+// Frase da regra do bônus, composta a partir das flags (o texto salvo não leva número).
+export function textoRegraBonus(flags: LojaFlags, texto: string): string | null {
+  if (!flags.bonusAtivo) return null;
+  const base = texto.trim();
+  const min = flags.bonusMinPecas;
+  const nome = flags.bonusProdutoNome?.trim() ?? "";
+  const qtd = flags.bonusQuantidade;
+  const brinde = nome ? `, você leva ${qtd > 1 ? `${qtd} unidades de ` : ""}${nome}` : "";
+  const frase = `A partir de ${min} ${min === 1 ? "peça" : "peças"}${brinde}.`;
+  if (!base) return frase;
+  const comPonto = /[.!?…]$/.test(base) ? base : `${base}.`;
+  return `${comPonto} ${frase}`;
+}
+
+export type CtaLP = { href: string; rotulo: string | null };
+
+// Destino do botão principal da landing. rotulo null = usar o texto salvo (lp_hero_botao / lp_final_botao).
+export function ctaLP({ logado, papel }: { logado: boolean; papel: Papel | null }): CtaLP {
+  if (logado && papel && EQUIPE.includes(papel)) return { href: "/admin", rotulo: "Ir para o admin" };
+  if (logado && papel === "revendedor") return { href: "/atacado", rotulo: "Ir para o painel" };
+  return { href: "/entrar?modo=revendedor", rotulo: null };
 }
