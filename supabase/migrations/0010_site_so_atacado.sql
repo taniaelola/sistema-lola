@@ -296,8 +296,12 @@ begin
       from product_sizes ps
       join product_colors pc on pc.id = ps.color_id
       join products p on p.id = pc.product_id
-      where p.id = v_cfg.bonus_produto_id and p.ativo and ps.estoque >= v_cfg.bonus_quantidade
-      order by ps.estoque desc, ps.id
+      where p.id = v_cfg.bonus_produto_id and p.ativo
+        -- estoque disponível = estoque menos o que este pedido já reservou nesse mesmo size_id
+        and ps.estoque - coalesce((select sum(oi.quantidade) from order_items oi
+              where oi.order_id = v_order_id and oi.size_id = ps.id), 0) >= v_cfg.bonus_quantidade
+      order by ps.estoque - coalesce((select sum(oi.quantidade) from order_items oi
+              where oi.order_id = v_order_id and oi.size_id = ps.id), 0) desc, ps.id
       limit 1
       for update of ps skip locked;
       if found then
@@ -426,9 +430,24 @@ begin
     return jsonb_build_object('ok', true, 'already', true);
   end if;
 
-  -- O valor cobrado tem de bater com o total do pedido (centavo de tolerância); NULL também falha.
-  if p_transaction_amount is null or abs(v_ord.valor_total - p_transaction_amount) > 0.01 then
-    raise exception 'valor divergente';
+  -- O valor cobrado tem de bater com o total do pedido (tolerância de 1 centavo). Sem exceção: o
+  -- Mercado Pago retenta em HTTP 500; ok:false vira 200 no webhook. Nunca liquida; o pedido segue pendente.
+  if p_transaction_amount is null then
+    raise warning 'pagamento sem valor: pedido % esperava %', p_order_id, v_ord.valor_total;
+    return jsonb_build_object('ok', false, 'reason', 'valor_ausente',
+      'esperado', v_ord.valor_total, 'recebido', null);
+  end if;
+  if p_transaction_amount < v_ord.valor_total - 0.01 then
+    raise warning 'pagamento abaixo do esperado: pedido % esperava % recebeu %',
+      p_order_id, v_ord.valor_total, p_transaction_amount;
+    return jsonb_build_object('ok', false, 'reason', 'valor_abaixo_do_esperado',
+      'esperado', v_ord.valor_total, 'recebido', p_transaction_amount);
+  end if;
+  if p_transaction_amount > v_ord.valor_total + 0.01 then
+    raise warning 'pagamento acima do esperado (revisão manual): pedido % esperava % recebeu %',
+      p_order_id, v_ord.valor_total, p_transaction_amount;
+    return jsonb_build_object('ok', false, 'reason', 'valor_acima_do_esperado',
+      'esperado', v_ord.valor_total, 'recebido', p_transaction_amount);
   end if;
 
   perform _settle_order(p_order_id, p_mp_payment_id, p_forma_pagamento);

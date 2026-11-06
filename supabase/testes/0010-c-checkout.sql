@@ -10,7 +10,7 @@ declare
   r jsonb; v_o14 uuid; v_o15 uuid; v_o30 uuid; v_ono uuid; v_ooff uuid; v_ov uuid;
   v_ord orders; v_n int; v_est int; v_pago numeric; v_seg text := 'segredo-teste-c';
   v_q int[];
-  v_items jsonb;
+  v_items jsonb; v_oa uuid; v_ob uuid; v_oc uuid;
 begin
   -- ---------- fixtures ----------
   insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at, created_at, updated_at)
@@ -204,19 +204,19 @@ begin
     perform mp_register_order_payment(v_seg, v_o30, 'mp-tc-30', 'pix');
     raise exception 'FALHOU: mp_register_order_payment aceitou chamada sem p_transaction_amount';
   exception when undefined_function then null; end;
-  -- valor divergente (abaixo e acima do total 1500)
-  begin
-    perform mp_register_order_payment(v_seg, v_o30, 'mp-tc-30', 'pix', 1499::numeric);
-    raise exception 'FALHOU: valor abaixo do total foi aceito';
-  exception when raise_exception then
-    if sqlerrm <> 'valor divergente' then raise; end if;
-  end;
-  begin
-    perform mp_register_order_payment(v_seg, v_o30, 'mp-tc-30', 'pix', 1501::numeric);
-    raise exception 'FALHOU: valor acima do total foi aceito';
-  exception when raise_exception then
-    if sqlerrm <> 'valor divergente' then raise; end if;
-  end;
+  -- valor divergente: SEM exceção, ok=false com reason, nada liquida e o pedido segue pendente
+  r := mp_register_order_payment(v_seg, v_o30, 'mp-tc-30', 'pix', 1499::numeric);
+  if r->>'reason' is distinct from 'valor_abaixo_do_esperado' or (r->>'ok')::boolean is distinct from false
+     or (r->>'esperado')::numeric <> 1500 or (r->>'recebido')::numeric <> 1499 then
+    raise exception 'FALHOU: valor abaixo retornou %', r; end if;
+  r := mp_register_order_payment(v_seg, v_o30, 'mp-tc-30', 'pix', 1501::numeric);
+  if r->>'reason' is distinct from 'valor_acima_do_esperado' or (r->>'ok')::boolean is distinct from false
+     or (r->>'esperado')::numeric <> 1500 or (r->>'recebido')::numeric <> 1501 then
+    raise exception 'FALHOU: valor acima retornou %', r; end if;
+  r := mp_register_order_payment(v_seg, v_o30, 'mp-tc-30', 'pix', null::numeric);
+  if r->>'reason' is distinct from 'valor_ausente' or (r->>'ok')::boolean is distinct from false
+     or (r->>'esperado')::numeric <> 1500 or r->'recebido' <> 'null'::jsonb then
+    raise exception 'FALHOU: valor NULL retornou %', r; end if;
   -- segredo errado continua barrado
   begin
     perform mp_register_order_payment('segredo-errado', v_o30, 'mp-tc-30', 'pix', 1500::numeric);
@@ -224,7 +224,8 @@ begin
   exception when sqlstate '28000' then null; end;
   reset role;
   if (select status from orders where id = v_o30) <> 'pendente' then
-    raise exception 'FALHOU: pedido liquidado apesar de erro'; end if;
+    raise exception 'FALHOU: pedido liquidado/alterado apesar de valor errado'; end if;
+  if exists (select 1 from sales where order_id = v_o30) then raise exception 'FALHOU: sales criada com valor errado'; end if;
   -- valor igual: liquida (chamável com a chave anon + segredo)
   perform set_config('request.jwt.claims', '{"role":"anon"}', true);
   set local role anon;
@@ -232,8 +233,86 @@ begin
   reset role;
   if (r->>'ok')::boolean is distinct from true then raise exception 'FALHOU: pagamento com valor igual retornou %', r; end if;
   if (select status from orders where id = v_o30) <> 'pago' then raise exception 'FALHOU: pedido não ficou pago'; end if;
+  perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+  set local role anon;
+  -- idempotência ANTES da conferência: pedido já pago com valor errado => already
+  r := mp_register_order_payment(v_seg, v_o30, 'mp-tc-30b', 'pix', 1::numeric);
+  if r is distinct from jsonb_build_object('ok', true, 'already', true) then
+    raise exception 'FALHOU: pedido já pago com valor errado retornou %', r; end if;
+  -- tolerância de 1 centavo (para cima e para baixo)
+  r := mp_register_order_payment(v_seg, v_ono, 'mp-tc-ono', 'pix', 750.01::numeric);
+  reset role;
+  if (r->>'ok')::boolean is distinct from true or (select status from orders where id = v_ono) <> 'pago' then
+    raise exception 'FALHOU: 750.01 deveria liquidar (%)', r; end if;
+  perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+  set local role anon;
+  r := mp_register_order_payment(v_seg, v_ooff, 'mp-tc-ooff', 'pix', 749.99::numeric);
+  reset role;
+  if (r->>'ok')::boolean is distinct from true or (select status from orders where id = v_ooff) <> 'pago' then
+    raise exception 'FALHOU: 749.99 deveria liquidar (%)', r; end if;
   select count(*) into v_n from sales where order_id = v_o30;
   if v_n <> 13 then raise exception 'FALHOU: liquidação gerou % linhas de sales (esperado 12 pagos + 1 bônus)', v_n; end if;
+
+  -- ---------- 11. bônus não vende além do estoque (produto de bônus também no carrinho) ----------
+  update admin_config set bonus_ativo = true where id = 1;
+  update products set ativo = true where id = v_bonus;
+  update product_sizes set estoque = 5 where id = v_bsize38;
+  update product_sizes set estoque = 0 where id = v_bsize37;
+  delete from carrinho_atacado;
+  insert into carrinho_atacado (revendedor_id, product_id, color_id, size_id, quantidade)
+    select v_rev, t.prod, t.color, t.size, 1 from t_sku t where t.n <= 11;
+  insert into carrinho_atacado (revendedor_id, product_id, color_id, size_id, quantidade)
+    values (v_rev, v_bonus, v_bcor, v_bsize38, 5);
+  perform set_config('request.jwt.claims', json_build_object('sub', u_ra, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  r := checkout_iniciar_pedido('Rev Teste', '(11) 99999-0000', 'retirada', null, null, null, null, null, null, '[]'::jsonb, true);
+  reset role;
+  v_oa := (r->>'id')::uuid;
+  select * into v_ord from orders where id = v_oa;
+  if v_ord.bonus_aplicado or v_ord.bonus_aviso is null then
+    raise exception 'FALHOU: bônus no mesmo size_id sem sobra deveria dar aviso (aplicado %, aviso %)', v_ord.bonus_aplicado, v_ord.bonus_aviso; end if;
+  if exists (select 1 from order_items where order_id = v_oa and preco_unit = 0) then
+    raise exception 'FALHOU: bônus criado sem estoque disponível (vende além do estoque)'; end if;
+  perform _settle_order(v_oa, 'mp-tc-oa', 'pix');
+  select estoque into v_est from product_sizes where id = v_bsize38;
+  if v_est <> 0 then raise exception 'FALHOU: estoque do tamanho 38 = % (esperado 0 = 5 - 5)', v_est; end if;
+  -- com um segundo tamanho disponível, o bônus usa o outro tamanho
+  update product_sizes set estoque = 5 where id = v_bsize38;
+  update product_sizes set estoque = 3 where id = v_bsize37;
+  delete from carrinho_atacado;
+  insert into carrinho_atacado (revendedor_id, product_id, color_id, size_id, quantidade)
+    select v_rev, t.prod, t.color, t.size, 1 from t_sku t where t.n <= 11;
+  insert into carrinho_atacado (revendedor_id, product_id, color_id, size_id, quantidade)
+    values (v_rev, v_bonus, v_bcor, v_bsize38, 5);
+  perform set_config('request.jwt.claims', json_build_object('sub', u_ra, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  r := checkout_iniciar_pedido('Rev Teste', '(11) 99999-0000', 'retirada', null, null, null, null, null, null, '[]'::jsonb, true);
+  reset role;
+  v_ob := (r->>'id')::uuid;
+  if not exists (select 1 from order_items where order_id = v_ob and preco_unit = 0 and size_id = v_bsize37 and quantidade = 1)
+     or not (select bonus_aplicado from orders where id = v_ob) then
+    raise exception 'FALHOU: bônus deveria usar o tamanho 37 (o 38 está comprometido)'; end if;
+  perform _settle_order(v_ob, 'mp-tc-ob', 'pix');
+  if (select min(estoque) from product_sizes where color_id = v_bcor) < 0 then raise exception 'FALHOU: estoque negativo'; end if;
+  if (select estoque from product_sizes where id = v_bsize38) <> 0 or (select estoque from product_sizes where id = v_bsize37) <> 2 then
+    raise exception 'FALHOU: estoque após liquidar (38 deveria ir a 0 e 37 a 2)'; end if;
+
+  -- ---------- 12. produto de bônus inativo: sem bônus, com aviso ----------
+  update products set ativo = false where id = v_bonus;
+  update product_sizes set estoque = 5 where color_id = v_bcor;
+  v_q := array[2,2,2,1,1,1,1,1,1,1,1,1];
+  delete from carrinho_atacado;
+  insert into carrinho_atacado (revendedor_id, product_id, color_id, size_id, quantidade)
+    select v_rev, t.prod, t.color, t.size, v_q[t.n] from t_sku t where t.n <= 12;
+  perform set_config('request.jwt.claims', json_build_object('sub', u_ra, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  r := checkout_iniciar_pedido('Rev Teste', '(11) 99999-0000', 'retirada', null, null, null, null, null, null, '[]'::jsonb, true);
+  reset role;
+  v_oc := (r->>'id')::uuid;
+  select * into v_ord from orders where id = v_oc;
+  if v_ord.bonus_aplicado or v_ord.bonus_aviso is null
+     or exists (select 1 from order_items where order_id = v_oc and preco_unit = 0) then
+    raise exception 'FALHOU: bônus inativo deveria dar aviso e não aplicar (aplicado %, aviso %)', v_ord.bonus_aplicado, v_ord.bonus_aviso; end if;
 
   -- ---------- 10. public_get_order sem endereço ----------
   perform set_config('request.jwt.claims', '{"role":"anon"}', true);
