@@ -106,18 +106,14 @@ describe("destinoPosLogin", () => {
   );
 });
 
-describe("urlEntrar", () => {
-  it("só revendedora vai para o modo revendedor, com next codificado", () => {
-    expect(urlEntrar(["revendedor"], "/atacado/catalogo")).toBe("/entrar?modo=revendedor&next=%2Fatacado%2Fcatalogo");
-    expect(urlEntrar(["revendedor"], "/checkout?modo=atacado")).toBe(
-      "/entrar?modo=revendedor&next=%2Fcheckout%3Fmodo%3Datacado"
-    );
-  });
-  it("outros papéis mantêm o login padrão", () => {
-    expect(urlEntrar(EQUIPE, "/admin")).toBe("/entrar?next=%2Fadmin");
-    expect(urlEntrar(["cliente", "revendedor"], "/minha-conta")).toBe("/entrar?next=%2Fminha-conta");
+describe("urlEntrar (login obrigatório, aba Entrar)", () => {
+  it("abre o login com next codificado, sem modo", () => {
+    expect(urlEntrar("/atacado/catalogo")).toBe("/entrar?next=%2Fatacado%2Fcatalogo");
+    expect(urlEntrar("/checkout?modo=atacado")).toBe("/entrar?next=%2Fcheckout%3Fmodo%3Datacado");
+    expect(urlEntrar("/admin")).toBe("/entrar?next=%2Fadmin");
+    expect(urlEntrar("/atacado")).not.toContain("modo=");
   });
   it("next inseguro vira /", () => {
-    expect(urlEntrar(["revendedor"], "//evil.com")).toBe("/entrar?modo=revendedor&next=%2F");
+    expect(urlEntrar("//evil.com")).toBe("/entrar?next=%2F");
   });
 });

@@ -3,9 +3,13 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessao } from "@/lib/auth";
+import { getLojaFlags } from "@/lib/loja-flags-server";
+import { varejoDisponivel } from "@/lib/loja-rotas";
+import { urlEntrar } from "@/lib/roles";
 import { supabaseComToken } from "@/lib/supabase";
 import { criarPreferencia, montarItensMP, resolverOrigem } from "@/lib/mercadopago";
 import {
+  MSG_VAREJO_DESATIVADO,
   mensagemErroCheckout,
   validarEntrega,
   type DadosEntrega,
@@ -24,7 +28,8 @@ export type ItemCarrinhoInput = {
   precoUnit: number;
 };
 
-const LOGIN_REVENDEDOR = "/entrar?modo=revendedor&next=/atacado";
+// Login obrigatório: abre a aba Entrar (quem já tem conta); o cadastro fica nos links "Seja revendedora".
+const LOGIN_ATACADO = urlEntrar("/atacado");
 
 type Resultado = { url?: string; error?: string };
 
@@ -32,6 +37,8 @@ export async function criarPedido(
   itens: ItemCarrinhoInput[],
   dados: DadosEntrega
 ): Promise<Resultado> {
+  // O banco também recusa, mas nem chamamos o RPC com o varejo desligado.
+  if (!varejoDisponivel(await getLojaFlags())) return { error: MSG_VAREJO_DESATIVADO };
   if (!itens.length) return { error: "Carrinho vazio." };
   const invalido = validarEntrega(dados);
   if (invalido) return { error: invalido };
@@ -63,7 +70,7 @@ async function iniciarPedido(
   // O banco só aceita checkout de usuário autenticado (deriva customer_id/revendedor_id
   // de auth.uid()); sem sessão não há convidado: volta para o login de revendedora.
   const sessao = await getSessao({ renovar: true });
-  if (!sessao) redirect(LOGIN_REVENDEDOR);
+  if (!sessao) redirect(LOGIN_ATACADO);
   const db = supabaseComToken(sessao.accessToken);
   const args = {
     p_cliente_nome: dados.nome.trim(),

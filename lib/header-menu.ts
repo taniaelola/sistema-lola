@@ -6,14 +6,16 @@ export type ItemMenuConta =
   | { tipo: "link"; rotulo: string; href: string }
   | { tipo: "sair"; rotulo: string };
 
-export function itensMenuConta(perfil: PerfilNav): ItemMenuConta[] {
+export function itensMenuConta(perfil: PerfilNav, varejoAtivo: boolean = true): ItemMenuConta[] {
   // Cada perfil vê só o seu destino: equipe no painel, revendedor no atacado, cliente em Minha conta.
   const destino: ItemMenuConta = ehEquipe(perfil.papel)
     ? { tipo: "link", rotulo: "Painel", href: "/admin" }
     : perfil.papel === "revendedor"
       ? { tipo: "link", rotulo: "Painel de atacado", href: "/atacado" }
       : { tipo: "link", rotulo: "Minha conta", href: "/minha-conta" };
-  return [destino, { tipo: "sair", rotulo: "Sair" }];
+  // Sem varejo /minha-conta redireciona para a Home: cliente logado só vê Sair.
+  const semDestino = perfil.papel === "cliente" && !varejoAtivo;
+  return semDestino ? [{ tipo: "sair", rotulo: "Sair" }] : [destino, { tipo: "sair", rotulo: "Sair" }];
 }
 
 export function linksCategorias(categorias: CategoriaNav[]): { href: string; rotulo: string }[] {

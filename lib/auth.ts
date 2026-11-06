@@ -105,7 +105,7 @@ export async function getPerfil(opcoes: { renovar?: boolean } = {}): Promise<Per
 export async function exigirPapel(papeis: Papel[], caminho: string = "/"): Promise<Perfil> {
   const perfil = await getPerfil();
   if (!perfil || !perfil.ativo) {
-    redirect(urlEntrar(papeis, caminho));
+    redirect(urlEntrar(caminho));
   }
   if (!papeis.includes(perfil.papel)) redirect("/");
   return perfil;

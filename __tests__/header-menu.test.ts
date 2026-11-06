@@ -9,6 +9,15 @@ describe("itensMenuConta", () => {
     expect(r.map((i) => i.rotulo)).toEqual(["Minha conta", "Sair"]);
     expect(r[1].tipo).toBe("sair");
   });
+  it("cliente com varejo desligado vê só Sair (sem link morto)", () => {
+    const r = itensMenuConta({ nome: "Ana", papel: "cliente" }, false);
+    expect(r.map((i) => i.rotulo)).toEqual(["Sair"]);
+    expect(itensMenuConta({ nome: "Ana", papel: "cliente" }, true).map((i) => i.rotulo)).toEqual(["Minha conta", "Sair"]);
+  });
+  it("equipe e revendedor não dependem do varejo", () => {
+    expect(itensMenuConta({ nome: "R", papel: "revendedor" }, false).map((i) => i.rotulo)).toEqual(["Painel de atacado", "Sair"]);
+    expect(itensMenuConta({ nome: "A", papel: "admin" }, false).map((i) => i.rotulo)).toEqual(["Painel", "Sair"]);
+  });
   it("equipe vê só Painel e Sair", () => {
     for (const papel of ["superadmin", "admin", "supervisor"] as const) {
       const r = itensMenuConta({ nome: "X", papel });

@@ -128,7 +128,7 @@ export default function HeaderClient({
               {contaAberta && (
                 <div id="contaMenuLista" className="conta-menu-lista">
                   <span className="conta-menu-nome">{perfil.nome || "Minha conta"}</span>
-                  {itensMenuConta(perfil).map((item) =>
+                  {itensMenuConta(perfil, varejoAtivo).map((item) =>
                     item.tipo === "link" ? (
                       <Link
                         key={item.href}
