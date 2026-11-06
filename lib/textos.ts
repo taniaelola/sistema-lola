@@ -25,8 +25,9 @@ export const TEXTOS_PADRAO: Record<string, string> = {
   lp_hero_subtitulo: "Preço de atacado, aprovação rápida e um painel só seu para montar o pedido.",
   lp_hero_botao: "Quero ser revendedora",
   lp_regras_titulo: "Como funciona o atacado",
+  // regra fixa: mínimo de 12 SKUs (checkout_iniciar_pedido)
   lp_regra_skus: "12 modelos diferentes por pedido.",
-  lp_regra_bonus: "A partir de 15 peças você ganha uma bonificação.",
+  lp_regra_bonus: "Peças suficientes no pedido garantem uma bonificação.",
   lp_regra_preco: "Preço de atacado em todos os modelos, direto no painel.",
   lp_passos_titulo: "Em três passos",
   lp_passo_1: "Crie o seu cadastro de revendedora.",

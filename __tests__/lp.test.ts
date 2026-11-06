@@ -54,6 +54,27 @@ describe("selecionarAmostra", () => {
     expect(r).toHaveLength(8);
     expect(r.map((a) => a.id)).toEqual(validos.slice(0, 8).map((v) => v.id));
   });
+  it("campos extras do RPC não vazam", () => {
+    const r = selecionarAmostra([
+      item(1, { estoque: 5, percentual: 40, desconto_atacado_percentual: 40, preco_atacado_bruto: 1 }),
+    ]);
+    expect(r[0]).toEqual({
+      id: "id-1",
+      slug: "produto-1",
+      nome: "Produto 1",
+      imagem: "/api/img/1",
+      precoVarejo: 100,
+      precoAtacado: 60,
+    });
+  });
+  it("strings vazias em id, slug ou nome descartam o item", () => {
+    expect(selecionarAmostra([item(1, { id: "" }), item(2, { slug: "  " }), item(3, { nome: "" })])).toEqual([]);
+  });
+  it("imagem ausente (undefined) vira null", () => {
+    const r = selecionarAmostra([item(1, { imagem: undefined })]);
+    expect(r).toHaveLength(1);
+    expect(r[0].imagem).toBeNull();
+  });
   it("não-array devolve vazio", () => {
     for (const v of [null, undefined, {}, "lista", 5, { 0: item(1) }]) {
       expect(selecionarAmostra(v)).toEqual([]);

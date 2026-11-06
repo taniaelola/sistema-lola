@@ -10,6 +10,10 @@ export type AmostraLP = {
 
 const LIMITE_AMOSTRA = 8;
 
+function textoNaoVazio(v: unknown): v is string {
+  return typeof v === "string" && v.trim() !== "";
+}
+
 function precoValido(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v) && v >= 0;
 }
@@ -23,14 +27,15 @@ export function selecionarAmostra(raw: unknown): AmostraLP[] {
     if (saida.length >= LIMITE_AMOSTRA) break;
     if (!item || typeof item !== "object") continue;
     const o = item as Record<string, unknown>;
-    if (typeof o.id !== "string" || typeof o.slug !== "string" || typeof o.nome !== "string") continue;
+    if (!textoNaoVazio(o.id) || !textoNaoVazio(o.slug) || !textoNaoVazio(o.nome)) continue;
     if (!precoValido(o.preco_varejo) || !precoValido(o.preco_atacado)) continue;
-    if (o.imagem !== null && typeof o.imagem !== "string") continue;
+    const imagem = o.imagem === undefined ? null : o.imagem;
+    if (imagem !== null && typeof imagem !== "string") continue;
     saida.push({
       id: o.id,
       slug: o.slug,
       nome: o.nome,
-      imagem: o.imagem,
+      imagem,
       precoVarejo: o.preco_varejo,
       precoAtacado: o.preco_atacado,
     });

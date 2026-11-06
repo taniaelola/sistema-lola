@@ -769,7 +769,7 @@ insert into textos_loja (chave, valor) values
   ('lp_hero_botao',      'Quero ser revendedora'),
   ('lp_regras_titulo',   'Como funciona o atacado'),
   ('lp_regra_skus',      '12 modelos diferentes por pedido.'),
-  ('lp_regra_bonus',     'A partir de 15 peças você ganha uma bonificação.'),
+  ('lp_regra_bonus',     'Peças suficientes no pedido garantem uma bonificação.'),
   ('lp_regra_preco',     'Preço de atacado em todos os modelos, direto no painel.'),
   ('lp_passos_titulo',   'Em três passos'),
   ('lp_passo_1',         'Crie o seu cadastro de revendedora.'),
