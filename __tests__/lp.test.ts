@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ctaLP, economiaPercentual, selecionarAmostra, textoRegraBonus } from "@/lib/lp";
+import { ctaLP, economiaPercentual, selecionarAmostra, seloBonus, textoRegraBonus } from "@/lib/lp";
 import { FLAGS_SEGURAS } from "@/lib/loja-flags";
 
 const item = (n: number, extra: Record<string, unknown> = {}) => ({
@@ -119,6 +119,16 @@ describe("textoRegraBonus", () => {
   });
   it("texto sem ponto final ganha ponto, sem espaço duplo", () => {
     expect(textoRegraBonus(on, "  Bônus no pedido  ")).toBe("Bônus no pedido. A partir de 15 peças, você leva Bolsa Pop.");
+  });
+  it("nome do brinde terminado em ponto não duplica o ponto", () => {
+    expect(textoRegraBonus({ ...on, bonusProdutoNome: "Bolsa Pop Ltda." }, "Bônus.")).toBe(
+      "Bônus. A partir de 15 peças, você leva Bolsa Pop Ltda."
+    );
+  });
+  it("selo do bônus acompanha bonusQuantidade", () => {
+    expect(seloBonus({ bonusQuantidade: 1 })).toBe("+1");
+    expect(seloBonus({ bonusQuantidade: 3 })).toBe("+3");
+    expect(seloBonus({ bonusQuantidade: 0 })).toBe("+1");
   });
   it("texto vazio: só a frase", () => {
     expect(textoRegraBonus(on, "  ")).toBe("A partir de 15 peças, você leva Bolsa Pop.");

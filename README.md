@@ -218,6 +218,12 @@ papel em Usuários não corta o atacado).
    O acesso ao `/admin` é por e-mail e senha do Supabase Auth, conforme o papel
    do usuário (ver "Papéis e acessos"); não há senha em variável de ambiente.
 
+   Modo demo (`LOLA_DEMO=1` no `.env.local`, só fora de produção): serve catálogo e
+   textos de exemplo para a landing e a vitrine. Nele, **adicionar ao carrinho do
+   atacado falha por design**: os ids dos produtos demo não são UUIDs e a ação
+   rejeita a entrada antes de falar com o banco. Para testar o carrinho, use um
+   Supabase real com a migration 0010 aplicada.
+
 ## Migrations
 
 Fonte em `supabase/migrations/`. Produção tem `0001` a `0009`; a `0010`

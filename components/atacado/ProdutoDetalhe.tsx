@@ -39,7 +39,7 @@ export default function ProdutoDetalhe({
           <div className="atc-produto-miniaturas" role="group" aria-label="Fotos do produto">
             {imagens.map((src, i) => (
               <button
-                key={src}
+                key={`${i}-${src}`}
                 type="button"
                 aria-pressed={src === foto}
                 aria-label={`Foto ${i + 1} de ${imagens.length}`}
@@ -60,8 +60,8 @@ export default function ProdutoDetalhe({
         {produto.descricao && <p style={{ margin: 0, fontSize: 14 }}>{produto.descricao}</p>}
         {produto.caracteristicas.length > 0 && (
           <ul className="atc-produto-lista" aria-label="Características">
-            {produto.caracteristicas.map((c) => (
-              <li key={c}>{c}</li>
+            {produto.caracteristicas.map((c, i) => (
+              <li key={`${i}-${c}`}>{c}</li>
             ))}
           </ul>
         )}

@@ -52,7 +52,9 @@ function falhaInesperada(contexto: string, e: unknown): ResultadoAcao {
 // O banco (atacado_cart_set_item) valida revendedor aprovado, produto ativo e a ligação
 // produto/cor/tamanho, mas NÃO valida estoque. Por isso o estoque é lido aqui, no servidor,
 // por get_produto_revendedor(slug); nada que o navegador mande sobre estoque é confiável.
-const SLUG = /^[a-z0-9][a-z0-9-]{0,199}$/i;
+// O slug vai como parâmetro ligado do RPC (sem concatenação de SQL): aqui só barramos entrada
+// vazia, enorme ou com espaço/caractere de controle; a existência é decidida pelo banco.
+const SLUG = /^[^\s\x00-\x1f\x7f]{1,200}$/;
 
 export async function addAoCarrinho(
   slug: string,

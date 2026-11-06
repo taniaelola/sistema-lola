@@ -2,16 +2,18 @@ export default function RegrasLP({
   titulo,
   skus,
   bonus,
+  seloBonus = "+1",
   preco,
 }: {
   titulo: string;
   skus: string;
   bonus: string | null;
+  seloBonus?: string;
   preco: string;
 }) {
   const cartoes = [
     { chave: "skus", destaque: "12", rotulo: "modelos", texto: skus },
-    ...(bonus ? [{ chave: "bonus", destaque: "+1", rotulo: "bônus", texto: bonus }] : []),
+    ...(bonus ? [{ chave: "bonus", destaque: seloBonus, rotulo: "bônus", texto: bonus }] : []),
     { chave: "preco", destaque: "R$", rotulo: "atacado", texto: preco },
   ];
   return (

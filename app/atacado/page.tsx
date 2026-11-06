@@ -121,9 +121,9 @@ export default async function PainelAtacadoPage() {
           )}
         </section>
 
-        <section className="atc-cartao" aria-labelledby="atc-novidades">
+        <section className="atc-cartao" aria-labelledby="atc-destaques">
           <div className="atc-cartao-titulo">
-            <h2 id="atc-novidades">Novidades no catálogo</h2>
+            <h2 id="atc-destaques">Destaques do catálogo</h2>
             <Link href="/atacado/catalogo" className="atc-link">
               Ver todos
             </Link>

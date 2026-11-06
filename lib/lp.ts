@@ -60,10 +60,17 @@ export function textoRegraBonus(flags: LojaFlags, texto: string): string | null 
   const nome = flags.bonusProdutoNome?.trim() ?? "";
   const qtd = flags.bonusQuantidade;
   const brinde = nome ? `, você leva ${qtd > 1 ? `${qtd} unidades de ` : ""}${nome}` : "";
-  const frase = `A partir de ${min} ${min === 1 ? "peça" : "peças"}${brinde}.`;
+  const fim = /[.!?…]$/.test(brinde) ? "" : ".";
+  const frase = `A partir de ${min} ${min === 1 ? "peça" : "peças"}${brinde}${fim}`;
   if (!base) return frase;
   const comPonto = /[.!?…]$/.test(base) ? base : `${base}.`;
   return `${comPonto} ${frase}`;
+}
+
+// Selo do cartão de bônus ("+1", "+2"...), sempre alinhado com a quantidade da frase.
+export function seloBonus(flags: Pick<LojaFlags, "bonusQuantidade">): string {
+  const qtd = Number.isFinite(flags.bonusQuantidade) && flags.bonusQuantidade >= 1 ? Math.floor(flags.bonusQuantidade) : 1;
+  return `+${qtd}`;
 }
 
 export type CtaLP = { href: string; rotulo: string | null };

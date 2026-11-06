@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
+import { BRAND } from "@/lib/brand.config";
 import { getTextos } from "@/lib/textos";
 import { getPerfil } from "@/lib/auth";
 import { getLojaFlags } from "@/lib/loja-flags-server";
-import { ctaLP, textoRegraBonus } from "@/lib/lp";
+import { ctaLP, seloBonus, textoRegraBonus } from "@/lib/lp";
 import { getAmostraLP } from "@/lib/lp-server";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooterServer from "@/components/SiteFooterServer";
@@ -12,6 +14,12 @@ import AmostraLP from "@/components/lp/AmostraLP";
 import CtaFinalLP from "@/components/lp/CtaFinalLP";
 
 export const revalidate = 0;
+
+// O layout raiz usa title string (sem template), então o título aqui é o completo.
+export const metadata: Metadata = {
+  title: `${BRAND.nome} Atacado — calçados para revender`,
+  description: `Seja revendedora ${BRAND.nome}: preço de atacado, bônus na compra e cadastro com aprovação. Veja o catálogo e comece a revender.`,
+};
 
 async function perfilSeguro() {
   try {
@@ -45,6 +53,7 @@ export default async function Home() {
           titulo={textos.lp_regras_titulo}
           skus={textos.lp_regra_skus}
           bonus={textoRegraBonus(flags, textos.lp_regra_bonus)}
+          seloBonus={seloBonus(flags)}
           preco={textos.lp_regra_preco}
         />
         <PassosLP titulo={textos.lp_passos_titulo} passos={[textos.lp_passo_1, textos.lp_passo_2, textos.lp_passo_3]} />
