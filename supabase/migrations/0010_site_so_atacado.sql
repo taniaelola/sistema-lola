@@ -108,12 +108,13 @@ begin
   perform _assert_catalogo_acesso();
   return jsonb_build_object(
     'categorias', coalesce((select jsonb_agg(jsonb_build_object('id', c.id, 'nome', c.nome, 'slug', c.slug, 'grupo', c.grupo)
-                                             order by c.ordem) from categorias c), '[]'::jsonb),
+                                             order by c.ordem) from categorias c where c.ativo), '[]'::jsonb),
     'produtos', coalesce((
       select jsonb_agg(_catalogo_produto(p, true) order by p.ordem, p.nome)
       from products p
       where p.ativo and not p.somente_bonus
-        and (p_categoria is null or exists (select 1 from categorias c where c.id = p.categoria_id and c.slug = p_categoria))
+        and exists (select 1 from categorias c where c.id = p.categoria_id and c.ativo)
+        and (p_categoria is null or exists (select 1 from categorias c where c.id = p.categoria_id and c.ativo and c.slug = p_categoria))
     ), '[]'::jsonb));
 end $$;
 
@@ -122,7 +123,8 @@ returns jsonb language plpgsql security definer stable set search_path = public,
 declare v_p products;
 begin
   perform _assert_catalogo_acesso();
-  select * into v_p from products where slug = p_slug and ativo and not somente_bonus;
+  select * into v_p from products p where p.slug = p_slug and p.ativo and not p.somente_bonus
+    and exists (select 1 from categorias c where c.id = p.categoria_id and c.ativo);
   if not found then return null; end if;
   return _catalogo_produto(v_p, true);
 end $$;
@@ -139,6 +141,7 @@ returns jsonb language sql security definer stable set search_path = public, ext
         (select c.desconto_atacado_percentual from categorias c where c.id = p.categoria_id))) as j
     from products p
     where p.ativo and p.destaque and not p.somente_bonus
+      and exists (select 1 from categorias c where c.id = p.categoria_id and c.ativo)
       and exists (select 1 from product_colors pc join product_sizes ps on ps.color_id = pc.id
                   where pc.product_id = p.id and ps.estoque > 0)
     order by p.ordem, p.nome
@@ -162,7 +165,7 @@ drop policy if exists prod_read on products;
 drop policy if exists col_read on product_colors;
 drop policy if exists siz_read on product_sizes;
 drop policy if exists cat_read on categorias;
-revoke select on products, product_colors, product_sizes, categorias from anon, authenticated;
+revoke all on products, product_colors, product_sizes, categorias from anon, authenticated;
 
 -- S-03: a vitrine "surpresa" é de varejo e devolvia preço de atacado e estoque.
 revoke all on function public_get_surpresa() from public, anon, authenticated;

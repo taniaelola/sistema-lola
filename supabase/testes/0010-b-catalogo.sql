@@ -2,7 +2,7 @@
 -- termina com TESTE_B_OK (o runner trata como sucesso). Negações: só 42501 é aceito.
 do $t$
 declare
-  r jsonb; txt text; s text; tb text; i int;
+  r jsonb; txt text; s text; tb text; pv text; i int;
   u_ra  uuid := '00000000-0000-4000-8000-0000000000f1';  -- revendedor aprovado
   u_rp  uuid := '00000000-0000-4000-8000-0000000000f2';  -- revendedor pendente
   u_rr  uuid := '00000000-0000-4000-8000-0000000000f3';  -- revendedor recusado
@@ -12,6 +12,7 @@ declare
   u_adm uuid := '00000000-0000-4000-8000-0000000000f7';
   v_cat uuid; v_cat_off uuid;
   v_a uuid; v_off uuid; v_bonus uuid; v_semest uuid; v_destbonus uuid; v_destoff uuid;
+  v_ovr uuid; v_catoff uuid; u_sa uuid := '00000000-0000-4000-8000-0000000000f8';
   v_cor uuid; v_exp_varejo numeric; v_exp_atacado numeric; v_item jsonb;
 begin
   -- ---------- fixtures ----------
@@ -19,10 +20,11 @@ begin
   select x.id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', x.em, now(), now(), now()
   from (values (u_ra,'tb-ra@teste.invalid'),(u_rp,'tb-rp@teste.invalid'),(u_rr,'tb-rr@teste.invalid'),
                (u_ri,'tb-ri@teste.invalid'),(u_cli,'tb-cli@teste.invalid'),(u_sup,'tb-sup@teste.invalid'),
-               (u_adm,'tb-adm@teste.invalid')) as x(id, em);
+               (u_adm,'tb-adm@teste.invalid'),(u_sa,'tb-sa@teste.invalid')) as x(id, em);
   update profiles set papel = 'revendedor' where id in (u_ra, u_rp, u_rr, u_ri);
   update profiles set papel = 'supervisor' where id = u_sup;
   update profiles set papel = 'admin' where id = u_adm;
+  update profiles set papel = 'superadmin' where id = u_sa;
   insert into revendedores (user_id, razao_social, email, status) values
     (u_ra, 'TB A', 'tb-ra@teste.invalid', 'aprovado'),
     (u_rp, 'TB P', 'tb-rp@teste.invalid', 'pendente'),
@@ -63,10 +65,18 @@ begin
     insert into product_sizes (color_id, tamanho, estoque) values (v_cor, '40', 1);
   end loop;
 
-  -- valores esperados, calculados como dono (mesmas funções do checkout)
-  select _preco_varejo(p.preco, _desconto_efetivo(p)), _preco_atacado(p.preco, p.preco_atacado, 40)
-    into v_exp_varejo, v_exp_atacado from products p where p.id = v_a;
-  if v_exp_atacado <> 60 then raise exception 'FALHOU: fixture: atacado esperado 60 (%)', v_exp_atacado; end if;
+  -- produto com override de atacado (123) e sem desconto; produto ativo em categoria INATIVA (destaque com estoque)
+  insert into products (slug, nome, categoria_id, preco, preco_atacado, ativo, ordem)
+    values ('tb-ovr', 'TB Override', v_cat, 200, 123, true, -990) returning id into v_ovr;
+  insert into product_colors (product_id, nome, ordem) values (v_ovr, 'Preto', 0) returning id into v_cor;
+  insert into product_sizes (color_id, tamanho, estoque) values (v_cor, '38', 2);
+  insert into products (slug, nome, categoria_id, preco, ativo, destaque, ordem)
+    values ('tb-catoff', 'TB Cat Inativa', v_cat_off, 100, true, true, -989) returning id into v_catoff;
+  insert into product_colors (product_id, nome, ordem) values (v_catoff, 'Preto', 0) returning id into v_cor;
+  insert into product_sizes (color_id, tamanho, estoque) values (v_cor, '38', 2);
+
+  -- valores esperados: literais (100 com 10% de desconto = 90; 100 com 40% da categoria = 60)
+  v_exp_varejo := 90; v_exp_atacado := 60;
 
   -- ---------- 1. anon não chama as funções de revendedor ----------
   perform set_config('request.jwt.claims', '{"role":"anon"}', true);
@@ -126,6 +136,19 @@ begin
     raise exception 'FALHOU: filtro por categoria perdeu o produto'; end if;
   r := get_catalogo_revendedor('nao-existe');
   if jsonb_array_length(r->'produtos') <> 0 then raise exception 'FALHOU: categoria inexistente devolveu produtos'; end if;
+  r := get_catalogo_revendedor('tb-cat-off');
+  if jsonb_array_length(r->'produtos') <> 0 then raise exception 'FALHOU: slug de categoria inativa devolveu produtos'; end if;
+  r := get_catalogo_revendedor();
+  if exists (select 1 from jsonb_array_elements(r->'produtos') e where e->>'id' = v_catoff::text) then
+    raise exception 'FALHOU: produto de categoria inativa no catálogo'; end if;
+  if exists (select 1 from jsonb_array_elements(r->'categorias') e where e->>'id' = v_cat_off::text) then
+    raise exception 'FALHOU: categoria inativa na lista de categorias'; end if;
+  -- override de atacado (literal) e varejo sem desconto
+  select e into v_item from jsonb_array_elements(r->'produtos') e where e->>'id' = v_ovr::text;
+  if v_item is null or (v_item->>'preco_atacado')::numeric <> 123 or (v_item->>'preco_varejo')::numeric <> 200 then
+    raise exception 'FALHOU: override de atacado (%)', v_item; end if;
+  if get_produto_revendedor('tb-catoff') is distinct from null then
+    raise exception 'FALHOU: detalhe de produto em categoria inativa deveria ser null'; end if;
   -- detalhe
   r := get_produto_revendedor('tb-ativo');
   if r->>'id' <> v_a::text or r::text like '%desconto_atacado_percentual%' or (r->>'preco_atacado')::numeric <> v_exp_atacado then
@@ -136,7 +159,7 @@ begin
   reset role;
 
   -- ---------- 4. equipe ----------
-  foreach s in array array[u_sup::text, u_adm::text] loop
+  foreach s in array array[u_sup::text, u_adm::text, u_sa::text] loop
     perform set_config('request.jwt.claims', json_build_object('sub', s, 'role', 'authenticated')::text, true);
     set local role authenticated;
     r := get_catalogo_revendedor();
@@ -153,7 +176,7 @@ begin
   if jsonb_array_length(r) <> 8 then raise exception 'FALHOU: destaques deve limitar em 8 (%)', jsonb_array_length(r); end if;
   select e into v_item from jsonb_array_elements(r) e where e->>'id' = v_a::text;
   if v_item is null then raise exception 'FALHOU: destaque ativo com estoque ausente'; end if;
-  foreach s in array array[v_semest::text, v_destbonus::text, v_destoff::text, v_off::text, v_bonus::text] loop
+  foreach s in array array[v_semest::text, v_destbonus::text, v_destoff::text, v_off::text, v_bonus::text, v_catoff::text] loop
     if exists (select 1 from jsonb_array_elements(r) e where e->>'id' = s) then
       raise exception 'FALHOU: destaques trouxe item indevido (%)', s; end if;
   end loop;
@@ -209,6 +232,25 @@ begin
   if get_categoria_imagem(v_cat_off) is not null then raise exception 'FALHOU: imagem de categoria inativa vazou'; end if;
   if get_categoria_imagem(gen_random_uuid()) is not null then raise exception 'FALHOU: id inexistente devolveu algo'; end if;
   reset role;
+
+  -- ---------- 9. privilégios em nível de tabela e de função ----------
+  foreach s in array array['anon', 'authenticated'] loop
+    foreach tb in array array['products', 'product_colors', 'product_sizes', 'categorias'] loop
+      foreach pv in array array['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger'] loop
+        if has_table_privilege(s, 'public.' || tb, pv) then
+          raise exception 'FALHOU: % tem % em %', s, pv, tb; end if;
+      end loop;
+    end loop;
+  end loop;
+  if has_function_privilege('anon', 'public.get_catalogo_revendedor(text)', 'execute') then raise exception 'FALHOU: anon executa get_catalogo_revendedor'; end if;
+  if has_function_privilege('anon', 'public.get_produto_revendedor(text)', 'execute') then raise exception 'FALHOU: anon executa get_produto_revendedor'; end if;
+  foreach s in array array['anon', 'authenticated'] loop
+    if has_function_privilege(s, 'public._assert_catalogo_acesso()', 'execute') then raise exception 'FALHOU: % executa _assert_catalogo_acesso', s; end if;
+    if has_function_privilege(s, 'public._catalogo_produto(public.products, boolean)', 'execute') then raise exception 'FALHOU: % executa _catalogo_produto', s; end if;
+    if has_function_privilege(s, 'public.public_get_surpresa()', 'execute') then raise exception 'FALHOU: % executa public_get_surpresa', s; end if;
+  end loop;
+  if not has_function_privilege('anon', 'public.get_destaques_atacado()', 'execute') then raise exception 'FALHOU: anon sem execute em get_destaques_atacado'; end if;
+  if not has_function_privilege('anon', 'public.get_categoria_imagem(uuid)', 'execute') then raise exception 'FALHOU: anon sem execute em get_categoria_imagem'; end if;
 
   raise exception 'TESTE_B_OK';   -- desfaz tudo; o runner trata TESTE_*_OK como sucesso
 end $t$;
