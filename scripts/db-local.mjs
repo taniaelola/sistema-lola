@@ -103,6 +103,19 @@ function testar() {
       console.log(`ok  testes/${t}`);
     }
   }
+  // Rollback da 0010: aplica rollback-0010.sql e a verificação na MESMA transação (tudo é desfeito no fim).
+  const rb = join(raiz, "supabase/rollback-0010.sql");
+  const vrf = join(raiz, "supabase/testes-rollback/verifica.sql");
+  if (!existsSync(rb) || !existsSync(vrf)) {
+    console.error("rollback-0010.sql ou testes-rollback/verifica.sql ausente");
+    process.exit(1);
+  }
+  const rr = psql("postgres", readFileSync(rb, "utf8") + "\n" + readFileSync(vrf, "utf8"), { transacaoUnica: true });
+  if (rr.codigo === 0 || !/ERROR:\s+TESTE_[A-Z0-9_]+_OK\b/.test(rr.saida)) {
+    console.error(`FALHOU rollback-0010\n${rr.saida}`);
+    process.exit(1);
+  }
+  console.log("ok  rollback-0010");
 }
 
 const cmd = process.argv[2];

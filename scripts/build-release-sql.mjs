@@ -140,3 +140,27 @@ end $$;
 const corpo = partes.map((p) => banner(p.nome) + p.conteudo + '\n').join('')
 writeFileSync(saida, cabecalho + corpo + blocoDono, 'utf8')
 console.log(`release:sql OK: ${saida} (${ORDEM.length} migrações + bloco do dono)`)
+
+// ---------------------------------------------------------------------
+// release-0010.sql: pacote da migração 0010 (site só atacado). As migrações
+// 0001 a 0009 já estão em produção; este arquivo tem SOMENTE a 0010.
+// ---------------------------------------------------------------------
+const saida0010 = join(raiz, 'supabase', 'release-0010.sql')
+const arq0010 = '0010_site_so_atacado.sql'
+const caminho0010 = join(dirMigracoes, arq0010)
+if (!existsSync(caminho0010)) falhar(`migração ausente: supabase/migrations/${arq0010}`)
+const conteudo0010 = readFileSync(caminho0010, 'utf8').replace(/\r\n/g, '\n').trim()
+if (!conteudo0010) falhar(`migração vazia: ${arq0010}`)
+
+const cabecalho0010 = `-- release-0010.sql — APLICAR NA MESMA JANELA DO DEPLOY (SQL primeiro, merge em seguida).
+--   (GERADO por scripts/build-release-sql.mjs; NÃO edite à mão. Contém somente a migração ${arq0010};
+--    as migrações 0001 a 0009 já estão aplicadas em produção.)
+--   0. Antes: confira Authentication > Providers > Email: "Confirm email" LIGADO e troca segura de e-mail.
+--   1. Cole o arquivo inteiro no SQL Editor do projeto LOLA e rode uma vez.
+--   2. Rode supabase/smoke.sql (todas as linhas ok = true) e supabase/rls-teste.sql.
+--   3. Mergeie/deploye o app imediatamente (o app antigo perde o catálogo e o checkout de convidado).
+--   Rollback: supabase/rollback-0010.sql + rollback do deploy.
+
+`
+writeFileSync(saida0010, cabecalho0010 + conteudo0010 + '\n', 'utf8')
+console.log(`release:sql OK: ${saida0010} (somente ${arq0010})`)

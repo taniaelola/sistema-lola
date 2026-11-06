@@ -1,6 +1,6 @@
 -- =====================================================================
 -- smoke.sql — verificação pós-lançamento (SOMENTE LEITURA)
--- Rode no SQL Editor do Supabase DEPOIS de release-unico.sql, do merge e de
+-- Rode no SQL Editor do Supabase DEPOIS de release-unico.sql e/ou release-0010.sql, do merge e de
 -- criar a conta do dono. Nenhum insert/update/delete/DDL.
 --
 -- COMO INTERPRETAR: o resultado é uma tabela (nome, ok, detalhe).
@@ -111,11 +111,11 @@ select nome, ok, detalhe from (
   union all
 
   -- ---------- checkout: público, só a assinatura nova ----------
-  select 70, 'checkout_iniciar_pedido executável por anon e authenticated',
+  select 70, 'checkout_iniciar_pedido sem EXECUTE para anon e com para authenticated',
          to_regprocedure('public.checkout_iniciar_pedido(text,text,entrega_tipo,text,text,text,text,text,text,jsonb,boolean)') is not null
-           and has_function_privilege('anon', to_regprocedure('public.checkout_iniciar_pedido(text,text,entrega_tipo,text,text,text,text,text,text,jsonb,boolean)'), 'EXECUTE')
+           and not has_function_privilege('anon', to_regprocedure('public.checkout_iniciar_pedido(text,text,entrega_tipo,text,text,text,text,text,text,jsonb,boolean)'), 'EXECUTE')
            and has_function_privilege('authenticated', to_regprocedure('public.checkout_iniciar_pedido(text,text,entrega_tipo,text,text,text,text,text,text,jsonb,boolean)'), 'EXECUTE'),
-         'compra de convidado e logado'
+         'convidado revogado na 0010; só logado compra'
 
   union all
 
@@ -135,6 +135,7 @@ select nome, ok, detalhe from (
   union all
 
   -- ---------- conteúdo público ----------
+  -- ajustar na Task 8 (15 chaves da LP)
   select 80, 'get_textos() devolve 19 chaves',
          (select count(*) from jsonb_object_keys(public.get_textos())) = 19,
          'chaves: ' || (select count(*) from jsonb_object_keys(public.get_textos()))::text
@@ -210,6 +211,114 @@ select nome, ok, detalhe from (
          true,
          'pendentes: ' || (select count(*) from public.convites_papel)::text
            || '. O convite do dono some assim que a conta confirmada o consome.'
+
+  union all
+
+  -- ---------- 0010: colunas novas ----------
+  select 110, 'coluna ' || c,
+         exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = split_part(c, '.', 1) and column_name = split_part(c, '.', 2)),
+         'admin_config/products/orders (0010)'
+  from unnest(array['admin_config.varejo_ativo','admin_config.bonus_ativo','admin_config.bonus_min_pecas',
+                    'admin_config.bonus_produto_id','admin_config.bonus_quantidade',
+                    'products.somente_bonus','orders.bonus_aplicado','orders.bonus_aviso']) as c
+
+  union all
+
+  -- ---------- 0010: funções públicas e de revendedor ----------
+  select 120, 'get_loja_flags() existe e é executável por anon',
+         to_regprocedure('public.get_loja_flags()') is not null
+           and has_function_privilege('anon', to_regprocedure('public.get_loja_flags()'), 'EXECUTE'),
+         'a Home lê as flags sem login'
+
+  union all
+
+  select 121, 'get_destaques_atacado() executável por anon',
+         to_regprocedure('public.get_destaques_atacado()') is not null
+           and has_function_privilege('anon', to_regprocedure('public.get_destaques_atacado()'), 'EXECUTE'),
+         'vitrine sem preço para visitante'
+
+  union all
+
+  select 122, 'get_categoria_imagem(uuid) executável por anon',
+         to_regprocedure('public.get_categoria_imagem(uuid)') is not null
+           and has_function_privilege('anon', to_regprocedure('public.get_categoria_imagem(uuid)'), 'EXECUTE'),
+         'rota /api/categoria-img'
+
+  union all
+
+  select 123, f || ' sem EXECUTE para anon e com para authenticated',
+         to_regprocedure('public.' || f) is not null
+           and not has_function_privilege('anon', to_regprocedure('public.' || f), 'EXECUTE')
+           and has_function_privilege('authenticated', to_regprocedure('public.' || f), 'EXECUTE'),
+         'catálogo de atacado só para logado'
+  from unnest(array['get_catalogo_revendedor(text)','get_produto_revendedor(text)']) as f
+
+  union all
+
+  select 124, 'public_get_surpresa() sem EXECUTE para anon',
+         to_regprocedure('public.public_get_surpresa()') is not null
+           and not has_function_privilege('anon', to_regprocedure('public.public_get_surpresa()'), 'EXECUTE'),
+         'vitrine surpresa (varejo) fechada'
+
+  union all
+
+  select 125, 'mp_register_order_payment: assinatura de 5 argumentos e uma única sobrecarga',
+         to_regprocedure('public.mp_register_order_payment(text,uuid,text,text,numeric)') is not null
+           and (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                where n.nspname = 'public' and p.proname = 'mp_register_order_payment') = 1,
+         'sobrecargas encontradas: '
+           || (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+               where n.nspname = 'public' and p.proname = 'mp_register_order_payment')::text
+
+  union all
+
+  select 126, 'admin_upsert_product com uma única sobrecarga',
+         (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public' and p.proname = 'admin_upsert_product') = 1,
+         'sobrecargas encontradas: '
+           || (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+               where n.nspname = 'public' and p.proname = 'admin_upsert_product')::text
+
+  union all
+
+  select 127, f || ' sem EXECUTE para anon/authenticated',
+         exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                 where n.nspname = 'public' and p.proname = f)
+           and not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                           where n.nspname = 'public' and p.proname = f
+                             and (has_function_privilege('anon', p.oid, 'EXECUTE')
+                                  or has_function_privilege('authenticated', p.oid, 'EXECUTE'))),
+         'helper interno: deve existir e estar fechado'
+  from unnest(array['_mascarar_dinheiro_pedido','_assert_catalogo_acesso']) as f
+
+  union all
+
+  select 128, f || ' com search_path configurado',
+         exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                 where n.nspname = 'public' and p.proname = f)
+           and not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                           where n.nspname = 'public' and p.proname = f
+                             and not coalesce(exists (select 1 from unnest(coalesce(p.proconfig, '{}'::text[])) cfg
+                                                      where cfg like 'search_path=%'), false)),
+         'proconfig contém search_path'
+  from unnest(array['_slugify','_preco_atacado','_preco_varejo']) as f
+
+  union all
+
+  -- ---------- 0010: catálogo fechado ----------
+  select 130, 'política ' || pol || ' ausente',
+         not exists (select 1 from pg_policies where schemaname = 'public' and policyname = pol),
+         'a leitura direta do catálogo foi fechada'
+  from unnest(array['prod_read','col_read','siz_read','cat_read']) as pol
+
+  union all
+
+  select 131, 'anon e authenticated sem SELECT em ' || t,
+         not has_table_privilege('anon', 'public.' || t, 'select')
+           and not has_table_privilege('authenticated', 'public.' || t, 'select'),
+         'catálogo só por RPC'
+  from unnest(array['products','product_colors','product_sizes','categorias']) as t
 
 ) as checagens
 order by ord, nome;
