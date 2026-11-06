@@ -67,7 +67,7 @@ Tudo da spec de 27/10 (§4 a §10) vale. Acréscimos e correções:
 
 ### 5.2 Vitrine do revendedor (`/atacado/catalogo`, `/atacado/produto/[slug]`)
 - Mostra **varejo (referência)** e **atacado (seu preço)**, e a margem implícita só como informação visual (diferença), sem cálculo gravado.
-- Tela de espera para pendente/recusado; redireciona anônimo para `/entrar?modo=revendedor&next=...`.
+- Tela de espera para pendente/recusado; redireciona anônimo para `/entrar?next=...` (abre a aba **Entrar**: quem precisa de login já tem conta; decisão tomada na Task 8b, 2026-11-06). Só os convites ao cadastro ("Seja revendedora", botão da LP) apontam para `/entrar?modo=revendedor`.
 - As rotas de varejo (`/produto/[slug]`, `/carrinho`, `/surpresa`, `/checkout` varejo, `/minha-conta`) redirecionam conforme a spec de 27/10 §5.1.
 
 ### 5.3 LP pública
