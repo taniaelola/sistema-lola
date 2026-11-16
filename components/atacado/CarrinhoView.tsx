@@ -7,7 +7,7 @@ import {
   alertaLinha,
   decisaoFinalizar,
   progressoBonus,
-  progressoSkus,
+  progressoPecas as progressoMinimo,
   somarPecas,
   textoBonus,
   type ItemCarrinho,
@@ -17,20 +17,18 @@ import { alterarQuantidade, removerItem } from "@/app/atacado/actions";
 
 export default function CarrinhoView({
   itens,
-  skus,
   total,
   bonus,
 }: {
   itens: ItemCarrinho[];
-  skus: number;
   total: number;
   bonus: { ativo: boolean; minPecas: number; quantidade: number; produtoNome: string | null };
 }) {
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, iniciar] = useTransition();
-  const progresso = progressoSkus(skus);
   const decisao = decisaoFinalizar(itens);
   const pecas = somarPecas(itens.filter((i) => i.disponivel));
+  const progresso = progressoMinimo(pecas);
   // Sem nome de produto (bônus inativo/inexistente no banco) o checkout não entrega brinde: trata como desligado.
   const bonusVisivel = bonus.ativo && bonus.produtoNome !== null;
   const progressoPecas = progressoBonus(pecas, bonus.minPecas, bonusVisivel);
@@ -50,7 +48,7 @@ export default function CarrinhoView({
         <ShoppingBag size={28} aria-hidden="true" style={{ color: "var(--adm-text-secondary)" }} />
         <p style={{ fontSize: 15, fontWeight: 600, margin: "10px 0 4px" }}>Seu carrinho está vazio</p>
         <p className="atc-suave" style={{ fontSize: 13, margin: "0 0 16px" }}>
-          Escolha produtos no catálogo até completar {progresso.minimo} produtos distintos.
+          Escolha produtos no catálogo até completar {progresso.minimo} peças.
         </p>
         <Link href="/atacado/catalogo" className="atc-btn">
           Ver catálogo
@@ -129,13 +127,13 @@ export default function CarrinhoView({
         <h2>Resumo do pedido</h2>
         <div>
           <div className="atc-suave" style={{ fontSize: 13 }}>
-            produtos distintos no carrinho
+            peças no carrinho (mínimo do pedido)
           </div>
           <div
             className="atc-barra"
             style={{ marginTop: 6 }}
             role="progressbar"
-            aria-label="produtos distintos no carrinho"
+            aria-label="peças no carrinho (mínimo do pedido)"
             aria-valuemin={0}
             aria-valuemax={progresso.minimo}
             aria-valuenow={Math.min(progresso.atual, progresso.minimo)}
@@ -143,7 +141,7 @@ export default function CarrinhoView({
             <span style={{ width: `${progresso.pct}%` }} />
           </div>
           <div className="atc-mono" style={{ fontSize: 13, marginTop: 6 }}>
-            {progresso.atual} de {progresso.minimo} produtos
+            {progresso.atual} de {progresso.minimo} peças
           </div>
         </div>
         {bonusVisivel && (

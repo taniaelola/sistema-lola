@@ -1,17 +1,17 @@
 import { describe, it, expect } from "vitest";
 import {
-  MIN_SKUS_ATACADO,
+  MIN_PECAS_ATACADO,
   comDescontoEfetivo,
   descontoEfetivo,
   precoVarejoEfetivo,
-  skusDistintos,
+  totalPecas,
 } from "@/lib/pricing";
 
 const CAT_A = "cat-a";
 const CAT_B = "cat-b";
 
-describe("MIN_SKUS_ATACADO", () => {
-  it("é 12", () => expect(MIN_SKUS_ATACADO).toBe(12));
+describe("MIN_PECAS_ATACADO", () => {
+  it("é 12", () => expect(MIN_PECAS_ATACADO).toBe(12));
 });
 
 describe("descontoEfetivo", () => {
@@ -97,17 +97,15 @@ describe("precoVarejoEfetivo", () => {
   });
 });
 
-describe("skusDistintos", () => {
-  it("conta combinações produto+cor+tamanho ignorando quantidade e duplicatas", () => {
-    const itens = [
-      { product_id: "p1", color_id: "c1", size_id: "s1", quantidade: 5 },
-      { product_id: "p1", color_id: "c1", size_id: "s1", quantidade: 1 },
-      { product_id: "p1", color_id: "c1", size_id: "s2" },
-      { product_id: "p1", color_id: "c2", size_id: "s1" },
-      { product_id: "p2", color_id: "c1", size_id: "s1" },
-    ];
-    expect(skusDistintos(itens)).toBe(4);
+describe("totalPecas", () => {
+  it("soma as quantidades, inclusive do mesmo SKU repetido", () => {
+    expect(totalPecas([{ quantidade: 5, disponivel: true }, { quantidade: 3, disponivel: true }])).toBe(8);
   });
-
-  it("lista vazia é 0", () => expect(skusDistintos([])).toBe(0));
+  it("itens indisponíveis não contam", () => {
+    expect(totalPecas([{ quantidade: 5, disponivel: true }, { quantidade: 9, disponivel: false }])).toBe(5);
+  });
+  it("ignora quantidade inválida e lista vazia é 0", () => {
+    expect(totalPecas([{ quantidade: -2, disponivel: true }, { quantidade: 0, disponivel: true }])).toBe(0);
+    expect(totalPecas([])).toBe(0);
+  });
 });

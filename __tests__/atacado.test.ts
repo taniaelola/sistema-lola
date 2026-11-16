@@ -12,7 +12,7 @@ import {
   normalizarCarrinho,
   normalizarPedidos,
   pedidoIdCurto,
-  progressoSkus,
+  progressoPecas,
   proximaQuantidade,
   quantidadeValida,
   rotuloStatusPedido,
@@ -57,39 +57,50 @@ function pedido(extra: Partial<PedidoAtacado> = {}): PedidoAtacado {
   };
 }
 
-describe("progressoSkus", () => {
+describe("progressoPecas", () => {
   it("calcula atual, percentual e rótulo", () => {
-    expect(progressoSkus(3)).toEqual({ atual: 3, minimo: 12, pct: 25, label: "3/12", completo: false });
+    expect(progressoPecas(3)).toEqual({ atual: 3, minimo: 12, pct: 25, label: "3/12", completo: false });
   });
   it("limita em 100% e marca completo", () => {
-    expect(progressoSkus(15)).toMatchObject({ pct: 100, completo: true });
-    expect(progressoSkus(12).completo).toBe(true);
+    expect(progressoPecas(15)).toMatchObject({ pct: 100, completo: true });
+    expect(progressoPecas(12).completo).toBe(true);
   });
   it("trata valores inválidos como zero", () => {
-    expect(progressoSkus(-2).atual).toBe(0);
-    expect(progressoSkus(Number.NaN).pct).toBe(0);
+    expect(progressoPecas(-2).atual).toBe(0);
+    expect(progressoPecas(Number.NaN).pct).toBe(0);
   });
 });
 
 describe("textoFaltam", () => {
-  it("plural", () => expect(textoFaltam(9)).toBe("Faltam 3 produtos para finalizar"));
-  it("singular", () => expect(textoFaltam(11)).toBe("Falta 1 produto para finalizar"));
+  it("plural", () => expect(textoFaltam(9)).toBe("Faltam 3 peças para finalizar"));
+  it("singular", () => expect(textoFaltam(11)).toBe("Falta 1 peça para finalizar"));
   it("nulo quando completo", () => expect(textoFaltam(12)).toBeNull());
-  it("zero SKUs", () => expect(textoFaltam(0)).toBe("Faltam 12 produtos para finalizar"));
+  it("zero peças", () => expect(textoFaltam(0)).toBe("Faltam 12 peças para finalizar"));
 });
 
 describe("decisaoFinalizar", () => {
-  it("habilita com 12 SKUs sem alerta", () => {
-    expect(decisaoFinalizar(itens(12))).toEqual({ habilitado: true, texto: "Finalizar pedido" });
+  it("habilita com 12 peças sem alerta", () => {
+    expect(decisaoFinalizar(itens(12, { quantidade: 1 }))).toEqual({ habilitado: true, texto: "Finalizar pedido" });
   });
-  it("bloqueia com menos de 12", () => {
-    expect(decisaoFinalizar(itens(10))).toEqual({
+  it("habilita com UM modelo e 12 peças", () => {
+    expect(decisaoFinalizar([item({ quantidade: 12, estoque: 50 })])).toEqual({ habilitado: true, texto: "Finalizar pedido" });
+  });
+  it("habilita com 12 peças em 3 modelos", () => {
+    const l = [item({ id: "a", quantidade: 5, estoque: 50 }), item({ id: "b", product_id: "p2", quantidade: 4, estoque: 50 }), item({ id: "c", product_id: "p3", quantidade: 3, estoque: 50 })];
+    expect(decisaoFinalizar(l).habilitado).toBe(true);
+  });
+  it("bloqueia com menos de 12 peças", () => {
+    expect(decisaoFinalizar(itens(10, { quantidade: 1 }))).toEqual({
       habilitado: false,
-      texto: "Faltam 2 produtos para finalizar",
+      texto: "Faltam 2 peças para finalizar",
     });
   });
-  it("bloqueia com alerta de estoque mesmo com 12 SKUs", () => {
-    const l = itens(12);
+  it("3 modelos com 10 peças no total: faltam 2", () => {
+    const l = [item({ id: "a", quantidade: 4 }), item({ id: "b", product_id: "p2", quantidade: 3 }), item({ id: "c", product_id: "p3", quantidade: 3 })];
+    expect(decisaoFinalizar(l)).toEqual({ habilitado: false, texto: "Faltam 2 peças para finalizar" });
+  });
+  it("bloqueia com alerta de estoque mesmo com 12 peças", () => {
+    const l = itens(12, { quantidade: 1 });
     l[3] = { ...l[3], quantidade: 11, estoque: 4 };
     expect(decisaoFinalizar(l)).toEqual({
       habilitado: false,
@@ -97,20 +108,20 @@ describe("decisaoFinalizar", () => {
     });
   });
   it("bloqueia com item indisponível", () => {
-    const l = itens(12);
+    const l = itens(12, { quantidade: 1 });
     l[0] = { ...l[0], disponivel: false };
     expect(decisaoFinalizar(l).habilitado).toBe(false);
   });
   it("carrinho vazio", () => {
     expect(decisaoFinalizar([])).toEqual({
       habilitado: false,
-      texto: "Faltam 12 produtos para finalizar",
+      texto: "Faltam 12 peças para finalizar",
     });
   });
-  it("itens indisponíveis não contam como SKU", () => {
-    const l = itens(12);
+  it("itens indisponíveis não contam como peça", () => {
+    const l = itens(12, { quantidade: 1 });
     l[0] = { ...l[0], disponivel: false };
-    expect(decisaoFinalizar(l).texto).toBe("Falta 1 produto para finalizar");
+    expect(decisaoFinalizar(l).texto).toBe("Falta 1 peça para finalizar");
   });
 });
 
@@ -263,11 +274,12 @@ describe("normalização de dados do banco", () => {
     expect(c.itens).toHaveLength(1);
     expect(c.itens[0]).toMatchObject({ quantidade: 3, preco_unit: 49.9, estoque: 7, subtotal: 149.7 });
     expect(c.sku_distintos).toBe(1);
+    expect(c.pecas).toBe(3);
     expect(c.total).toBe(149.7);
   });
   it("carrinho inválido vira vazio", () => {
-    expect(normalizarCarrinho(null)).toEqual({ itens: [], sku_distintos: 0, total: 0 });
-    expect(normalizarCarrinho("x")).toEqual({ itens: [], sku_distintos: 0, total: 0 });
+    expect(normalizarCarrinho(null)).toEqual({ itens: [], sku_distintos: 0, pecas: 0, total: 0 });
+    expect(normalizarCarrinho("x")).toEqual({ itens: [], sku_distintos: 0, pecas: 0, total: 0 });
   });
   it("pedidos inválidos são descartados", () => {
     const p = normalizarPedidos([pedido(), { id: 1 }, null]);

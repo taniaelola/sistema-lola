@@ -4,7 +4,7 @@ import { formatarReais } from "@/lib/home";
 import {
   calcularKpis,
   pedidoIdCurto,
-  progressoSkus,
+  progressoPecas,
   rotuloStatusPedido,
 } from "@/lib/atacado";
 import SwingTag from "@/components/SwingTag";
@@ -30,7 +30,7 @@ export default async function PainelAtacadoPage() {
   const lancamentos = catalogo ? novidadesDoCatalogo(catalogo) : null;
   const desconto = catalogo ? descontoMaximoDoCatalogo(catalogo) : null;
 
-  const progresso = progressoSkus(carrinho?.sku_distintos ?? 0);
+  const progresso = progressoPecas(carrinho?.pecas ?? 0);
   const kpis = calcularKpis({ pedidos, descontoMaximo: desconto, agora: agora() });
   const ultimos = (pedidos ?? []).slice(0, 5);
 
@@ -39,7 +39,7 @@ export default async function PainelAtacadoPage() {
       <section className="atc-cartao atc-progresso" aria-label="Pedido mínimo">
         <div className="atc-progresso-texto">
           <h2 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 4px" }}>
-            Pedido mínimo: {progresso.minimo} produtos distintos
+            Pedido mínimo: {progresso.minimo} peças
           </h2>
           <p className="atc-suave" style={{ fontSize: 13, margin: 0 }}>
             Adicione itens ao carrinho até completar o mínimo para finalizar o pedido.
@@ -47,7 +47,7 @@ export default async function PainelAtacadoPage() {
           <div
             className="atc-barra"
             role="progressbar"
-            aria-label="produtos distintos no carrinho"
+            aria-label="peças no carrinho"
             aria-valuemin={0}
             aria-valuemax={progresso.minimo}
             aria-valuenow={Math.min(progresso.atual, progresso.minimo)}
@@ -57,7 +57,7 @@ export default async function PainelAtacadoPage() {
         </div>
         <div className="atc-progresso-valor">
           <div className="atc-progresso-num">
-            {progresso.atual} de {progresso.minimo} produtos
+            {progresso.atual} de {progresso.minimo} peças
           </div>
           <Link href="/atacado/carrinho" className="atc-btn" style={{ marginTop: 8 }}>
             Ver carrinho

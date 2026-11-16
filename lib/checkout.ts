@@ -1,4 +1,4 @@
-import { MIN_SKUS_ATACADO, skusDistintos } from "@/lib/pricing";
+import { MIN_PECAS_ATACADO, totalPecas } from "@/lib/pricing";
 
 export type EntregaTipoCheckout = "retirada" | "entrega" | "entrega_fora";
 
@@ -72,12 +72,13 @@ export function mensagemErroCheckout(
     return "Um item ficou sem estoque. Ajuste o carrinho de atacado e tente de novo.";
   }
 
-  const minimo = m.match(/mínimo de (\d+) SKUs distintos \(carrinho tem (\d+)\)/);
+  // Mensagem atual (0011): "mínimo de 12 peças (carrinho tem N)". A antiga (0010: "12 SKUs distintos") segue aceita.
+  const minimo = m.match(/mínimo de (\d+) (?:peças|SKUs distintos) \(carrinho tem (\d+)\)/);
   if (minimo) {
-    return `O pedido de atacado precisa de pelo menos ${minimo[1]} produtos distintos. Seu carrinho tem ${minimo[2]}.`;
+    return `O pedido de atacado precisa de pelo menos ${minimo[1]} peças. Seu carrinho tem ${minimo[2]}.`;
   }
   if (m.includes("mínimo de")) {
-    return `O pedido de atacado precisa de pelo menos ${MIN_SKUS_ATACADO} produtos distintos.`;
+    return `O pedido de atacado precisa de pelo menos ${MIN_PECAS_ATACADO} peças.`;
   }
 
   if (m.includes("revendedor não aprovado")) {
@@ -119,14 +120,14 @@ export function problemaLinhaAtacado(i: ItemCarrinhoAtacado): string | null {
 }
 
 export type AvaliacaoAtacado = {
-  skus: number;
+  pecas: number;
   problemas: { id: string; motivo: string }[];
   liberado: boolean;
   motivo: string | null;
 };
 
 export function avaliarCarrinhoAtacado(itens: ItemCarrinhoAtacado[]): AvaliacaoAtacado {
-  const skus = skusDistintos(itens.filter((i) => i.disponivel));
+  const pecas = totalPecas(itens);
   const problemas = itens.flatMap((i) => {
     const motivo = problemaLinhaAtacado(i);
     return motivo ? [{ id: i.id, motivo }] : [];
@@ -136,8 +137,8 @@ export function avaliarCarrinhoAtacado(itens: ItemCarrinhoAtacado[]): AvaliacaoA
   if (itens.length === 0) motivo = "Seu carrinho de atacado está vazio.";
   else if (problemas.length > 0)
     motivo = "Há itens indisponíveis ou sem estoque suficiente. Ajuste o carrinho para continuar.";
-  else if (skus < MIN_SKUS_ATACADO)
-    motivo = `O pedido de atacado precisa de pelo menos ${MIN_SKUS_ATACADO} produtos distintos. Seu carrinho tem ${skus}.`;
+  else if (pecas < MIN_PECAS_ATACADO)
+    motivo = `O pedido de atacado precisa de pelo menos ${MIN_PECAS_ATACADO} peças. Seu carrinho tem ${pecas}.`;
 
-  return { skus, problemas, liberado: motivo === null, motivo };
+  return { pecas, problemas, liberado: motivo === null, motivo };
 }

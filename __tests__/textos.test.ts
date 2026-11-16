@@ -21,7 +21,7 @@ describe("textos da Landing de revendedores", () => {
       expect(typeof TEXTOS_PADRAO[k], k).toBe("string");
       expect(TEXTOS_PADRAO[k].trim(), k).not.toBe("");
     }
-    expect(TEXTOS_PADRAO["lp_regra_skus"]).toContain("12 modelos diferentes por pedido");
+    expect(TEXTOS_PADRAO["lp_regra_skus"]).toContain("12 peças por pedido");
     expect(TEXTOS_PADRAO["lp_regra_bonus"]).not.toMatch(/\d/);
   });
   it("padrões sem preço", () => {

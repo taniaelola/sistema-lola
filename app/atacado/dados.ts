@@ -52,7 +52,7 @@ export async function cadastroAprovado(db: SupabaseClient): Promise<boolean> {
 }
 
 export async function carregarCarrinho(db: SupabaseClient): Promise<CarrinhoAtacado | null> {
-  if (DEMO) return { itens: [], sku_distintos: 0, total: 0 };
+  if (DEMO) return { itens: [], sku_distintos: 0, pecas: 0, total: 0 };
   const { data, error } = await db.rpc("atacado_cart_get");
   if (error) {
     registrarErro("atacado_cart_get", error);

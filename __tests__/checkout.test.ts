@@ -51,7 +51,13 @@ describe("mensagemErroCheckout — atacado", () => {
     expect(mensagemErroCheckout("estoque insuficiente", true)).toMatch(/estoque/i);
   });
 
-  it("mínimo de 12 SKUs com a contagem atual", () => {
+  it("mínimo de 12 peças com a contagem atual", () => {
+    const m = mensagemErroCheckout("mínimo de 12 peças (carrinho tem 7)", true);
+    expect(m).toContain("12 peças");
+    expect(m).toContain("7");
+  });
+
+  it("ainda entende a mensagem antiga (0010) de 12 SKUs distintos", () => {
     const m = mensagemErroCheckout("mínimo de 12 SKUs distintos (carrinho tem 7)", true);
     expect(m).toContain("12");
     expect(m).toContain("7");
@@ -135,22 +141,22 @@ describe("problemaLinhaAtacado", () => {
     ));
 });
 
-function nItens(n: number): ItemCarrinhoAtacado[] {
+function nItens(n: number, quantidade = 2): ItemCarrinhoAtacado[] {
   return Array.from({ length: n }, (_, i) =>
-    item({ id: `l${i}`, product_id: `p${i}`, size_id: `s${i}` })
+    item({ id: `l${i}`, product_id: `p${i}`, size_id: `s${i}`, quantidade })
   );
 }
 
 describe("avaliarCarrinhoAtacado", () => {
-  it("12 SKUs ok libera", () => {
-    const r = avaliarCarrinhoAtacado(nItens(12));
+  it("12 peças em 12 modelos libera", () => {
+    const r = avaliarCarrinhoAtacado(nItens(12, 1));
     expect(r.liberado).toBe(true);
-    expect(r.skus).toBe(12);
+    expect(r.pecas).toBe(12);
     expect(r.motivo).toBeNull();
   });
 
-  it("menos de 12 bloqueia com a contagem", () => {
-    const r = avaliarCarrinhoAtacado(nItens(11));
+  it("menos de 12 peças bloqueia com a contagem", () => {
+    const r = avaliarCarrinhoAtacado(nItens(11, 1));
     expect(r.liberado).toBe(false);
     expect(r.motivo).toContain("11");
     expect(r.motivo).toContain("12");
@@ -162,7 +168,7 @@ describe("avaliarCarrinhoAtacado", () => {
     expect(r.motivo).toMatch(/vazio/i);
   });
 
-  it("linha com problema bloqueia mesmo com 12 SKUs", () => {
+  it("linha com problema bloqueia mesmo com 12 peças", () => {
     const itens = nItens(13);
     itens[0] = { ...itens[0], estoque: 0 };
     const r = avaliarCarrinhoAtacado(itens);
@@ -170,15 +176,47 @@ describe("avaliarCarrinhoAtacado", () => {
     expect(r.problemas).toEqual([{ id: "l0", motivo: "Sem estoque — remova do carrinho." }]);
   });
 
-  it("produto inativo não conta como SKU", () => {
-    const itens = nItens(12);
+  it("produto inativo não conta como peça", () => {
+    const itens = nItens(12, 1);
     itens[0] = { ...itens[0], disponivel: false };
-    expect(avaliarCarrinhoAtacado(itens).skus).toBe(11);
+    const r = avaliarCarrinhoAtacado(itens);
+    expect(r.pecas).toBe(11);
+    expect(r.liberado).toBe(false);
   });
 
-  it("quantidade não altera a contagem de SKUs", () => {
-    const itens = [item({ quantidade: 30 }), item({ id: "l2", quantidade: 1 })];
-    expect(avaliarCarrinhoAtacado(itens).skus).toBe(1);
+  it("UM modelo com 12 peças libera (a quantidade conta)", () => {
+    const r = avaliarCarrinhoAtacado([item({ quantidade: 12, estoque: 50 })]);
+    expect(r.pecas).toBe(12);
+    expect(r.liberado).toBe(true);
+  });
+
+  it("12 peças em 3 modelos libera", () => {
+    const itens = [
+      item({ id: "a", product_id: "p1", quantidade: 5, estoque: 50 }),
+      item({ id: "b", product_id: "p2", quantidade: 4, estoque: 50 }),
+      item({ id: "c", product_id: "p3", quantidade: 3, estoque: 50 }),
+    ];
+    expect(avaliarCarrinhoAtacado(itens).liberado).toBe(true);
+  });
+
+  it("3 modelos com 10 peças bloqueia e mostra 10", () => {
+    const itens = [
+      item({ id: "a", product_id: "p1", quantidade: 4, estoque: 50 }),
+      item({ id: "b", product_id: "p2", quantidade: 3, estoque: 50 }),
+      item({ id: "c", product_id: "p3", quantidade: 3, estoque: 50 }),
+    ];
+    const r = avaliarCarrinhoAtacado(itens);
+    expect(r.pecas).toBe(10);
+    expect(r.liberado).toBe(false);
+    expect(r.motivo).toContain("10");
+  });
+
+  it("só conta peças disponíveis (indisponível de 9 peças não ajuda)", () => {
+    const itens = [
+      item({ id: "a", quantidade: 5, estoque: 50 }),
+      item({ id: "b", product_id: "p2", quantidade: 9, estoque: 50, disponivel: false }),
+    ];
+    expect(avaliarCarrinhoAtacado(itens).pecas).toBe(5);
   });
 });
 

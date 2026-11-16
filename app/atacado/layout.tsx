@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AtacadoLayout({ children }: { children: ReactNode }) {
-  if (DEMO) return <AtacadoShell nome="Revendedora Demo" skus={0}>{children}</AtacadoShell>;
+  if (DEMO) return <AtacadoShell nome="Revendedora Demo" pecas={0}>{children}</AtacadoShell>;
   const perfil = await exigirPapel(["revendedor"], "/atacado");
   const db = await authedSupabase();
   const cadastro = await carregarCadastro(db);
@@ -24,7 +24,7 @@ export default async function AtacadoLayout({ children }: { children: ReactNode 
 
   const carrinho = await carregarCarrinho(db);
   return (
-    <AtacadoShell nome={perfil.nome || cadastro.razao_social} skus={carrinho?.sku_distintos ?? 0}>
+    <AtacadoShell nome={perfil.nome || cadastro.razao_social} pecas={carrinho?.pecas ?? 0}>
       {children}
     </AtacadoShell>
   );
