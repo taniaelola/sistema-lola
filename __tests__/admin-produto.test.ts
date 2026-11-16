@@ -94,3 +94,19 @@ describe("validarProdutoBasico", () => {
     });
   });
 });
+
+describe("precoAtacadoEfetivo (espelha _preco_atacado)", () => {
+  it("preço próprio vence tudo", async () => {
+    const { precoAtacadoEfetivo } = await import("@/lib/admin-produto");
+    expect(precoAtacadoEfetivo(100, 50, 30)).toBe(50);
+  });
+  it("sem preço próprio usa o % da categoria", async () => {
+    const { precoAtacadoEfetivo } = await import("@/lib/admin-produto");
+    expect(precoAtacadoEfetivo(100, null, 30)).toBe(70);
+    expect(precoAtacadoEfetivo(189.9, null, 30)).toBe(132.93);
+  });
+  it("sem nada, igual ao varejo (nunca metade)", async () => {
+    const { precoAtacadoEfetivo } = await import("@/lib/admin-produto");
+    expect(precoAtacadoEfetivo(100, null, null)).toBe(100);
+  });
+});
