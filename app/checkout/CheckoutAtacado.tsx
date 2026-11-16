@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BRAND } from "@/lib/brand.config";
 import { avaliarCarrinhoAtacado, type ItemCarrinhoAtacado } from "@/lib/checkout";
 import { MIN_SKUS_ATACADO } from "@/lib/pricing";
 import { criarPedidoAtacado } from "./actions";
 import Header from "@/components/Header";
 import { SiteFooter } from "@/components/PaymentsFooter";
-import { CamposEntrega, DADOS_VAZIOS, type DadosForm } from "./CamposEntrega";
+import { CamposEntrega, DADOS_VAZIOS, OPCOES_ATACADO, type DadosForm } from "./CamposEntrega";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -155,22 +154,7 @@ export default function CheckoutAtacado({
               onSubmit={handleSubmit}
               style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 22 }}
             >
-              <CamposEntrega dados={dados} set={set} />
-
-              {dados.entregaTipo === "entrega" && (
-                <p style={{ fontSize: 11.5, color: "var(--muted)", margin: 0 }}>
-                  Taxa de entrega calculada no checkout.
-                </p>
-              )}
-              {dados.entregaTipo === "entrega_fora" && (
-                <p style={{ fontSize: 11.5, color: "var(--muted)", margin: 0 }}>
-                  Frete a combinar pelo{" "}
-                  <a href={BRAND.whatsappUrl} target="_blank" rel="noopener noreferrer">
-                    WhatsApp
-                  </a>
-                  .
-                </p>
-              )}
+              <CamposEntrega dados={dados} set={set} opcoes={OPCOES_ATACADO} />
 
               {erro && (
                 <p style={{ fontSize: 12.5, color: "#b23b3b", textAlign: "center" }}>{erro}</p>

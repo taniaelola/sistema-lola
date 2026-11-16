@@ -16,6 +16,21 @@ export type DadosEntrega = {
 
 export const MSG_VAREJO_DESATIVADO = "A loja de varejo está desativada no momento.";
 
+/**
+ * Formas de recebimento aceitas no atacado. Por ora só retirada na loja
+ * (decisão do dono em 2026-11-16); para voltar a oferecer entrega, inclua
+ * "entrega"/"entrega_fora" aqui e em OPCOES_ATACADO (app/checkout/CamposEntrega.tsx).
+ * O banco continua aceitando os três tipos: a regra vive no app.
+ */
+export const ENTREGAS_ATACADO: readonly EntregaTipoCheckout[] = ["retirada"];
+
+export const MSG_SO_RETIRADA = "No momento o pedido de atacado é só para retirada na loja.";
+
+export function validarEntregaAtacado(dados: DadosEntrega): string | null {
+  if (!ENTREGAS_ATACADO.includes(dados.entregaTipo)) return MSG_SO_RETIRADA;
+  return validarEntrega(dados);
+}
+
 export function validarEntrega(dados: DadosEntrega): string | null {
   if (!dados.nome.trim()) return "Informe seu nome.";
   if (!dados.telefone.trim()) return "Informe seu telefone/WhatsApp.";

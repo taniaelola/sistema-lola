@@ -12,6 +12,7 @@ import {
   MSG_VAREJO_DESATIVADO,
   mensagemErroCheckout,
   validarEntrega,
+  validarEntregaAtacado,
   type DadosEntrega,
 } from "@/lib/checkout";
 
@@ -57,7 +58,7 @@ export async function criarPedido(
 
 /** Atacado: os itens vêm do carrinho do revendedor no servidor, nunca do cliente. */
 export async function criarPedidoAtacado(dados: DadosEntrega): Promise<Resultado> {
-  const invalido = validarEntrega(dados);
+  const invalido = validarEntregaAtacado(dados);
   if (invalido) return { error: invalido };
   return iniciarPedido(dados, [], true);
 }

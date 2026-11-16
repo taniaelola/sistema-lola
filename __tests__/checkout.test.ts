@@ -181,3 +181,23 @@ describe("avaliarCarrinhoAtacado", () => {
     expect(avaliarCarrinhoAtacado(itens).skus).toBe(1);
   });
 });
+
+describe("atacado só com retirada", () => {
+  const base = { nome: "Ana", telefone: "81999999999", rua: "R", numero: "1", bairro: "B", cidade: "Recife" };
+
+  it("aceita retirada", async () => {
+    const { validarEntregaAtacado } = await import("@/lib/checkout");
+    expect(validarEntregaAtacado({ ...base, entregaTipo: "retirada" })).toBeNull();
+  });
+
+  it("recusa entrega e entrega_fora mesmo com endereço completo", async () => {
+    const { validarEntregaAtacado, MSG_SO_RETIRADA } = await import("@/lib/checkout");
+    expect(validarEntregaAtacado({ ...base, entregaTipo: "entrega" })).toBe(MSG_SO_RETIRADA);
+    expect(validarEntregaAtacado({ ...base, entregaTipo: "entrega_fora" })).toBe(MSG_SO_RETIRADA);
+  });
+
+  it("mantém as validações de nome e telefone", async () => {
+    const { validarEntregaAtacado } = await import("@/lib/checkout");
+    expect(validarEntregaAtacado({ ...base, nome: " ", entregaTipo: "retirada" })).toBe("Informe seu nome.");
+  });
+});
