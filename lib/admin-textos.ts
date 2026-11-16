@@ -77,7 +77,7 @@ export const GRUPOS_TEXTOS: GrupoTextos[] = [
       { chave: "lp_hero_subtitulo", rotulo: "Topo: subtítulo", tipo: "area" },
       { chave: "lp_hero_botao", rotulo: "Topo: texto do botão", tipo: "linha" },
       { chave: "lp_regras_titulo", rotulo: "Regras: título", tipo: "linha" },
-      { chave: "lp_regra_skus", rotulo: "Regra: modelos por pedido", tipo: "linha" },
+      { chave: "lp_regra_skus", rotulo: "Regra: peças por pedido", tipo: "linha" },
       { chave: "lp_regra_bonus", rotulo: "Regra: bonificação", tipo: "linha", dica: "o mínimo de peças e o produto da bonificação vêm da configuração do varejo/bônus; não escreva números aqui" },
       { chave: "lp_regra_preco", rotulo: "Regra: preço", tipo: "linha" },
       { chave: "lp_passos_titulo", rotulo: "Passos: título", tipo: "linha" },

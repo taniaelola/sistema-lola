@@ -12,7 +12,7 @@ export default function RegrasLP({
   preco: string;
 }) {
   const cartoes = [
-    { chave: "skus", destaque: "12", rotulo: "modelos", texto: skus },
+    { chave: "skus", destaque: "12", rotulo: "peças", texto: skus },
     ...(bonus ? [{ chave: "bonus", destaque: seloBonus, rotulo: "bônus", texto: bonus }] : []),
     { chave: "preco", destaque: "R$", rotulo: "atacado", texto: preco },
   ];

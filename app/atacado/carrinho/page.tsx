@@ -14,7 +14,6 @@ export default async function CarrinhoAtacadoPage() {
   return (
     <CarrinhoView
       itens={carrinho.itens}
-      skus={carrinho.sku_distintos}
       total={carrinho.total}
       bonus={{
         ativo: flags.bonusAtivo,

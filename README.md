@@ -247,7 +247,10 @@ papel em Usuários não corta o atacado).
 
 Fonte em `supabase/migrations/`. Produção tem `0001` a `0009`; a `0010`
 (site só atacado) entra na janela descrita em "Janela da migração 0010", pelo
-`supabase/release-0010.sql`. Banco novo e vazio: rode `0001`, `0002` e `0003` no
+`supabase/release-0010.sql`. A `0011` (pedido mínimo do atacado = 12 PEÇAS, não 12 modelos
+distintos) vai por `supabase/release-0011.sql`: pode rodar antes ou junto do deploy do app
+(o app antigo é mais estrito que o SQL novo); rollback em `supabase/rollback-0011.sql`.
+Banco novo e vazio: rode `0001`, `0002` e `0003` no
 SQL Editor (no `0003`, substitua os placeholders por valores reais; o webhook
 secret é o `ADMIN_WEBHOOK_SECRET` do ambiente) e depois o `release-unico.sql`.
 Nunca reaplique `0002`/`0007` depois do `0008`, nem `0008`/`0009` depois da `0010`
@@ -261,7 +264,7 @@ npm run dev          # desenvolvimento em http://localhost:3000
 npm run build        # build de produção
 npm test             # testes unitários (Vitest)
 npm run lint         # ESLint (deve sair com 0 erros)
-npm run release:sql  # regenera supabase/release-unico.sql e supabase/release-0010.sql
+npm run release:sql  # regenera supabase/release-unico.sql, release-0010.sql e release-0011.sql
 ```
 
 ## Deploy (Cloudflare Workers)

@@ -1,6 +1,7 @@
 import { precoVarejo } from "@/lib/types";
 
-export const MIN_SKUS_ATACADO = 12;
+/** Mínimo de PEÇAS (unidades) por pedido de atacado. No SQL: v_min em checkout_iniciar_pedido (0011). */
+export const MIN_PECAS_ATACADO = 12;
 
 export type PromocaoAtiva = {
   desconto_percentual: number;
@@ -52,8 +53,7 @@ export function precoVarejoEfetivo(p: { preco: number; desconto_efetivo?: number
   };
 }
 
-export function skusDistintos(
-  itens: { product_id: string; color_id: string; size_id: string }[]
-): number {
-  return new Set(itens.map((i) => `${i.product_id}::${i.color_id}::${i.size_id}`)).size;
+/** Total de peças (soma das quantidades) dos itens DISPONÍVEIS; item indisponível não conta. */
+export function totalPecas(itens: { quantidade: number; disponivel: boolean }[]): number {
+  return itens.reduce((s, i) => (i.disponivel && i.quantidade > 0 ? s + i.quantidade : s), 0);
 }

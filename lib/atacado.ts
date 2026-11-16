@@ -1,5 +1,5 @@
 import { economiaPercentual } from "@/lib/lp";
-import { MIN_SKUS_ATACADO } from "@/lib/pricing";
+import { MIN_PECAS_ATACADO, totalPecas } from "@/lib/pricing";
 import { avaliarCarrinhoAtacado, type ItemCarrinhoAtacado } from "@/lib/checkout";
 import { formatarReais } from "@/lib/home";
 
@@ -12,7 +12,10 @@ export type ItemCarrinho = ItemCarrinhoAtacado & { imagem: string | null };
 
 export type CarrinhoAtacado = {
   itens: ItemCarrinho[];
+  /** Modelos distintos (informativo; o mínimo do pedido é em peças). */
   sku_distintos: number;
+  /** Peças disponíveis no carrinho (soma das quantidades): é o que vale para o mínimo. */
+  pecas: number;
   total: number;
 };
 
@@ -61,21 +64,21 @@ export function progressoBonus(pecas: number, min: number, ativo: boolean) {
   };
 }
 
-export function progressoSkus(skus: number) {
-  const atual = inteiroNaoNegativo(skus);
+export function progressoPecas(pecas: number) {
+  const atual = inteiroNaoNegativo(pecas);
   return {
     atual,
-    minimo: MIN_SKUS_ATACADO,
-    pct: Math.min(100, Math.round((atual / MIN_SKUS_ATACADO) * 100)),
-    label: `${atual}/${MIN_SKUS_ATACADO}`,
-    completo: atual >= MIN_SKUS_ATACADO,
+    minimo: MIN_PECAS_ATACADO,
+    pct: Math.min(100, Math.round((atual / MIN_PECAS_ATACADO) * 100)),
+    label: `${atual}/${MIN_PECAS_ATACADO}`,
+    completo: atual >= MIN_PECAS_ATACADO,
   };
 }
 
-export function textoFaltam(skus: number): string | null {
-  const faltam = MIN_SKUS_ATACADO - inteiroNaoNegativo(skus);
+export function textoFaltam(pecas: number): string | null {
+  const faltam = MIN_PECAS_ATACADO - inteiroNaoNegativo(pecas);
   if (faltam <= 0) return null;
-  return faltam === 1 ? "Falta 1 produto para finalizar" : `Faltam ${faltam} produtos para finalizar`;
+  return faltam === 1 ? "Falta 1 peça para finalizar" : `Faltam ${faltam} peças para finalizar`;
 }
 
 export function alertaLinha(i: Pick<ItemCarrinho, "disponivel" | "estoque" | "quantidade">): string | null {
@@ -87,7 +90,7 @@ export function alertaLinha(i: Pick<ItemCarrinho, "disponivel" | "estoque" | "qu
 
 export function decisaoFinalizar(itens: ItemCarrinho[]): { habilitado: boolean; texto: string } {
   const av = avaliarCarrinhoAtacado(itens);
-  const faltam = textoFaltam(av.skus);
+  const faltam = textoFaltam(av.pecas);
   if (faltam) return { habilitado: false, texto: faltam };
   if (av.problemas.length > 0) {
     return { habilitado: false, texto: "Ajuste os itens com alerta para finalizar" };
@@ -233,12 +236,12 @@ function normalizarItem(v: unknown): ItemCarrinho | null {
 
 export function normalizarCarrinho(data: unknown): CarrinhoAtacado {
   const r = registro(data);
-  if (!r) return { itens: [], sku_distintos: 0, total: 0 };
+  if (!r) return { itens: [], sku_distintos: 0, pecas: 0, total: 0 };
   const itens = (Array.isArray(r.itens) ? r.itens : []).flatMap((i) => {
     const n = normalizarItem(i);
     return n ? [n] : [];
   });
-  return { itens, sku_distintos: numero(r.sku_distintos) ?? 0, total: numero(r.total) ?? 0 };
+  return { itens, sku_distintos: numero(r.sku_distintos) ?? 0, pecas: totalPecas(itens), total: numero(r.total) ?? 0 };
 }
 
 export function normalizarPedidos(data: unknown): PedidoAtacado[] | null {

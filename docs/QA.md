@@ -162,8 +162,10 @@ Webhook:
 - [ ] No `/admin` > Revendedores, o admin aprova o cadastro → `/atacado` libera o painel.
 - [ ] Recusado/pendente não acessa `/atacado/catalogo`, nem pelo endereço direto.
 - [ ] Catálogo de atacado mostra preço de atacado e estoque por SKU.
-- [ ] Carrinho de atacado com 11 SKUs distintos: "Finalizar" bloqueado, progresso "11 de 12".
-- [ ] Carrinho com 12 SKUs distintos: "Finalizar" liberado → `/checkout` com preço de atacado.
+- [ ] Carrinho de atacado com 11 peças: "Finalizar" bloqueado ("Falta 1 peça para finalizar"), progresso "11 de 12 peças".
+- [ ] Carrinho com 3 modelos e 10 peças: bloqueado, "Faltam 2 peças para finalizar".
+- [ ] Carrinho com 1 modelo e 12 peças (mesmo tamanho): "Finalizar" liberado → `/checkout` com preço de atacado.
+- [ ] O contador do menu mostra peças (ex.: "10/12"), não modelos.
 - [ ] Pagamento (Pix, valor pequeno) → pedido de atacado `pago` → carrinho de
       atacado limpo **apenas dos SKUs do pedido** (itens adicionados depois permanecem).
 - [ ] `/atacado/pedidos` lista o pedido com o status certo.

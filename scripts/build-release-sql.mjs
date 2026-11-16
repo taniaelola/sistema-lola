@@ -181,3 +181,29 @@ const cabecalho0010 = `-- release-0010.sql — ORDEM SEGURA: app novo SEM promov
 `
 const mudou0010 = gravarSeMudou(saida0010, cabecalho0010 + conteudo0010 + '\n')
 console.log(`release:sql OK: ${saida0010} (somente ${arq0010}${mudou0010 ? '' : '; sem mudanças'})`)
+
+// ---------------------------------------------------------------------
+// release-0011.sql: pacote da migração 0011 (mínimo do atacado = 12 peças).
+// As migrações 0001 a 0010 já estão em produção; este arquivo tem SOMENTE a 0011.
+// ---------------------------------------------------------------------
+const saida0011 = join(raiz, 'supabase', 'release-0011.sql')
+const arq0011 = '0011_minimo_pecas.sql'
+const caminho0011 = join(dirMigracoes, arq0011)
+if (!existsSync(caminho0011)) falhar(`migração ausente: supabase/migrations/${arq0011}`)
+const conteudo0011 = readFileSync(caminho0011, 'utf8').replace(/\r\n/g, '\n').trim()
+if (!conteudo0011) falhar(`migração vazia: ${arq0011}`)
+
+const cabecalho0011 = `-- release-0011.sql — mínimo do atacado: 12 PEÇAS (antes: 12 modelos/SKUs distintos).
+--   (GERADO por scripts/build-release-sql.mjs; NÃO edite à mão. Contém somente a migração ${arq0011};
+--    as migrações 0001 a 0010 já estão aplicadas em produção.)
+--   ORDEM: aplicar este SQL ANTES ou JUNTO do deploy do app é seguro, em qualquer das duas ordens.
+--   Por quê: o app antigo exige 12 modelos distintos para liberar o "Finalizar" (mais estrito que o SQL novo,
+--   que aceita 12 peças), então nenhum pedido que o app antigo libera é recusado. O app novo com o SQL antigo é
+--   que erraria: mostraria o carrinho como liberado (12 peças) enquanto o checkout ainda recusaria (menos de 12
+--   modelos). Por isso, se o app novo for ao ar primeiro, rode este SQL logo em seguida.
+--   Cole o arquivo inteiro no SQL Editor do projeto LOLA e rode UMA vez (create or replace: idempotente).
+--   Rollback: supabase/rollback-0011.sql (restaura o mínimo de 12 SKUs distintos e o texto antigo da LP).
+
+`
+const mudou0011 = gravarSeMudou(saida0011, cabecalho0011 + conteudo0011 + '\n')
+console.log(`release:sql OK: ${saida0011} (somente ${arq0011}${mudou0011 ? '' : '; sem mudanças'})`)

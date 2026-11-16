@@ -13,8 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { BRAND } from "@/lib/brand.config";
-import { progressoSkus, secaoAtacado } from "@/lib/atacado";
-import { MIN_SKUS_ATACADO } from "@/lib/pricing";
+import { progressoPecas, secaoAtacado } from "@/lib/atacado";
+import { MIN_PECAS_ATACADO } from "@/lib/pricing";
 import { sairAction } from "@/app/entrar/actions";
 
 type Item = {
@@ -46,9 +46,9 @@ const ITENS: Item[] = [
     label: "Carrinho",
     Icon: ShoppingCart,
     titulo: "Carrinho",
-    // Dívida: o mínimo também é literal 12 em checkout_iniciar_pedido (SQL, 0010) e no texto lp_regra_skus
-    // (textos_loja/TEXTOS_PADRAO). Aqui vem de MIN_SKUS_ATACADO; mudar o mínimo exige mexer nos três.
-    subtitulo: `Mínimo de ${MIN_SKUS_ATACADO} produtos distintos por pedido`,
+    // Dívida: o mínimo também é literal 12 em checkout_iniciar_pedido (SQL, v_min da 0011) e no texto lp_regra_skus
+    // (textos_loja/TEXTOS_PADRAO). Aqui vem de MIN_PECAS_ATACADO; mudar o mínimo exige mexer nos três.
+    subtitulo: `Mínimo de ${MIN_PECAS_ATACADO} peças por pedido`,
     contador: true,
   },
   {
@@ -83,18 +83,18 @@ function Logo() {
 
 export default function AtacadoShell({
   nome,
-  skus,
+  pecas,
   children,
 }: {
   nome: string;
-  skus: number;
+  pecas: number;
   children: ReactNode;
 }) {
   const caminho = usePathname();
   const router = useRouter();
   const [menuAberto, setMenuAberto] = useState(false);
   const [saindo, iniciarSaida] = useTransition();
-  const progresso = progressoSkus(skus);
+  const progresso = progressoPecas(pecas);
   const atual =
     secaoAtacado(caminho) === "produto" ? TITULO_PRODUTO : (ITENS.find((i) => ativo(i.href, caminho)) ?? ITENS[0]);
 

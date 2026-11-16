@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { avaliarCarrinhoAtacado, type ItemCarrinhoAtacado } from "@/lib/checkout";
-import { MIN_SKUS_ATACADO } from "@/lib/pricing";
+import { MIN_PECAS_ATACADO } from "@/lib/pricing";
 import { criarPedidoAtacado } from "./actions";
 import Header from "@/components/Header";
 import { SiteFooter } from "@/components/PaymentsFooter";
@@ -98,7 +98,7 @@ export default function CheckoutAtacado({
                 margin: 0,
               }}
             >
-              {avaliacao.skus} de {MIN_SKUS_ATACADO} produtos distintos
+              {avaliacao.pecas} de {MIN_PECAS_ATACADO} peças
             </p>
             {itens.map((i) => {
               const problema = problemaPorId.get(i.id);

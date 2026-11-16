@@ -42,7 +42,7 @@ export const COPY: Record<Modo, { titulo: string; subtitulo: string; botao: stri
   cadastro: { titulo: "Crie sua conta.", subtitulo: "Acompanhe pedidos e salve seus favoritos.", botao: "Criar conta" },
   revendedor: {
     titulo: "Seja revendedor.",
-    subtitulo: "Preço de atacado a partir de 12 modelos diferentes.",
+    subtitulo: "Preço de atacado a partir de 12 peças por pedido.",
     botao: "Enviar solicitação",
   },
   esqueci: {
