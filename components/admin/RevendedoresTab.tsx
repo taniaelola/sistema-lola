@@ -15,6 +15,7 @@ import {
   type ErrosRevendedor,
   type RevendedorForm,
 } from "@/lib/admin-revendedores";
+import { linkAvisoWhatsApp } from "@/lib/aviso-revendedor";
 import { mascararCnpj, mascararWhatsapp } from "@/lib/validators";
 import Drawer from "./Drawer";
 import Campo from "./Campo";
@@ -36,12 +37,43 @@ export default function RevendedoresTab({
 }: {
   revendedores: Revendedor[];
   papel: Papel;
-  onAprovar?: (id: string) => void;
-  onRecusar?: (id: string) => void;
+  onAprovar?: (id: string) => void | Promise<void>;
+  onRecusar?: (id: string) => void | Promise<void>;
   onSalvo: (mensagem: string) => void | Promise<void>;
 }) {
   const [editor, setEditor] = useState<{ revendedor: Revendedor | null } | null>(null);
   const podeDecidir = Boolean(onAprovar && onRecusar);
+  const [aprovadoId, setAprovadoId] = useState<string | null>(null);
+  const recemAprovada = revendedores.find((r) => r.id === aprovadoId && r.status === "aprovado") ?? null;
+
+  async function aprovar(id: string) {
+    await onAprovar?.(id);
+    setAprovadoId(id);
+  }
+
+  function botaoAvisar(r: Revendedor) {
+    const link = linkAvisoWhatsApp({
+      telefone: r.whatsapp,
+      nome: r.responsavel || null,
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+    });
+    return link ? (
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="adm-btn-mini adm-btn-aviso"
+        aria-label={`Avisar ${r.razao_social} no WhatsApp`}
+        style={{ background: "var(--adm-success-bg)", borderColor: "var(--mint)" }}
+      >
+        Avisar no WhatsApp
+      </a>
+    ) : (
+      <button type="button" className="adm-btn-mini adm-btn-aviso" disabled title="Sem WhatsApp válido">
+        Sem WhatsApp válido
+      </button>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -50,6 +82,13 @@ export default function RevendedoresTab({
           + Cadastrar revendedor
         </button>
       </div>
+
+      {recemAprovada && (
+        <div role="status" className="adm-nota" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span>Cadastro aprovado. Avise a revendedora:</span>
+          {botaoAvisar(recemAprovada)}
+        </div>
+      )}
 
       <div className="adm-tabela">
         <div className="adm-tabela-cab" style={{ gridTemplateColumns: COLUNAS, minWidth: 900 }}>
@@ -94,7 +133,7 @@ export default function RevendedoresTab({
                     <button
                       type="button"
                       className="adm-btn-mini"
-                      onClick={() => onAprovar?.(r.id)}
+                      onClick={() => aprovar(r.id)}
                       aria-label={`Aprovar ${r.razao_social}`}
                       style={{ background: "var(--adm-success-bg)", borderColor: "var(--mint)" }}
                     >
@@ -110,6 +149,8 @@ export default function RevendedoresTab({
                       Recusar
                     </button>
                   </div>
+                ) : r.status === "aprovado" ? (
+                  <div>{botaoAvisar(r)}</div>
                 ) : (
                   <div />
                 )}

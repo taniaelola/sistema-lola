@@ -160,6 +160,10 @@ Webhook:
       máscara e 14 dígitos, nome, WhatsApp) → confirmar e-mail → login mostra a
       tela "cadastro pendente de aprovação" em `/atacado`.
 - [ ] No `/admin` > Revendedores, o admin aprova o cadastro → `/atacado` libera o painel.
+- [ ] Logo após Aprovar, aparece "Cadastro aprovado. Avise a revendedora:" com o botão
+      **Avisar no WhatsApp** (também na linha de todo aprovado); abre o `wa.me` do telefone
+      da revendedora com a mensagem pronta e o link `/entrar?next=%2Fatacado`. Sem telefone
+      válido, o botão aparece desativado ("Sem WhatsApp válido"). A tela de espera diz que o aviso vem por WhatsApp.
 - [ ] Recusado/pendente não acessa `/atacado/catalogo`, nem pelo endereço direto.
 - [ ] Catálogo de atacado mostra preço de atacado e estoque por SKU.
 - [ ] Carrinho de atacado com 11 peças: "Finalizar" bloqueado ("Falta 1 peça para finalizar"), progresso "11 de 12 peças".
