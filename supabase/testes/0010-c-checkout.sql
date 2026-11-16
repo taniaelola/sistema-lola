@@ -237,7 +237,8 @@ begin
   set local role anon;
   -- idempotência ANTES da conferência: pedido já pago com valor errado => already
   r := mp_register_order_payment(v_seg, v_o30, 'mp-tc-30b', 'pix', 1::numeric);
-  if r is distinct from jsonb_build_object('ok', true, 'already', true) then
+  if r is distinct from jsonb_build_object('ok', true, 'already', true,
+       'status_atual', 'pago', 'mp_payment_id_registrado', 'mp-tc-30') then
     raise exception 'FALHOU: pedido já pago com valor errado retornou %', r; end if;
   -- tolerância de 1 centavo (para cima e para baixo)
   r := mp_register_order_payment(v_seg, v_ono, 'mp-tc-ono', 'pix', 750.01::numeric);

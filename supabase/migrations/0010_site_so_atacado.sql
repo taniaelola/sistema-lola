@@ -18,7 +18,9 @@ alter table products add column if not exists somente_bonus boolean not null def
 
 alter table orders
   add column if not exists bonus_aplicado boolean not null default false,
-  add column if not exists bonus_aviso text null;
+  add column if not exists bonus_aviso text null,
+  -- Aviso interno (só admin_list_orders): pedido liquidado com estoque menor que o vendido.
+  add column if not exists estoque_aviso text null;
 
 create or replace function get_loja_flags()
 returns jsonb language sql security definer stable set search_path = public, extensions as $$
@@ -410,6 +412,61 @@ grant execute on function
   checkout_iniciar_pedido(text, text, entrega_tipo, text, text, text, text, text, text, jsonb, boolean)
 to authenticated;
 
+-- Liquidação (corpo de 0008 + aviso de estoque insuficiente). O checkout só VALIDA estoque, não reserva:
+-- dois pedidos pendentes podem pedir o mesmo estoque. O dinheiro já entrou, então a liquidação segue (baixa
+-- até 0, como antes) e grava em orders.estoque_aviso o que faltou, para o admin resolver na mão.
+-- Mesma assinatura, sem security definer e sem grant (só as RPCs definer a chamam); create or replace
+-- preserva o ACL, repetido abaixo para re-paste idempotente. Reserva completa de estoque: dívida registrada.
+create or replace function _settle_order(
+  p_order_id uuid, p_mp_payment_id text, p_forma_pagamento text
+) returns void language plpgsql set search_path = public, extensions as $$
+declare v_ord orders; v_it order_items; v_est int; v_falta int; v_avisos text[] := '{}';
+begin
+  select * into v_ord from orders where id = p_order_id;
+  if not found then raise exception 'pedido não encontrado'; end if;
+
+  update orders set status = 'pago', mp_payment_id = p_mp_payment_id,
+    forma_pagamento = p_forma_pagamento where id = p_order_id;
+
+  for v_it in select * from order_items where order_id = p_order_id loop
+    if v_it.size_id is not null then
+      -- trava a linha do tamanho (mesma ordem de antes) e lê o estoque atual
+      select estoque into v_est from product_sizes where id = v_it.size_id for update;
+      if found then
+        v_falta := v_it.quantidade - v_est;
+        if v_falta > 0 then
+          v_avisos := v_avisos || ('Faltaram ' || v_falta || ' un. de ' || v_it.produto_nome
+            || coalesce(' / ' || v_it.produto_cor, '') || coalesce(' / ' || v_it.produto_tamanho, ''));
+        end if;
+        update product_sizes set estoque = greatest(0, estoque - v_it.quantidade)
+        where id = v_it.size_id;
+      end if;
+    end if;
+    insert into sales(produto_id, produto_nome, quantidade, preco_unit, valor_total,
+      forma_pagamento, cliente, origem, is_atacado, produto_cor, produto_tamanho,
+      mp_payment_id, status, order_id)
+    values (v_it.produto_id, v_it.produto_nome, v_it.quantidade, v_it.preco_unit, v_it.subtotal,
+      p_forma_pagamento, v_ord.cliente_nome,
+      case when v_ord.is_atacado then 'atacado' else 'loja' end,
+      v_ord.is_atacado, v_it.produto_cor, v_it.produto_tamanho,
+      p_mp_payment_id, 'aprovado', p_order_id);
+  end loop;
+
+  if array_length(v_avisos, 1) is not null then
+    update orders set estoque_aviso = array_to_string(v_avisos, '; ') where id = p_order_id;
+  end if;
+
+  -- Só os SKUs deste pedido: itens adicionados depois do checkout continuam.
+  if v_ord.is_atacado and v_ord.revendedor_id is not null then
+    delete from carrinho_atacado ca
+    using order_items i
+    where ca.revendedor_id = v_ord.revendedor_id
+      and i.order_id = p_order_id
+      and ca.size_id = i.size_id;
+  end if;
+end $$;
+revoke all on function _settle_order(uuid, text, text) from public, anon, authenticated;
+
 -- Webhook: p_transaction_amount passa a ser OBRIGATÓRIO e é conferido com o total do pedido.
 -- A assinatura antiga (5 args, valor opcional) é removida: sem sobrecarga que mantenha a porta aberta.
 drop function if exists mp_register_order_payment(text, uuid, text, text, numeric);
@@ -427,7 +484,10 @@ begin
   -- idempotência: pedido já liquidado, ou o mesmo pagamento já registrado => no-op.
   if v_ord.status <> 'pendente'
      or (v_ord.mp_payment_id is not null and v_ord.mp_payment_id = p_mp_payment_id) then
-    return jsonb_build_object('ok', true, 'already', true);
+    -- status_atual e mp_payment_id_registrado deixam o webhook distinguir retentativa do mesmo pagamento de
+    -- um segundo pagamento (ou pedido cancelado), que precisa de revisão manual.
+    return jsonb_build_object('ok', true, 'already', true,
+      'status_atual', v_ord.status::text, 'mp_payment_id_registrado', v_ord.mp_payment_id);
   end if;
 
   -- O valor cobrado tem de bater com o total do pedido (tolerância de 1 centavo). Sem exceção: o
@@ -540,7 +600,7 @@ begin
         (_order_json(o.id) || jsonb_build_object(
           'cliente_telefone', o.cliente_telefone, 'mp_payment_id', o.mp_payment_id,
           'forma_pagamento', o.forma_pagamento, 'revendedor_id', o.revendedor_id,
-          'bonus_aviso', o.bonus_aviso)) as j
+          'bonus_aviso', o.bonus_aviso, 'estoque_aviso', o.estoque_aviso)) as j
       from orders o
       where (p_filtro = 'todos' or p_filtro is null)
          or (p_filtro = 'varejo'  and o.is_atacado = false)
@@ -607,6 +667,22 @@ begin
     from products p cross join lateral (select _product_json(p) as j) x), '[]'::jsonb);
 end $$;
 
+-- Trava de ativação: produto de venda só ativa com preço de varejo > 0 E preço de atacado efetivo > 0
+-- (cobre override 0 e desconto de categoria de 100%). Brinde (somente_bonus) mantém só a regra do preço.
+create or replace function _assert_pode_ativar(
+  p_preco numeric, p_override numeric, p_categoria_id uuid, p_somente_bonus boolean
+) returns void language plpgsql stable set search_path = public, extensions as $$
+declare v_pct int;
+begin
+  if coalesce(p_preco, 0) = 0 then raise exception 'defina o preço antes de ativar'; end if;
+  if coalesce(p_somente_bonus, false) then return; end if;
+  select desconto_atacado_percentual into v_pct from categorias where id = p_categoria_id;
+  if coalesce(_preco_atacado(p_preco, p_override, v_pct), 0) <= 0 then
+    raise exception 'Defina um preço de atacado maior que zero antes de ativar';
+  end if;
+end $$;
+revoke all on function _assert_pode_ativar(numeric, numeric, uuid, boolean) from public, anon, authenticated;
+
 -- Novo parâmetro final (p_somente_bonus): muda a assinatura, então a antiga é derrubada.
 drop function if exists admin_upsert_product(uuid, text, uuid, text, numeric, int, numeric, text, text[], boolean, boolean, int, text);
 create or replace function admin_upsert_product(
@@ -615,7 +691,7 @@ create or replace function admin_upsert_product(
   p_caracteristicas text[], p_ativo boolean, p_destaque boolean, p_ordem int, p_slug text,
   p_somente_bonus boolean default null
 ) returns uuid language plpgsql security definer set search_path = public, extensions as $$
-declare v_id uuid; v_slug text; v_papel text; v_preco numeric; v_cat_atual uuid; v_pa numeric;
+declare v_id uuid; v_slug text; v_papel text; v_preco numeric; v_cat_atual uuid; v_pa numeric; v_sb boolean;
 begin
   v_papel := assert_papel(array['superadmin','admin','supervisor']);
   v_slug := coalesce(nullif(trim(p_slug),''), _slugify(p_nome));
@@ -629,8 +705,8 @@ begin
         coalesce(p_somente_bonus,false))
       returning id into v_id;
     else
-      if coalesce(p_ativo,false) and coalesce(p_preco,0) = 0 then
-        raise exception 'defina o preço antes de ativar';
+      if coalesce(p_ativo,false) then
+        perform _assert_pode_ativar(p_preco, p_preco_atacado, p_categoria_id, coalesce(p_somente_bonus,false));
       end if;
       insert into products(nome,categoria_id,colecao,preco,desconto_percentual,preco_atacado,
         descricao,caracteristicas,ativo,destaque,ordem,slug,somente_bonus)
@@ -642,7 +718,7 @@ begin
   else
     if v_papel = 'supervisor' then
       -- preco, preco_atacado e desconto_percentual atuais são preservados (argumentos ignorados)
-      select preco, categoria_id, preco_atacado into v_preco, v_cat_atual, v_pa from products where id = p_id;
+      select preco, categoria_id, preco_atacado, somente_bonus into v_preco, v_cat_atual, v_pa, v_sb from products where id = p_id;
       if not found then raise exception 'registro não encontrado'; end if;
       -- mudar de categoria muda o preço de atacado efetivo (desconto da categoria) quando não há override
       if p_categoria_id is distinct from v_cat_atual and v_pa is null
@@ -650,8 +726,8 @@ begin
              is distinct from (select desconto_atacado_percentual from categorias where id = p_categoria_id) then
         raise exception 'sem permissão para mudar a categoria: altera o preço de atacado' using errcode = '42501';
       end if;
-      if coalesce(p_ativo,false) and v_preco = 0 then
-        raise exception 'defina o preço antes de ativar';
+      if coalesce(p_ativo,false) then
+        perform _assert_pode_ativar(v_preco, v_pa, p_categoria_id, coalesce(p_somente_bonus, v_sb));
       end if;
       update products set nome=p_nome, categoria_id=p_categoria_id, colecao=p_colecao,
         descricao=p_descricao, caracteristicas=coalesce(p_caracteristicas,'{}'), ativo=p_ativo,
@@ -659,8 +735,9 @@ begin
         somente_bonus=coalesce(p_somente_bonus, products.somente_bonus)
       where id=p_id returning id into v_id;
     else
-      if coalesce(p_ativo,false) and coalesce(p_preco,0) = 0 then
-        raise exception 'defina o preço antes de ativar';
+      if coalesce(p_ativo,false) then
+        perform _assert_pode_ativar(p_preco, p_preco_atacado, p_categoria_id,
+          coalesce(p_somente_bonus, (select somente_bonus from products where id = p_id), false));
       end if;
       update products set nome=p_nome, categoria_id=p_categoria_id, colecao=p_colecao, preco=p_preco,
         desconto_percentual=nullif(p_desconto_percentual,0), preco_atacado=p_preco_atacado,
@@ -676,10 +753,14 @@ end $$;
 
 create or replace function admin_set_ativo(p_id uuid, p_ativo boolean)
 returns void language plpgsql security definer set search_path = public, extensions as $$
+declare v_p products;
 begin
   perform assert_papel(array['superadmin','admin','supervisor']);
-  if p_ativo and exists (select 1 from products where id = p_id and preco = 0) then
-    raise exception 'defina o preço antes de ativar';
+  if p_ativo then
+    select * into v_p from products where id = p_id;
+    if found then
+      perform _assert_pode_ativar(v_p.preco, v_p.preco_atacado, v_p.categoria_id, v_p.somente_bonus);
+    end if;
   end if;
   update products set ativo = p_ativo where id = p_id;
 end $$;
