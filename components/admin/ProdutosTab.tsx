@@ -2,6 +2,7 @@
 
 import type { Product } from "@/lib/types";
 import { capaImagem, totalEstoque } from "@/lib/types";
+import { precoAtacadoEfetivo } from "@/lib/admin-produto";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -97,7 +98,7 @@ export default function ProdutosTab({
                   {podeEditarPreco && (
                     <>
                       <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}>{brl(p.preco)}</div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--adm-purple-text)" }}>{brl(p.preco_atacado ?? Math.round(p.preco * 0.5))}</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--adm-purple-text)" }}>{brl(precoAtacadoEfetivo(p.preco, p.preco_atacado, p.categoria?.desconto_atacado_percentual))}</div>
                     </>
                   )}
                   <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: estoque <= 5 ? "var(--adm-pink-text)" : "var(--ink)" }}>{estoque}</div>

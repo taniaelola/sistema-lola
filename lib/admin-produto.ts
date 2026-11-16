@@ -61,3 +61,17 @@ export function validarProdutoBasico(e: EntradaProduto): ResultadoProduto {
   }
   return { ok: true, preco };
 }
+
+/**
+ * Preço de atacado efetivo exibido no admin. Espelha _preco_atacado (SQL):
+ * preço próprio do produto > desconto da categoria > preço de varejo.
+ */
+export function precoAtacadoEfetivo(
+  preco: number,
+  precoAtacado: number | null | undefined,
+  descontoCategoriaPct: number | null | undefined
+): number {
+  if (precoAtacado != null) return precoAtacado;
+  if (descontoCategoriaPct != null) return Math.round(preco * (100 - descontoCategoriaPct)) / 100;
+  return preco;
+}

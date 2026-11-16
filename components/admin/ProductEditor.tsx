@@ -87,6 +87,7 @@ export default function ProductEditor({
   const atual = { nome, categoriaId, preco, precoAtacado, descricao, caracteristicas, desconto, ativo, destaque, somenteBonus };
   const [base, setBase] = useState(atual);
 
+  const pctCategoria = categorias.find((c) => c.id === categoriaId)?.desconto_atacado_percentual ?? null;
   const calcados = categorias.filter((c) => c.grupo === "calcados");
   const acessorios = categorias.filter((c) => c.grupo === "acessorios");
 
@@ -264,7 +265,7 @@ export default function ProductEditor({
             placeholder={podeEditarPreco ? "Ex: 179,90" : "Definido por um admin"}
           />
           <div style={hintStyle}>
-            deixe vazio para usar o % de desconto da subcategoria (Fase 3)
+            deixe vazio para usar o desconto de atacado da categoria{pctCategoria != null ? ` (hoje ${pctCategoria}%)` : ""}
           </div>
         </div>
       </div>
