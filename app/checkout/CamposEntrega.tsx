@@ -1,5 +1,7 @@
 "use client";
 
+import { ENTREGAS_ATACADO } from "@/lib/checkout";
+
 export type EntregaTipo = "retirada" | "entrega" | "entrega_fora";
 
 export type DadosForm = {
@@ -45,6 +47,9 @@ export const OPCOES: { valor: EntregaTipo; titulo: string; descricao: string }[]
   },
 ];
 
+/** Opções do atacado: só as formas em ENTREGAS_ATACADO (lib/checkout.ts). */
+export const OPCOES_ATACADO = OPCOES.filter((op) => ENTREGAS_ATACADO.includes(op.valor));
+
 export const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "11px 12px",
@@ -64,9 +69,11 @@ export const labelStyle: React.CSSProperties = {
 export function CamposEntrega({
   dados,
   set,
+  opcoes = OPCOES,
 }: {
   dados: DadosForm;
   set: <K extends keyof DadosForm>(campo: K, valor: DadosForm[K]) => void;
+  opcoes?: typeof OPCOES;
 }) {
   const precisaEndereco =
     dados.entregaTipo === "entrega" || dados.entregaTipo === "entrega_fora";
@@ -100,7 +107,7 @@ export function CamposEntrega({
       <div>
         <label style={labelStyle}>Como você quer receber</label>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {OPCOES.map((op) => (
+          {opcoes.map((op) => (
             <label
               key={op.valor}
               style={{
