@@ -14,7 +14,7 @@ const CONTEUDO: Record<EstadoGate, { rotulo: string | null; status: string; text
   pendente: {
     rotulo: "Cadastro pendente",
     status: "Cadastro pendente",
-    texto: "Seu cadastro de revendedor está sendo avaliado pela equipe LOLA. Avisaremos assim que houver uma resposta.",
+    texto: "Recebemos o seu cadastro de revendedora e a equipe LOLA está avaliando. Quando for aprovado, avisaremos você pelo WhatsApp que cadastrou. Pode voltar a esta página depois e entrar com o seu e-mail e senha.",
   },
   recusado: {
     rotulo: "Cadastro não aprovado",

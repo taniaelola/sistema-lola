@@ -376,3 +376,5 @@ A marca é provisória. Para rebrandar sem tocar em componente:
 
 O checklist de QA manual está em [`docs/QA.md`](docs/QA.md). A verificação do
 banco após o lançamento é o `supabase/smoke.sql`.
+
+Aprovação de revendedora: em `/admin` > Revendedores, depois de Aprovar, use o botão "Avisar no WhatsApp" (abre o `wa.me` com a mensagem e o link de acesso pronto; não há envio automático nem e-mail).
