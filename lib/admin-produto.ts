@@ -31,6 +31,13 @@ export type EntradaProduto = {
    * mascara o preço do supervisor; a trava "defina o preço antes de ativar" fica com o banco.
    */
   precoAtual: number | null;
+  /**
+   * Override de preço de atacado digitado (texto do campo). Só vale para quem edita preço. Vazio = sem override.
+   * O banco também barra desconto de categoria de 100%, que o cliente não enxerga aqui.
+   */
+  precoAtacado?: string;
+  /** Brinde (somente_bonus) mantém só a regra do preço nominal. */
+  somenteBonus?: boolean;
 };
 
 export type ResultadoProduto = { ok: true; preco: number } | { ok: false; erro: string };
@@ -46,5 +53,11 @@ export function validarProdutoBasico(e: EntradaProduto): ResultadoProduto {
     if (!Number.isFinite(preco) || preco < 0) return { ok: false, erro: "O preço deve ser um número válido." };
   }
   if (e.ativo && e.precoAtual !== null && preco === 0) return { ok: false, erro: "Defina o preço antes de ativar o produto." };
+  if (e.ativo && e.podeEditarPreco && !e.somenteBonus && e.precoAtacado?.trim()) {
+    const pa = parseFloat(e.precoAtacado.replace(",", "."));
+    if (Number.isFinite(pa) && pa === 0) {
+      return { ok: false, erro: "Defina um preço de atacado maior que zero antes de ativar o produto." };
+    }
+  }
   return { ok: true, preco };
 }

@@ -48,6 +48,18 @@ describe("validarProdutoBasico", () => {
     expect(validarProdutoBasico({ ...base, preco: "abc" }).ok).toBe(false);
     expect(validarProdutoBasico({ ...base, preco: "-1" }).ok).toBe(false);
   });
+  it("não ativa produto de venda com override de atacado 0 (brinde e inativo passam)", () => {
+    expect(validarProdutoBasico({ ...base, preco: "99", precoAtacado: "0", ativo: true })).toEqual({
+      ok: false,
+      erro: "Defina um preço de atacado maior que zero antes de ativar o produto.",
+    });
+    expect(validarProdutoBasico({ ...base, preco: "99", precoAtacado: "0", ativo: true, somenteBonus: true })).toEqual({ ok: true, preco: 99 });
+    expect(validarProdutoBasico({ ...base, preco: "99", precoAtacado: "0", ativo: false })).toEqual({ ok: true, preco: 99 });
+    expect(validarProdutoBasico({ ...base, preco: "99", precoAtacado: "49,9", ativo: true })).toEqual({ ok: true, preco: 99 });
+  });
+  it("supervisor (sem edição de preço) ignora o override digitado", () => {
+    expect(validarProdutoBasico({ ...base, preco: "", podeEditarPreco: false, precoAtual: null, precoAtacado: "0", ativo: true }).ok).toBe(true);
+  });
   it("não ativa produto com preço zero", () => {
     expect(validarProdutoBasico({ ...base, preco: "0", ativo: true })).toEqual({
       ok: false,

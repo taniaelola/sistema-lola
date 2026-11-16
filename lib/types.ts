@@ -96,6 +96,8 @@ export type Order = {
   bonus_aplicado?: boolean | null;
   /** Só em admin_list_orders (nunca em public_get_order). */
   bonus_aviso?: string | null;
+  /** Só em admin_list_orders: pedido liquidado com estoque menor que o vendido (nunca em public_get_order). */
+  estoque_aviso?: string | null;
   mp_payment_id: string | null;
   forma_pagamento: string | null;
   is_atacado: boolean;

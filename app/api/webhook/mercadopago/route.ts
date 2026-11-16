@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { buscarPagamento, mapFormaPagamento } from "@/lib/mercadopago";
 import { BRAND } from "@/lib/brand.config";
-import { parsePaymentId, valorPagoValido } from "@/lib/mp-webhook";
+import { parsePaymentId, valorPagoValido, classificarPagamentoJaRegistrado } from "@/lib/mp-webhook";
 
 export const dynamic = "force-dynamic";
 
@@ -146,6 +146,24 @@ export async function POST(req: NextRequest) {
         ref.order_id
       );
       return NextResponse.json({ ok: false, reason: resultado.reason }, { status: 200 });
+    }
+
+    // Já registrado: retentativa do mesmo pagamento é normal; segundo pagamento ou pedido cancelado é dinheiro
+    // recebido sem pedido a atender. Loga linha estruturada (sem segredos nem dados pessoais) e responde 200.
+    const motivo = classificarPagamentoJaRegistrado(rpcData, String(pagamento.id));
+    if (motivo) {
+      console.error(
+        "ALERTA_PAGAMENTO_REVISAR",
+        JSON.stringify({
+          order_id: ref.order_id,
+          mp_payment_id: String(pagamento.id),
+          reason: motivo,
+          amount: valorPago,
+        })
+      );
+    }
+    if ((rpcData as { already?: boolean } | null)?.already === true) {
+      return NextResponse.json({ ok: true, already: true, ...(motivo ? { alerta: motivo } : {}) });
     }
 
     await notificarVenda(ref.order_id, origin);

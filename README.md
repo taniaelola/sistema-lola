@@ -94,18 +94,26 @@ A `0010_site_so_atacado.sql` fecha o catálogo (só função, com login), revoga
 checkout de convidado, abre o cadastro de produto ao supervisor e mascara valores
 de Pedidos para ele. Ela **quebra o app antigo** (o `SELECT` das tabelas de
 produto é revogado), então o SQL e o deploy do app novo acontecem **na mesma
-janela**, em horário de pouco movimento. As migrações 0001 a 0009 já estão em
+janela**, em horário de pouco movimento, **nesta ordem: app novo primeiro, SQL
+depois** (app antigo + SQL novo derruba Home, catálogo e salvar categoria; app
+novo + SQL antigo só degrada: varejo off, sem bônus, Config e salvar produto
+falham, e os caminhos de dinheiro nunca quebram). As migrações 0001 a 0009 já estão em
 produção; o pacote da janela é só o `supabase/release-0010.sql` (gerado por
 `npm run release:sql`, que também regenera o `release-unico.sql`).
 
 1. Antes: conferir Authentication > Providers > Email com "Confirm email"
    ligado; ter à mão `supabase/rollback-0010.sql` e o deploy anterior para reverter.
-2. Colar `supabase/release-0010.sql` inteiro no SQL Editor e rodar **uma vez**
+2. **Ideal (versions upload):** subir o app novo **sem promover** (`wrangler versions
+   upload`) e abrir a URL da versão para o smoke do app.
+3. Colar `supabase/release-0010.sql` inteiro no SQL Editor e rodar **uma vez**
    (transação única: se der erro, nada é aplicado).
-3. Rodar `supabase/smoke.sql` (todas as linhas `ok = true`).
-4. **Mergear/deployar o app imediatamente** (o app antigo fica sem catálogo e sem
-   compra de convidado até o build terminar).
-5. Durante o build, rodar `supabase/rls-teste.sql` (todas as linhas `ok = true`).
+4. Rodar `supabase/smoke.sql` (todas as linhas `ok = true`) e repetir o smoke da
+   versão nova (home, `/atacado`, login).
+5. Promover a versão a 100% (`wrangler versions deploy`). Em seguida rodar
+   `supabase/rls-teste.sql` (todas as linhas `ok = true`).
+   **Se o build do Worker só publica automaticamente pelo Git** (sem
+   `versions upload`): mergear **primeiro** e rodar o SQL **imediatamente** depois;
+   até o build terminar o app antigo fica sem catálogo e sem compra de convidado.
 6. Passada de QA em [`docs/QA.md`](docs/QA.md): LP, vitrine só logado e aprovado,
    telas de pendente/recusado, bônus, supervisor sem preço e sem valores.
 
@@ -114,7 +122,18 @@ Estado inicial depois da janela: **varejo desligado**, **bonificação desligada
 `supabase/rollback-0010.sql` + voltar o deploy; o rollback também religa o varejo.
 
 
-Webhook do Mercado Pago: `p_transaction_amount` passou a ser obrigatório em
+Estoque: o checkout só **valida** estoque, não reserva. Dois pedidos pendentes
+podem pedir o mesmo estoque; ao liquidar, o banco baixa até zero e grava
+`orders.estoque_aviso` ("Faltaram N un. de produto / cor / tamanho") no pedido
+que ficou sem estoque. O admin vê um aviso vermelho em Pedidos e resolve na mão
+(repor, trocar ou reembolsar). O aviso só aparece em `admin_list_orders`.
+Ativar produto de venda exige preço de varejo e **preço de atacado efetivo**
+(override ou desconto da categoria) maiores que zero.
+
+Webhook do Mercado Pago: pagamento aprovado para pedido já registrado com outro
+payment id, ou para pedido cancelado, responde 200 e deixa no log do Worker uma
+linha `ALERTA_PAGAMENTO_REVISAR` (pedido, payment id, motivo, valor): é dinheiro
+recebido que exige reembolso ou conciliação manual. `p_transaction_amount` passou a ser obrigatório em
 `mp_register_order_payment`. O app sempre envia o valor pago e, se o Mercado Pago
 não trouxer um valor válido, nem chama o RPC (responde 200 e o pedido segue
 pendente; veja o log do Worker).

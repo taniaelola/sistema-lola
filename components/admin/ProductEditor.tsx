@@ -108,6 +108,8 @@ export default function ProductEditor({
       podeEditarPreco,
       // Produto existente do supervisor chega com preco null (mascarado no banco): o banco valida a ativação.
       precoAtual: product ? (product.preco ?? null) : 0,
+      precoAtacado,
+      somenteBonus,
     });
     if (!basico.ok) {
       setError(basico.erro);

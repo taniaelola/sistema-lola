@@ -160,16 +160,21 @@ if (!existsSync(caminho0010)) falhar(`migração ausente: supabase/migrations/${
 const conteudo0010 = readFileSync(caminho0010, 'utf8').replace(/\r\n/g, '\n').trim()
 if (!conteudo0010) falhar(`migração vazia: ${arq0010}`)
 
-const cabecalho0010 = `-- release-0010.sql — APLICAR NA MESMA JANELA DO DEPLOY (SQL primeiro, merge em seguida).
+const cabecalho0010 = `-- release-0010.sql — ORDEM SEGURA: app novo SEM promover -> este SQL + smoke -> promover o app.
 --   (GERADO por scripts/build-release-sql.mjs; NÃO edite à mão. Contém somente a migração ${arq0010};
 --    as migrações 0001 a 0009 já estão aplicadas em produção.)
+--   Por quê: app antigo + SQL novo derruba Home, catálogo e salvar categoria (o SELECT anônimo do catálogo é
+--   revogado). App novo + SQL antigo só degrada (varejo off, sem bônus, Config e salvar produto falham) e os
+--   caminhos de dinheiro nunca quebram. Por isso o SQL NUNCA vai antes do app novo estar de pé.
 --   0. Antes: confira Authentication > Providers > Email: "Confirm email" LIGADO e troca segura de e-mail.
---   1. Cole o arquivo inteiro no SQL Editor do projeto LOLA e rode UMA vez, em horário de pouco movimento.
+--   1. IDEAL (Cloudflare Workers): suba o app novo SEM promover (wrangler versions upload) e teste a URL da versão.
+--   2. Cole este arquivo inteiro no SQL Editor do projeto LOLA e rode UMA vez, em horário de pouco movimento.
 --      Se der erro, nada foi aplicado (transação única): corrija e rode o arquivo inteiro de novo.
---   2. Rode supabase/smoke.sql (todas as linhas ok = true, exceto "superadmin ativo" se a conta do dono ainda não existir).
---   3. Mergeie/deploye o app IMEDIATAMENTE: até o deploy terminar (o build leva minutos) o app antigo
---      fica sem catálogo e sem compra de convidado, e /pedido/[id] perde o endereço.
---   4. DURANTE o build, rode supabase/rls-teste.sql (as falhas aparecem primeiro; todas as linhas com ok = true).
+--   3. Rode supabase/smoke.sql (todas as linhas ok = true, exceto "superadmin ativo" se a conta do dono ainda não existir)
+--      e faça o smoke da versão nova (home, /atacado, login, um pedido de teste).
+--   4. Promova a versão (wrangler versions deploy, 100%). Em seguida rode supabase/rls-teste.sql (todas as linhas ok = true).
+--   SE o build só faz deploy automático pelo Git (sem versions upload): mergeie PRIMEIRO e rode este SQL
+--   IMEDIATAMENTE em seguida (o build leva minutos; até lá, o app antigo fica sem catálogo e sem compra de convidado).
 --   Rollback: supabase/rollback-0010.sql + rollback do deploy. O rollback também religa o varejo
 --   (admin_config.varejo_ativo = true), que a 0010 deixa desligado por padrão.
 

@@ -146,6 +146,11 @@ export default function PedidosTab({
                     #{o.id.slice(0, 8)}
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {o.estoque_aviso ? (
+                      <span title={o.estoque_aviso} aria-label="Estoque insuficiente" style={{ color: "#b23b3b", marginRight: 6 }}>
+                        ⚠
+                      </span>
+                    ) : null}
                     {o.cliente_nome}
                   </div>
                   <div style={{ fontSize: 12.5, color: o.is_atacado ? "var(--adm-purple-text)" : "var(--adm-text-secondary)", fontWeight: o.is_atacado ? 600 : 400 }}>
@@ -220,6 +225,23 @@ export default function PedidosTab({
                       {o.bonus_aplicado === true && (
                         <p style={{ fontSize: 12, color: "var(--adm-text-secondary)", margin: "8px 0 0" }}>
                           Bônus aplicado neste pedido.
+                        </p>
+                      )}
+                      {o.estoque_aviso && (
+                        <p
+                          role="alert"
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            color: "#8a2a2a",
+                            background: "#fdecec",
+                            border: "1px solid #e8b4b4",
+                            borderRadius: 8,
+                            padding: "8px 10px",
+                            margin: "8px 0 0",
+                          }}
+                        >
+                          Estoque insuficiente (pagamento já recebido): {o.estoque_aviso}
                         </p>
                       )}
                       {o.bonus_aviso && (

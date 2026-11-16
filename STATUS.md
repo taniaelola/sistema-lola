@@ -1,18 +1,21 @@
 # STATUS — Lola (lolaonline.com.br)
-Atualizado: 2026-11-06
+Atualizado: 2026-11-16
 Fase: Parte A (site só atacado) com o código pronto na branch feat/parte-a-site-so-atacado, aguardando a revisão final e a janela única de SQL + deploy; Parte C (GTM, Pixel, GA4, SEO) ainda não começou
 Progresso: 
-Próximo passo: Revisão final da Parte A (Reality Checker) e marcar a janela única: rodar supabase/release-0010.sql e mergear/deployar na sequência
+Próximo passo: Abrir o PR da Parte A e marcar a janela: subir o app novo sem promover, rodar supabase/release-0010.sql + smoke, promover a versão
 Prazo do próximo passo: 
 Trava: Data da janela SQL + deploy (decisão do dono, horário de pouco movimento); entradas do dono para a Parte C: GTM ID, GA4, Meta Pixel e token da API de Conversões, token do Cloudflare Web Analytics
 
 ## Feito na última sessão
+- Correções da revisão final: liquidação com estoque insuficiente passa a gravar orders.estoque_aviso (visível só no admin, em Pedidos); ativar produto exige preço de atacado efetivo maior que zero; webhook do Mercado Pago loga ALERTA_PAGAMENTO_REVISAR para segundo pagamento ou pedido cancelado; ordem de deploy segura nos docs e no cabeçalho do release-0010.sql
 - Parte A (site só atacado) implementada: migração 0010 (catálogo fechado, checkout de convidado revogado, bônus, papéis), varejo desligado no app, landing page de revendedoras, vitrine do revendedor com preço de varejo e de atacado, telas de espera (pendente/recusado) e indicador de bonificação no carrinho
 - Painel /admin: Config (só superadmin) com interruptor do varejo e bonificação (peças mínimas, quantidade, produto do brinde); editor de produto com "Somente bônus" e preço desabilitado para o supervisor; Pedidos e Visão geral sem valores para o supervisor; categorias sem desconto de atacado e sem excluir para o supervisor
 - Webhook do Mercado Pago: envia sempre o valor pago (obrigatório no banco) e, sem valor válido, não chama o RPC
 - README (janela da 0010, varejo e bonificação, matriz de papéis), docs/QA.md (LP, pendente/recusado, bônus 14 e 15 peças, supervisor sem preço e sem valores) e testes atualizados
 
 ## Para o conselheiro
+- Ordem de deploy decidida na revisão final: app novo sem promover (wrangler versions upload) -> release-0010.sql + smoke -> promover (versions deploy) -> rls-teste. Se o Worker só publicar pelo Git: mergear primeiro e rodar o SQL logo em seguida (app novo + SQL antigo degrada sem dano; app antigo + SQL novo derruba Home e catálogo).
+- Dívidas aceitas (registradas): (1) mínimo de 12 SKUs literal no SQL do checkout, em lp_regra_skus, lib/textos.ts e components/auth/form.ts; (2) reserva completa de estoque adiada (hoje só aviso na liquidação); (3) S-04 só parcial: anon ainda lê nome, itens e valores de pedido de atacado por uuid; (4) M-4 adiado; (5) medir o bundle do Worker (opennextjs-cloudflare build + wrangler deploy --dry-run, gzip abaixo de 3 MB); (6) testar contra o Supabase real com a 0010 aplicada (categoria null, preco_atacado = 0, RPCs) antes de abrir tráfego.
 - Decisões do dono (05/11): (1) revogar o checkout de convidado para visitante; religar o varejo exigirá migração futura; (2) supervisor vê Pedidos sem valores; (3) webhook do Mercado Pago mantido com segredo rotacionado e valor pago obrigatório; (4) supervisor cadastra produto mas preço só admin/superadmin (produto novo do supervisor nasce inativo e com preço 0; hipótese a confirmar).
 - Regras do dono para o site: sem venda no varejo, vitrine só para revendedor aprovado e logado, vitrine com preço de varejo e de atacado, cadastro de produto por admin ou supervisor (o "gerente"), RLS sem acesso entre usuários, SEO/Pixel/GA4/GTM/Cloudflare Web Analytics.
 - O que o dono precisa fazer na janela (nesta ordem): conferir Auth > Email com "Confirm email" ligado; colar supabase/release-0010.sql inteiro no SQL Editor e rodar uma vez; rodar supabase/smoke.sql; mergear o PR e deixar o deploy terminar logo em seguida; durante o build, rodar supabase/rls-teste.sql; fazer a passada de docs/QA.md. Rollback: supabase/rollback-0010.sql + deploy anterior (o rollback também religa o varejo).

@@ -120,11 +120,27 @@ Supervisor (sem preço e sem valores):
 - [ ] Admin: vê todas as colunas e campos de preço, define o preço do produto
       criado pelo supervisor e consegue ativá-lo.
 
+Estoque e ativação:
+
+- [ ] **Dois pedidos, mesmo estoque**: com um tamanho de estoque 12, criar dois
+      pedidos pendentes de 12 un. desse tamanho (duas revendedoras, ou o mesmo
+      carrinho em sequência). Pagar o primeiro (sem aviso, estoque 0) e depois o
+      segundo: o segundo **também liquida**, o estoque fica 0 (nunca negativo) e o
+      pedido mostra em Pedidos o aviso vermelho "Faltaram 12 un. de Produto / Cor /
+      Tamanho" (e o ícone ⚠ na linha). O aviso **não** aparece em `/pedido/<id>`
+      nem em "meus pedidos" da revendedora.
+- [ ] Ativar produto com preço de atacado (override) **0**, ou em categoria com
+      desconto de atacado 100%, é recusado: "Defina um preço de atacado maior que
+      zero antes de ativar". Produto "Somente bônus" segue só a regra do preço.
+
 Webhook:
 
 - [ ] Pagamento aprovado liquida o pedido com o valor pago conferido; valor
       diferente do total (abaixo ou acima) **não** liquida: o webhook responde
       `200` com `ok:false` e o pedido segue pendente (veja o log do Worker).
+- [ ] Segundo pagamento aprovado para um pedido já pago (ou aprovado para pedido
+      cancelado) responde `200` e deixa `ALERTA_PAGAMENTO_REVISAR` no log do
+      Worker; a retentativa do **mesmo** pagamento não gera alerta.
 
 ## Login e contas
 
