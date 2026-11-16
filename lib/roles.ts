@@ -37,7 +37,7 @@ const MENU: Tela[] = [
 const ACESSO: Record<Papel, Tela[]> = {
   superadmin: MENU.filter((t) => t !== "vendas"),
   admin: MENU.filter((t) => t !== "config" && t !== "vendas"),
-  supervisor: ["visao-geral", "pedidos", "vendas", "revendedores"],
+  supervisor: ["visao-geral", "pedidos", "vendas", "produtos", "revendedores"],
   revendedor: [],
   cliente: [],
 };
@@ -72,4 +72,12 @@ export function destinoPosLogin(papel: Papel, next?: string | null): string {
   if (ehEquipe(papel)) return "/admin";
   if (papel === "revendedor") return "/atacado";
   return nextSeguro(next);
+}
+
+/**
+ * URL do login para quem precisa estar logado para abrir `caminho`: abre a aba ENTRAR.
+ * O cadastro de revendedora é outra intenção e vive em `/entrar?modo=revendedor` (links "Seja revendedora").
+ */
+export function urlEntrar(caminho: string): string {
+  return `/entrar?next=${encodeURIComponent(nextSeguro(caminho))}`;
 }

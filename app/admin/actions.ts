@@ -39,6 +39,12 @@ import {
   listarVendas,
   type ConfigAdmin,
 } from "./consultas";
+import {
+  lojaConfigValida,
+  traduzirErroLojaConfig,
+  type ConfigEntrega,
+  type LojaConfig,
+} from "@/lib/admin-config";
 
 export type { Revendedor } from "@/lib/types";
 
@@ -71,12 +77,12 @@ async function cliente(acao: AcaoAdmin): Promise<SupabaseClient | null> {
 }
 
 export async function fetchProducts(): Promise<Product[]> {
-  const sb = await cliente("catalogo");
+  const sb = await cliente("cadastro");
   return sb ? listarProdutos(sb) : [];
 }
 
 export async function fetchCategorias(): Promise<Categoria[]> {
-  const sb = await cliente("catalogo");
+  const sb = await cliente("cadastro");
   return sb ? listarCategorias(sb) : [];
 }
 
@@ -111,8 +117,10 @@ export async function saveProduct(payload: {
   slug: string;
   desconto_percentual: number | null;
   preco_atacado: number | null;
+  // Sempre reenviado pelo editor; null = manter o valor atual (o banco usa coalesce).
+  somente_bonus: boolean | null;
 }): Promise<{ error?: string; id?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   const { data, error } = await g.sb.rpc("admin_upsert_product", {
     p_id: payload.id,
@@ -128,13 +136,14 @@ export async function saveProduct(payload: {
     p_destaque: payload.destaque,
     p_ordem: payload.ordem,
     p_slug: payload.slug,
+    p_somente_bonus: payload.somente_bonus,
   });
   if (error) return { error: error.message };
   return { id: data as string };
 }
 
 export async function deleteProduct(id: string): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("exclusao");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_delete_product", { p_id: id });
   if (error) return { error: error.message };
@@ -142,7 +151,7 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
 }
 
 export async function setAtivo(id: string, ativo: boolean): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_set_ativo", { p_id: id, p_ativo: ativo });
   if (error) return { error: error.message };
@@ -154,7 +163,7 @@ export async function setDesconto(
   id: string,
   pct: number | null
 ): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("preco");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_set_desconto", {
     p_id: id,
@@ -166,7 +175,7 @@ export async function setDesconto(
 
 // Ativar um produto na Live Surpresa desativa os demais no servidor.
 export async function setSurpresa(id: string, ativo: boolean): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("preco");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_set_surpresa", { p_id: id, p_ativo: ativo });
   if (error) return { error: error.message };
@@ -177,7 +186,7 @@ export async function setDestaque(
   id: string,
   destaque: boolean
 ): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_set_destaque", { p_id: id, p_destaque: destaque });
   if (error) return { error: error.message };
@@ -192,7 +201,7 @@ export async function saveColor(payload: {
   imagens: string[];
   ordem: number;
 }): Promise<{ error?: string; id?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   const { data, error } = await g.sb.rpc("admin_upsert_color", {
     p_id: payload.id,
@@ -207,7 +216,7 @@ export async function saveColor(payload: {
 }
 
 export async function deleteColor(id: string): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("exclusao");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_delete_color", { p_id: id });
   if (error) return { error: error.message };
@@ -220,7 +229,7 @@ export async function saveSize(payload: {
   tamanho: string;
   estoque: number;
 }): Promise<{ error?: string; id?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   const { data, error } = await g.sb.rpc("admin_upsert_size", {
     p_id: payload.id,
@@ -233,7 +242,7 @@ export async function saveSize(payload: {
 }
 
 export async function deleteSize(id: string): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("exclusao");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_delete_size", { p_id: id });
   if (error) return { error: error.message };
@@ -254,7 +263,7 @@ export async function saveCategoria(payload: {
   desconto_atacado_percentual: number | null;
   imagem?: string | null;
 }): Promise<{ error?: string; id?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("cadastro");
   if ("error" in g) return { error: g.error };
   if (!textosValidos(payload, ["grupo", "nome", "slug"]) || (payload.id !== null && typeof payload.id !== "string")) {
     return { error: MSG_DADOS_INVALIDOS };
@@ -264,13 +273,11 @@ export async function saveCategoria(payload: {
 
   let imagem = payload.imagem || null;
   if (payload.imagem === undefined && payload.id) {
-    const { data, error } = await g.sb
-      .from("categorias")
-      .select("imagem")
-      .eq("id", payload.id)
-      .maybeSingle();
-    if (error) return { error: "Não foi possível ler a imagem atual da categoria." };
-    imagem = (data as { imagem: string | null } | null)?.imagem ?? null;
+    // A tabela categorias está fechada: a imagem atual vem da RPC de equipe admin_list_categorias.
+    const { data, error } = await g.sb.rpc("admin_list_categorias");
+    if (error || !Array.isArray(data)) return { error: "Não foi possível ler a imagem atual da categoria." };
+    const atual = (data as { id: string; imagem?: string | null }[]).find((c) => c.id === payload.id);
+    imagem = atual?.imagem ?? null;
   }
 
   const { data, error } = await g.sb.rpc("admin_upsert_categoria", {
@@ -288,7 +295,7 @@ export async function saveCategoria(payload: {
 }
 
 export async function deleteCategoria(id: string): Promise<{ error?: string }> {
-  const g = await autorizar("catalogo");
+  const g = await autorizar("exclusao");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_delete_categoria", { p_id: id });
   if (error) return { error: traduzirErroCategoria(error.message) };
@@ -367,7 +374,7 @@ export async function fetchConfig(): Promise<ConfigAdmin | null> {
   return sb ? lerConfig(sb) : null;
 }
 
-export async function saveConfig(payload: ConfigAdmin): Promise<{ error?: string }> {
+export async function saveConfig(payload: ConfigEntrega): Promise<{ error?: string }> {
   const g = await autorizar("config");
   if ("error" in g) return { error: g.error };
   const { error } = await g.sb.rpc("admin_set_config", {
@@ -376,6 +383,22 @@ export async function saveConfig(payload: ConfigAdmin): Promise<{ error?: string
     p_cidade: payload.cidade_taxa,
   });
   if (error) return { error: error.message };
+  return {};
+}
+
+// Varejo ligado/desligado e bonificação (só superadmin; o banco confere com assert_papel).
+export async function salvarLojaConfig(payload: LojaConfig): Promise<{ error?: string }> {
+  const g = await autorizar("config");
+  if ("error" in g) return { error: g.error };
+  if (!lojaConfigValida(payload)) return { error: MSG_DADOS_INVALIDOS };
+  const { error } = await g.sb.rpc("admin_set_loja_config", {
+    p_varejo_ativo: payload.varejo_ativo,
+    p_bonus_ativo: payload.bonus_ativo,
+    p_bonus_min_pecas: payload.bonus_min_pecas,
+    p_bonus_produto_id: payload.bonus_produto_id,
+    p_bonus_quantidade: payload.bonus_quantidade,
+  });
+  if (error) return { error: traduzirErroLojaConfig(error.message) };
   return {};
 }
 

@@ -1,3 +1,4 @@
+import { economiaPercentual } from "@/lib/lp";
 import { MIN_SKUS_ATACADO } from "@/lib/pricing";
 import { avaliarCarrinhoAtacado, type ItemCarrinhoAtacado } from "@/lib/checkout";
 import { formatarReais } from "@/lib/home";
@@ -21,6 +22,8 @@ export type PedidoAtacado = {
   status: string;
   valor_total: number;
   skus: number;
+  /** O pedido recebeu a bonificação (orders.bonus_aplicado). */
+  bonus_aplicado?: boolean;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -35,6 +38,27 @@ export function quantidadeValida(v: unknown): v is number {
 
 function inteiroNaoNegativo(v: number): number {
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+}
+
+/** Soma as quantidades válidas (finitas e positivas); lixo e negativos são ignorados. */
+export function somarPecas(linhas: { quantidade: number }[]): number {
+  return linhas.reduce((t, l) => (Number.isFinite(l.quantidade) && l.quantidade > 0 ? t + l.quantidade : t), 0);
+}
+
+/** Bônus de brinde: ganha uma vez ao chegar em `min` peças (não acumula). */
+export function progressoBonus(pecas: number, min: number, ativo: boolean) {
+  // min inválido (<= 0, NaN) vira 1: evita divisão por zero e "ganhou" com 0 peças.
+  const minimo = Number.isFinite(min) && min >= 1 ? Math.floor(min) : 1;
+  const qtd = Number.isFinite(pecas) && pecas > 0 ? pecas : 0;
+  const ganhou = ativo && qtd >= minimo;
+  return {
+    ativo,
+    ganhou,
+    faltam: ativo ? Math.max(0, minimo - qtd) : 0,
+    pecas: qtd,
+    min: minimo,
+    pct: Math.min(100, Math.round((qtd / minimo) * 100)),
+  };
 }
 
 export function progressoSkus(skus: number) {
@@ -158,6 +182,9 @@ export function mensagemErroAtacado(erro: { message?: string } | null | undefine
   if (msg.includes("revendedor não aprovado")) {
     return "Seu cadastro de revendedor não está aprovado ou sua sessão expirou. Entre novamente.";
   }
+  if (msg.includes("sem permissão")) {
+    return "Seu acesso ao catálogo não está liberado ou a sessão expirou. Entre novamente.";
+  }
   if (msg.includes("carrinho cheio")) return "Seu carrinho está cheio. Remova algum item antes de adicionar outro.";
   if (msg.includes("produto indisponível")) return "Esse produto está indisponível no momento.";
   if (msg.includes("item inválido")) return "Item inválido. Atualize a página e tente de novo.";
@@ -223,7 +250,7 @@ export function normalizarPedidos(data: unknown): PedidoAtacado[] | null {
     const status = r && texto(r.status);
     const valor = r && numero(r.valor_total);
     if (!r || !id || !created_at || !status || valor == null) return [];
-    return [{ id, created_at, status, valor_total: valor, skus: numero(r.skus) ?? 0 }];
+    return [{ id, created_at, status, valor_total: valor, skus: numero(r.skus) ?? 0, bonus_aplicado: r.bonus_aplicado === true }];
   });
 }
 
@@ -250,4 +277,167 @@ export function dataPtBr(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return TRACO;
   return d.toLocaleDateString("pt-BR", { timeZone: FUSO });
+}
+
+/**
+ * Margem informativa da revenda: diferença entre o preço de referência (varejo) e o
+ * preço do revendedor (atacado). Nunca é gravada. 0/0 quando algum preço é inválido
+ * ou quando o atacado não é menor que o varejo.
+ */
+export function margemRevenda(
+  precoVarejo: number,
+  precoAtacado: number
+): { valor: number; percentual: number } {
+  const valido = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
+  if (!valido(precoVarejo) || !valido(precoAtacado) || precoAtacado >= precoVarejo) {
+    return { valor: 0, percentual: 0 };
+  }
+  const valor = Math.round((precoVarejo - precoAtacado) * 100) / 100;
+  return { valor, percentual: Math.round((valor / precoVarejo) * 100) };
+}
+
+export type TamanhoRevendedor = { id: string; tamanho: string; estoque: number };
+export type CorRevendedor = {
+  id: string;
+  nome: string;
+  hex: string | null;
+  imagem: string | null;
+  imagens: string[];
+  tamanhos: TamanhoRevendedor[];
+};
+/** Produto como o banco entrega ao revendedor (preços já calculados). */
+export type ProdutoRevendedor = {
+  id: string;
+  slug: string;
+  nome: string;
+  descricao: string;
+  caracteristicas: string[];
+  categoria: string;
+  /** Preço de referência para revenda (varejo, já com o desconto de varejo). */
+  precoVarejo: number;
+  /** Preço do revendedor (atacado). */
+  precoAtacado: number;
+  cores: CorRevendedor[];
+};
+
+/** Converte um `Produto` de get_catalogo_revendedor/get_produto_revendedor; null se inválido. */
+export function normalizarProdutoRevendedor(v: unknown): ProdutoRevendedor | null {
+  const r = registro(v);
+  if (!r) return null;
+  const id = texto(r.id);
+  const slug = texto(r.slug);
+  const nome = texto(r.nome);
+  const varejo = numero(r.preco_varejo);
+  const atacado = numero(r.preco_atacado);
+  if (!id || !slug || nome === null || varejo == null || atacado == null) return null;
+  const cat = registro(r.categoria);
+  const cores = (Array.isArray(r.cores) ? r.cores : []).flatMap<CorRevendedor>((cv) => {
+    const c = registro(cv);
+    const cid = c && texto(c.id);
+    if (!c || !cid) return [];
+    const imagens = (Array.isArray(c.imagens) ? c.imagens : []).filter(
+      (i): i is string => typeof i === "string" && i !== ""
+    );
+    const tamanhos = (Array.isArray(c.tamanhos) ? c.tamanhos : []).flatMap<TamanhoRevendedor>((tv) => {
+      const t = registro(tv);
+      const tid = t && texto(t.id);
+      if (!t || !tid) return [];
+      return [{ id: tid, tamanho: texto(t.tamanho) ?? "", estoque: numero(t.estoque) ?? 0 }];
+    });
+    return [{ id: cid, nome: texto(c.nome) ?? "", hex: texto(c.hex), imagem: imagens[0] ?? null, imagens, tamanhos }];
+  });
+  return {
+    id,
+    slug,
+    nome,
+    descricao: texto(r.descricao) ?? "",
+    caracteristicas: (Array.isArray(r.caracteristicas) ? r.caracteristicas : []).filter(
+      (x): x is string => typeof x === "string" && x.trim() !== ""
+    ),
+    categoria: (cat && texto(cat.nome)) ?? "",
+    precoVarejo: varejo,
+    precoAtacado: atacado,
+    cores,
+  };
+}
+
+/** `{ categorias, produtos }` de get_catalogo_revendedor; null quando o formato não é o esperado. */
+export function normalizarCatalogoRevendedor(data: unknown): ProdutoRevendedor[] | null {
+  const r = registro(data);
+  if (!r || !Array.isArray(r.produtos)) return null;
+  return r.produtos.flatMap((p) => {
+    const n = normalizarProdutoRevendedor(p);
+    return n ? [n] : [];
+  });
+}
+
+/** Maior economia percentual (varejo vs. atacado) entre os produtos; null sem produtos. */
+export function descontoMaximoDosProdutos(
+  produtos: Pick<ProdutoRevendedor, "precoVarejo" | "precoAtacado">[]
+): number | null {
+  if (produtos.length === 0) return null;
+  return Math.max(...produtos.map((p) => economiaPercentual(p.precoVarejo, p.precoAtacado)));
+}
+
+export function produtoTemEstoque(p: Pick<ProdutoRevendedor, "cores">): boolean {
+  return p.cores.some((c) => c.tamanhos.some((t) => t.estoque > 0));
+}
+
+/**
+ * Mensagem do indicador de bonificação do carrinho. "" quando o bônus está desligado.
+ * Os números vêm da configuração da loja (`min` e `pecas` já estão em `p`), nunca fixos aqui.
+ */
+export function textoBonus(
+  p: ReturnType<typeof progressoBonus>,
+  nomeBonus: string | null,
+  qtd: number
+): string {
+  if (!p.ativo) return "";
+  const nome = nomeBonus?.trim() || null;
+  const unidades = Number.isInteger(qtd) && qtd > 1 ? `${qtd}× ` : "";
+  if (p.ganhou) {
+    const brinde = nome ? ` (${unidades}${nome})` : "";
+    return `Você atingiu ${p.pecas} peças: a bonificação${brinde} entra no pedido (sujeita a estoque)`;
+  }
+  const pecas = p.faltam === 1 ? "peça" : "peças";
+  const alvo = nome ? `${unidades}${nome}` : "a bonificação";
+  return `${p.pecas} de ${p.min} peças: faltam ${p.faltam} ${pecas} para ganhar ${alvo}`;
+}
+
+export type SecaoAtacado = "painel" | "catalogo" | "produto" | "carrinho" | "pedidos";
+
+/** Seção da área do revendedor para o título do cabeçalho e o item ativo do menu. */
+export function secaoAtacado(caminho: string): SecaoAtacado {
+  const dentro = (base: string) => caminho === base || caminho.startsWith(`${base}/`);
+  if (dentro("/atacado/produto")) return "produto";
+  if (dentro("/atacado/catalogo")) return "catalogo";
+  if (dentro("/atacado/carrinho")) return "carrinho";
+  if (dentro("/atacado/pedidos")) return "pedidos";
+  return "painel";
+}
+
+/** Item do pedido que é a bonificação: `bonus` do banco (_order_json); sem a marca, fallback pelo preço 0. */
+export function itemEhBonus(i: {
+  bonus?: boolean;
+  quantidade: number;
+  preco_unit: number | null;
+  subtotal: number | null;
+}): boolean {
+  if (i.bonus === true) return true;
+  if (i.bonus === false) return false;
+  return i.quantidade > 0 && i.preco_unit === 0 && i.subtotal === 0;
+}
+
+/**
+ * Linha de entrega do resumo do pedido. null = não mostrar (por exemplo, valores ocultos para o
+ * supervisor: taxa null não pode virar "Grátis").
+ */
+export function linhaEntrega(
+  tipo: string,
+  taxa: number | null | undefined
+): { rotulo: string; valor: number | "A combinar" | "Grátis" } | null {
+  if (tipo === "entrega_fora") return { rotulo: "Frete", valor: "A combinar" };
+  if (typeof taxa !== "number" || !Number.isFinite(taxa)) return null;
+  if (taxa > 0) return { rotulo: "Taxa de entrega", valor: taxa };
+  return tipo === "entrega" ? { rotulo: "Entrega", valor: "Grátis" } : null;
 }

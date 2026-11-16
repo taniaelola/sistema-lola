@@ -7,8 +7,8 @@ import { Menu, ShoppingBag, User, X } from "lucide-react";
 import { BRAND } from "@/lib/brand.config";
 import { useCart } from "@/lib/cart";
 import {
+  itensMenu,
   itensMenuConta,
-  linksCategorias,
   primeiroNome,
   type CategoriaNav,
   type PerfilNav,
@@ -18,9 +18,11 @@ import { sairAction } from "@/app/entrar/actions";
 export default function HeaderClient({
   categorias,
   perfil: perfilProp,
+  varejoAtivo = false,
 }: {
   categorias: CategoriaNav[];
   perfil: PerfilNav | null;
+  varejoAtivo?: boolean;
 }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const [contaAberta, setContaAberta] = useState(false);
@@ -31,7 +33,10 @@ export default function HeaderClient({
   const contaRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const { totalItens } = useCart();
-  const links = linksCategorias(categorias);
+  // Com o varejo desligado itensMenu nunca devolve sacola nem categorias; visitante vê Entrar / Seja revendedora.
+  const itens = itensMenu({ varejoAtivo, logado: !!perfil, papel: perfil?.papel, categorias });
+  const links = itens.filter((i) => i.tipo === "categoria" || (i.tipo === "link" && !perfil));
+  const temSacola = itens.some((i) => i.tipo === "sacola");
 
   useEffect(() => {
     if (!contaAberta) return;
@@ -94,15 +99,15 @@ export default function HeaderClient({
           <img src="/lola-logo.png" alt={BRAND.nome} />
         </Link>
 
-        <nav className="nav-main" aria-label="Categorias">
+        <nav className="nav-main" aria-label="Navegação">
           {links.map((l) => (
-            <a
+            <Link
               key={l.href}
               href={l.href}
               className={l.href === "/#lancamentos" ? "nav-link nav-link-destaque" : "nav-link"}
             >
               {l.rotulo}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -123,7 +128,7 @@ export default function HeaderClient({
               {contaAberta && (
                 <div id="contaMenuLista" className="conta-menu-lista">
                   <span className="conta-menu-nome">{perfil.nome || "Minha conta"}</span>
-                  {itensMenuConta(perfil).map((item) =>
+                  {itensMenuConta(perfil, varejoAtivo).map((item) =>
                     item.tipo === "link" ? (
                       <Link
                         key={item.href}
@@ -154,10 +159,12 @@ export default function HeaderClient({
             </Link>
           )}
 
-          <Link href="/carrinho" className="hd-icon-btn cart-link" aria-label="Carrinho">
-            <ShoppingBag size={20} aria-hidden="true" />
-            {totalItens > 0 && <span className="cart-badge">{totalItens}</span>}
-          </Link>
+          {temSacola && (
+            <Link href="/carrinho" className="hd-icon-btn cart-link" aria-label="Carrinho">
+              <ShoppingBag size={20} aria-hidden="true" />
+              {totalItens > 0 && <span className="cart-badge">{totalItens}</span>}
+            </Link>
+          )}
         </div>
       </div>
 
@@ -168,14 +175,14 @@ export default function HeaderClient({
         style={{ display: menuAberto ? "flex" : "none" }}
       >
         {links.map((l) => (
-          <a
+          <Link
             key={l.href}
             href={l.href}
             onClick={() => setMenuAberto(false)}
             className="mobile-nav-link"
           >
             {l.rotulo}
-          </a>
+          </Link>
         ))}
       </nav>
     </header>

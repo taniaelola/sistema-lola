@@ -10,8 +10,7 @@ import {
   supabaseComToken,
   supabaseEfemero,
 } from "@/lib/supabase";
-import { nextSeguro } from "@/lib/validators";
-import type { Papel } from "@/lib/roles";
+import { urlEntrar, type Papel } from "@/lib/roles";
 import {
   COOKIE_AT,
   COOKIE_RT,
@@ -106,7 +105,7 @@ export async function getPerfil(opcoes: { renovar?: boolean } = {}): Promise<Per
 export async function exigirPapel(papeis: Papel[], caminho: string = "/"): Promise<Perfil> {
   const perfil = await getPerfil();
   if (!perfil || !perfil.ativo) {
-    redirect(`/entrar?next=${encodeURIComponent(nextSeguro(caminho))}`);
+    redirect(urlEntrar(caminho));
   }
   if (!papeis.includes(perfil.papel)) redirect("/");
   return perfil;

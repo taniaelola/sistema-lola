@@ -22,12 +22,14 @@ declare
   u_rev_a constant uuid := '00000000-0000-4000-8000-0000000000b1';
   u_rev_b constant uuid := '00000000-0000-4000-8000-0000000000b2';
   u_rev_p constant uuid := '00000000-0000-4000-8000-0000000000b3';
+  u_rev_r constant uuid := '00000000-0000-4000-8000-0000000000b4';
   u_sup   constant uuid := '00000000-0000-4000-8000-0000000000c1';
   u_adm   constant uuid := '00000000-0000-4000-8000-0000000000c2';
   u_sa    constant uuid := '00000000-0000-4000-8000-0000000000c3';
   r_a     constant uuid := '00000000-0000-4000-8000-0000000000d1';
   r_b     constant uuid := '00000000-0000-4000-8000-0000000000d2';
   r_p     constant uuid := '00000000-0000-4000-8000-0000000000d3';
+  r_r     constant uuid := '00000000-0000-4000-8000-0000000000d4';
   o_cli_a constant uuid := '00000000-0000-4000-8000-0000000000e1';
   o_cli_b constant uuid := '00000000-0000-4000-8000-0000000000e2';
   o_rev_a constant uuid := '00000000-0000-4000-8000-0000000000e3';
@@ -41,7 +43,7 @@ begin
     from (values
       (u_cli_a, 't-cli-a@teste.invalid'), (u_cli_b, 't-cli-b@teste.invalid'),
       (u_rev_a, 't-rev-a@teste.invalid'), (u_rev_b, 't-rev-b@teste.invalid'),
-      (u_rev_p, 't-rev-p@teste.invalid'), (u_sup, 't-sup@teste.invalid'),
+      (u_rev_p, 't-rev-p@teste.invalid'), (u_rev_r, 't-rev-r@teste.invalid'), (u_sup, 't-sup@teste.invalid'),
       (u_adm, 't-adm@teste.invalid'), (u_sa, 't-sa@teste.invalid')
     ) as x(id, email);
 
@@ -49,14 +51,15 @@ begin
     update profiles set papel = x.p::papel_usuario
     from (values
       (u_rev_a, 'revendedor'), (u_rev_b, 'revendedor'), (u_rev_p, 'revendedor'),
-      (u_sup, 'supervisor'), (u_adm, 'admin'), (u_sa, 'superadmin')
+      (u_rev_r, 'revendedor'), (u_sup, 'supervisor'), (u_adm, 'admin'), (u_sa, 'superadmin')
     ) as x(id, p)
     where profiles.id = x.id;
 
     insert into revendedores (id, user_id, razao_social, email, status) values
       (r_a, u_rev_a, 'Teste A', 't-rev-a@teste.invalid', 'aprovado'),
       (r_b, u_rev_b, 'Teste B', 't-rev-b@teste.invalid', 'aprovado'),
-      (r_p, u_rev_p, 'Teste P', 't-rev-p@teste.invalid', 'pendente');
+      (r_p, u_rev_p, 'Teste P', 't-rev-p@teste.invalid', 'pendente'),
+      (r_r, u_rev_r, 'Teste R', 't-rev-r@teste.invalid', 'recusado');
 
     insert into orders (id, status, cliente_nome, cliente_telefone, entrega_tipo,
                         valor_produtos, valor_total, is_atacado, customer_id, revendedor_id) values
@@ -88,11 +91,11 @@ begin
         (16, 'anon não lê carrinho_atacado','anon', null::uuid, 'select count(*)::text from carrinho_atacado', 'ERRO'),
         (17, 'anon não lê convites_papel', 'anon', null::uuid, 'select count(*)::text from convites_papel', 'ERRO'),
         (18, 'anon não lê promocoes',      'anon', null::uuid, 'select count(*)::text from promocoes', 'ERRO'),
-        -- visitante: catálogo (ALVO da spec: sem acesso direto; hoje deve falhar)
-        (19, 'ALVO: anon não lê products', 'anon', null::uuid, 'select count(*)::text from products', 'ERRO'),
+        -- visitante: catálogo (sem acesso direto; fechado na seção B da 0010)
+        (19, 'anon não lê products', 'anon', null::uuid, 'select count(*)::text from products', 'ERRO'),
         (20, 'INFO: produtos com preco_atacado visíveis ao anon', 'anon', null::uuid,
              'select count(*) filter (where preco_atacado is not null)::text from products', 'INFO'),
-        (21, 'ALVO: anon não lê product_sizes (estoque)', 'anon', null::uuid, 'select count(*)::text from product_sizes', 'ERRO'),
+        (21, 'anon não lê product_sizes (estoque)', 'anon', null::uuid, 'select count(*)::text from product_sizes', 'ERRO'),
         -- visitante: RPCs
         (22, 'anon não chama admin_list_orders', 'anon', null::uuid, 'select admin_list_orders()::text', 'ERRO'),
         (23, 'anon não chama admin_list_users',  'anon', null::uuid, 'select admin_list_users()::text', 'ERRO'),
@@ -153,7 +156,7 @@ begin
         (81, 'supervisor chama admin_list_revendedores', 'sup', u_sup, 'select left(admin_list_revendedores()::text, 20)', 'OK'),
         (82, 'supervisor NÃO chama admin_list_users', 'sup', u_sup, 'select admin_list_users()::text', 'ERRO'),
         (83, 'supervisor NÃO chama admin_get_config', 'sup', u_sup, 'select admin_get_config()::text', 'ERRO'),
-        (84, 'INFO: supervisor admin_list_products (vira OK na Parte A)', 'sup', u_sup, 'select left(admin_list_products()::text, 20)', 'INFO'),
+        (84, 'supervisor chama admin_list_products (cadastro, 0010 seção D)', 'sup', u_sup, 'select left(admin_list_products()::text, 20)', 'OK'),
         (85, 'supervisor NÃO exclui produto', 'sup', u_sup,
              format('select admin_delete_product(%L)::text', gen_random_uuid()), 'ERRO'),
         (86, 'supervisor NÃO altera papel de usuário', 'sup', u_sup,
@@ -164,7 +167,37 @@ begin
         (90, 'admin NÃO cria superadmin', 'adm', u_adm,
              format('select admin_set_user(%L, %L, true)::text', u_cli_a, 'superadmin'), 'ERRO'),
         (91, 'superadmin chama admin_get_config', 'sa', u_sa, 'select left(admin_get_config()::text, 20)', 'OK'),
-        (92, 'superadmin chama admin_list_users', 'sa', u_sa, 'select left(admin_list_users()::text, 20)', 'OK')
+        (92, 'superadmin chama admin_list_users', 'sa', u_sa, 'select left(admin_list_users()::text, 20)', 'OK'),
+        -- catálogo fechado (0010 seção B): leitura direta negada, só por funções por papel
+        (100, 'cliente não lê products',        'cli_a', u_cli_a, 'select count(*)::text from products', 'ERRO'),
+        (101, 'cliente não lê product_colors',  'cli_a', u_cli_a, 'select count(*)::text from product_colors', 'ERRO'),
+        (102, 'cliente não lê product_sizes',   'cli_a', u_cli_a, 'select count(*)::text from product_sizes', 'ERRO'),
+        (103, 'cliente não lê categorias',      'cli_a', u_cli_a, 'select count(*)::text from categorias', 'ERRO'),
+        (104, 'revendedor PENDENTE não lê products',       'rev_p', u_rev_p, 'select count(*)::text from products', 'ERRO'),
+        (105, 'revendedor PENDENTE não lê product_colors', 'rev_p', u_rev_p, 'select count(*)::text from product_colors', 'ERRO'),
+        (106, 'revendedor PENDENTE não lê product_sizes',  'rev_p', u_rev_p, 'select count(*)::text from product_sizes', 'ERRO'),
+        (107, 'revendedor PENDENTE não lê categorias',     'rev_p', u_rev_p, 'select count(*)::text from categorias', 'ERRO'),
+        (108, 'anon não lê product_colors',     'anon', null::uuid, 'select count(*)::text from product_colors', 'ERRO'),
+        (109, 'anon não lê categorias',         'anon', null::uuid, 'select count(*)::text from categorias', 'ERRO'),
+        (110, 'anon sem EXECUTE em public_get_surpresa',    'anon', null::uuid, 'select public_get_surpresa()::text', 'ERRO'),
+        (111, 'cliente sem EXECUTE em public_get_surpresa', 'cli_a', u_cli_a, 'select public_get_surpresa()::text', 'ERRO'),
+        (112, 'anon get_destaques_atacado',     'anon', null::uuid, 'select left(get_destaques_atacado()::text, 20)', 'OK'),
+        (113, 'anon não chama get_catalogo_revendedor', 'anon', null::uuid, 'select get_catalogo_revendedor()::text', 'ERRO'),
+        (114, 'revendedor RECUSADO não chama get_catalogo_revendedor', 'rev_r', u_rev_r, 'select get_catalogo_revendedor()::text', 'ERRO'),
+        (115, 'revendedor RECUSADO não usa carrinho', 'rev_r', u_rev_r, 'select atacado_cart_get()::text', 'ERRO'),
+        (116, 'revendedor aprovado chama get_catalogo_revendedor', 'rev_a', u_rev_a, 'select left(get_catalogo_revendedor()::text, 20)', 'OK'),
+        (117, 'revendedor PENDENTE não chama get_catalogo_revendedor', 'rev_p', u_rev_p, 'select get_catalogo_revendedor()::text', 'ERRO'),
+        (118, 'anon get_categoria_imagem',      'anon', null::uuid, 'select get_categoria_imagem(gen_random_uuid())::text', 'OK'),
+        -- papéis do cadastro (0010 seção D): supervisor sem preço/desconto/surpresa/exclusão; visitante e cliente fora
+        (119, 'supervisor NÃO chama admin_set_desconto', 'sup', u_sup,
+             format('select admin_set_desconto(%L, 10)::text', gen_random_uuid()), 'ERRO'),
+        (120, 'supervisor NÃO chama admin_set_surpresa', 'sup', u_sup,
+             format('select admin_set_surpresa(%L, true)::text', gen_random_uuid()), 'ERRO'),
+        (121, 'supervisor NÃO exclui produto (admin_delete_product)', 'sup', u_sup,
+             format('select admin_delete_product(%L)::text', gen_random_uuid()), 'ERRO'),
+        (122, 'visitante NÃO chama admin_list_products', 'anon', null::uuid, 'select admin_list_products()::text', 'ERRO'),
+        (123, 'cliente NÃO chama admin_list_products', 'cli_a', u_cli_a, 'select admin_list_products()::text', 'ERRO'),
+        (124, 'admin chama admin_list_products', 'adm', u_adm, 'select left(admin_list_products()::text, 20)', 'OK')
       ) as t(ord, caso, quem, uid, sql, esperado)
       order by ord
     loop

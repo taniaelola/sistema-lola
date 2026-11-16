@@ -4,6 +4,13 @@ import { useState } from "react";
 import type { Product, ProductColor, Categoria } from "@/lib/types";
 import Drawer from "./Drawer";
 import { confirmarDescarte, temAlteracoes } from "@/lib/admin-rascunho";
+import {
+  AVISO_SEM_PRECO,
+  DICA_SOMENTE_BONUS,
+  ativoInicialProduto,
+  somenteBonusParaEnvio,
+  validarProdutoBasico,
+} from "@/lib/admin-produto";
 
 // Limite de tamanho por foto: base64 vai num campo text[], e a server action
 // tem teto de 4 MB. ~1,5 MB por arquivo mantém a linha enxuta.
@@ -41,11 +48,17 @@ const hintStyle: React.CSSProperties = {
 export default function ProductEditor({
   product,
   categorias,
+  podeEditarPreco,
+  podeExcluir,
   onChange,
   onDone,
 }: {
   product: Product | null;
   categorias: Categoria[];
+  /** false para o supervisor: preço, atacado e desconto ficam só leitura. */
+  podeEditarPreco: boolean;
+  /** false para o supervisor: não exclui cor nem tamanho. */
+  podeExcluir: boolean;
   onChange: (list?: Product[]) => void;
   onDone: () => void;
 }) {
@@ -65,12 +78,13 @@ export default function ProductEditor({
   const [desconto, setDesconto] = useState(
     product?.desconto_percentual != null ? String(product.desconto_percentual) : ""
   );
-  const [ativo, setAtivo] = useState(product?.ativo ?? true);
+  const [ativo, setAtivo] = useState(ativoInicialProduto(product, podeEditarPreco));
   const [destaque, setDestaque] = useState(product?.destaque ?? false);
+  const [somenteBonus, setSomenteBonus] = useState(product?.somente_bonus ?? false);
   const [colors, setColors] = useState<ProductColor[]>(product?.colors ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const atual = { nome, categoriaId, preco, precoAtacado, descricao, caracteristicas, desconto, ativo, destaque };
+  const atual = { nome, categoriaId, preco, precoAtacado, descricao, caracteristicas, desconto, ativo, destaque, somenteBonus };
   const [base, setBase] = useState(atual);
 
   const calcados = categorias.filter((c) => c.grupo === "calcados");
@@ -86,17 +100,25 @@ export default function ProductEditor({
   }
 
   async function handleSaveProduct() {
-    if (!nome.trim() || !preco || !categoriaId) {
-      setError("Preencha ao menos nome, categoria e preço.");
+    const basico = validarProdutoBasico({
+      nome,
+      categoriaId,
+      preco,
+      ativo,
+      podeEditarPreco,
+      // Produto existente do supervisor chega com preco null (mascarado no banco): o banco valida a ativação.
+      precoAtual: product ? (product.preco ?? null) : 0,
+      precoAtacado,
+      somenteBonus,
+    });
+    if (!basico.ok) {
+      setError(basico.erro);
       return;
     }
-    const precoNum = parseFloat(preco.replace(",", "."));
-    if (isNaN(precoNum) || precoNum < 0) {
-      setError("O preço deve ser um número válido.");
-      return;
-    }
-    let descontoPercentual: number | null = null;
-    if (desconto.trim()) {
+    const precoNum = basico.preco;
+    // Supervisor não edita preço: reenviamos o que já está gravado (o banco o preserva de qualquer forma).
+    let descontoPercentual: number | null = podeEditarPreco ? null : product?.desconto_percentual ?? null;
+    if (podeEditarPreco && desconto.trim()) {
       descontoPercentual = parseInt(desconto.trim(), 10);
       if (
         isNaN(descontoPercentual) ||
@@ -107,8 +129,8 @@ export default function ProductEditor({
         return;
       }
     }
-    let precoAtacadoNum: number | null = null;
-    if (precoAtacado.trim()) {
+    let precoAtacadoNum: number | null = podeEditarPreco ? null : product?.preco_atacado ?? null;
+    if (podeEditarPreco && precoAtacado.trim()) {
       precoAtacadoNum = parseFloat(precoAtacado.replace(",", "."));
       if (isNaN(precoAtacadoNum) || precoAtacadoNum < 0) {
         setError("O preço de atacado deve ser um número válido.");
@@ -135,6 +157,8 @@ export default function ProductEditor({
         slug: product?.slug || slugify(nome),
         desconto_percentual: descontoPercentual,
         preco_atacado: precoAtacadoNum,
+        // Sempre reenviado: salvar uma edição nunca zera "Somente bônus".
+        somente_bonus: somenteBonusParaEnvio(product, somenteBonus),
       });
       if (res.error) {
         setError(res.error);
@@ -212,13 +236,20 @@ export default function ProductEditor({
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 20 }}>
+        {!podeEditarPreco && (
+          <p role="note" style={{ gridColumn: "1 / -1", fontSize: 12, color: "var(--muted)", margin: 0 }}>
+            {AVISO_SEM_PRECO}
+          </p>
+        )}
         <div>
           <label style={labelStyle}>Preço (R$)</label>
           <input
             style={inputStyle}
-            value={preco}
+            value={podeEditarPreco ? preco : ""}
+            readOnly={!podeEditarPreco}
+            disabled={!podeEditarPreco}
             onChange={(e) => setPreco(e.target.value)}
-            placeholder="Ex: 249,90"
+            placeholder={podeEditarPreco ? "Ex: 249,90" : "Definido por um admin"}
           />
           <div style={hintStyle}>Preço de tabela (varejo).</div>
         </div>
@@ -226,9 +257,11 @@ export default function ProductEditor({
           <label style={labelStyle}>Preço de atacado (R$, opcional)</label>
           <input
             style={inputStyle}
-            value={precoAtacado}
+            value={podeEditarPreco ? precoAtacado : ""}
+            readOnly={!podeEditarPreco}
+            disabled={!podeEditarPreco}
             onChange={(e) => setPrecoAtacado(e.target.value)}
-            placeholder="Ex: 179,90"
+            placeholder={podeEditarPreco ? "Ex: 179,90" : "Definido por um admin"}
           />
           <div style={hintStyle}>
             deixe vazio para usar o % de desconto da subcategoria (Fase 3)
@@ -241,13 +274,16 @@ export default function ProductEditor({
           <label style={labelStyle}>Desconto de varejo (%, opcional)</label>
           <input
             style={inputStyle}
-            value={desconto}
+            value={podeEditarPreco ? desconto : ""}
+            readOnly={!podeEditarPreco}
+            disabled={!podeEditarPreco}
             onChange={(e) => setDesconto(e.target.value)}
-            placeholder="Ex: 30 (deixe em branco pra não aplicar)"
+            placeholder={podeEditarPreco ? "Ex: 30 (deixe em branco pra não aplicar)" : "Definido por um admin"}
           />
           <div style={hintStyle}>Aplica na vitrine sobre o preço de tabela.</div>
         </div>
-        {desconto.trim() &&
+        {podeEditarPreco &&
+          desconto.trim() &&
           preco &&
           !isNaN(parseFloat(desconto.replace(",", "."))) &&
           !isNaN(parseFloat(preco.replace(",", "."))) && (
@@ -300,6 +336,7 @@ export default function ProductEditor({
           <input
             type="checkbox"
             checked={ativo}
+            disabled={!podeEditarPreco && !id}
             onChange={(e) => setAtivo(e.target.checked)}
           />{" "}
           Ativo no site
@@ -314,7 +351,18 @@ export default function ProductEditor({
           />{" "}
           Marcar como destaque
         </label>
+        <label
+          style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}
+        >
+          <input
+            type="checkbox"
+            checked={somenteBonus}
+            onChange={(e) => setSomenteBonus(e.target.checked)}
+          />{" "}
+          Somente bônus
+        </label>
       </div>
+      {somenteBonus && <p style={{ ...hintStyle, marginTop: -8 }}>{DICA_SOMENTE_BONUS}</p>}
 
       {error && (
         <p style={{ color: "#b23b3b", fontSize: 12.5, marginBottom: 14 }}>{error}</p>
@@ -333,6 +381,7 @@ export default function ProductEditor({
         <ColorsManager
           productId={id}
           colors={colors}
+          podeExcluir={podeExcluir}
           onChange={() => reloadColors(id)}
         />
       ) : (
@@ -348,10 +397,12 @@ export default function ProductEditor({
 function ColorsManager({
   productId,
   colors,
+  podeExcluir,
   onChange,
 }: {
   productId: string;
   colors: ProductColor[];
+  podeExcluir: boolean;
   onChange: () => void;
 }) {
   const [addingColor, setAddingColor] = useState(false);
@@ -389,7 +440,7 @@ function ColorsManager({
       )}
 
       {colors.map((c) => (
-        <ColorRow key={c.id} color={c} onChange={onChange} />
+        <ColorRow key={c.id} color={c} podeExcluir={podeExcluir} onChange={onChange} />
       ))}
 
       {addingColor && (
@@ -408,9 +459,11 @@ function ColorsManager({
 
 function ColorRow({
   color,
+  podeExcluir,
   onChange,
 }: {
   color: ProductColor;
+  podeExcluir: boolean;
   onChange: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -495,6 +548,7 @@ function ColorRow({
           >
             Editar cor/fotos
           </button>
+          {podeExcluir && (
           <button
             onClick={async () => {
               if (confirm(`Excluir a cor "${color.nome}"?`)) {
@@ -517,6 +571,7 @@ function ColorRow({
           >
             Excluir
           </button>
+          )}
         </div>
       </div>
 
@@ -571,6 +626,7 @@ function ColorRow({
                 fontSize: 12,
               }}
             />
+            {podeExcluir && (
             <button
               onClick={async () => {
                 const { error } = await deleteSize(s.id);
@@ -592,6 +648,7 @@ function ColorRow({
             >
               ×
             </button>
+            )}
           </div>
         ))}
       </div>

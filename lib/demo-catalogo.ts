@@ -1,6 +1,7 @@
 // Catálogo fictício só para pré-visualizar a vitrine localmente, sem tocar no banco.
 // Liga com LOLA_DEMO=1 no .env.local. Nunca definir essa variável no Worker da Cloudflare.
 import type { Categoria, Product } from "@/lib/types";
+import type { ProdutoRevendedor } from "@/lib/atacado";
 import { ilustracaoDemo, type Tipo } from "@/lib/demo-ilustracoes";
 
 export const DEMO = process.env.LOLA_DEMO === "1" && process.env.NODE_ENV !== "production";
@@ -135,3 +136,32 @@ export const PRODUTOS_DEMO: Product[] = [
     descricao: "Versão maxi para dar volume ao penteado.",
   }),
 ];
+
+/** Preços da pré-visualização local, na forma que o banco entrega ao revendedor (só demo). */
+export function precosDemo(p: Product): { precoVarejo: number; precoAtacado: number } {
+  const pctVarejo = p.desconto_percentual ?? 0;
+  const pctAtacado = p.categoria?.desconto_atacado_percentual ?? 0;
+  const centavos = (pct: number) => Math.round((Math.round(p.preco * 100) * (100 - pct)) / 100) / 100;
+  return { precoVarejo: centavos(pctVarejo), precoAtacado: p.preco_atacado ?? centavos(pctAtacado) };
+}
+
+/** Catálogo demo no formato de `get_catalogo_revendedor` (já normalizado). */
+export function produtosRevendedorDemo(): ProdutoRevendedor[] {
+  return PRODUTOS_DEMO.map((p) => ({
+    id: p.id,
+    slug: p.slug ?? p.id,
+    nome: p.nome,
+    descricao: p.descricao ?? "",
+    caracteristicas: p.caracteristicas ?? [],
+    categoria: p.categoria?.nome ?? "",
+    ...precosDemo(p),
+    cores: p.colors.map((c) => ({
+      id: c.id,
+      nome: c.nome,
+      hex: c.hex,
+      imagem: c.imagens[0] ?? null,
+      imagens: c.imagens,
+      tamanhos: c.sizes.map((s) => ({ id: s.id, tamanho: s.tamanho, estoque: s.estoque })),
+    })),
+  }));
+}

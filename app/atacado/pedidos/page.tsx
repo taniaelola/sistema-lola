@@ -37,6 +37,7 @@ export default async function PedidosAtacadoPage() {
             <div role="cell">
               <span className="atc-pedido-rotulo">Produtos</span>
               {p.skus}
+              {p.bonus_aplicado && <span className="atc-suave"> + bônus</span>}
             </div>
             <div className="atc-suave" role="cell">
               {dataPtBr(p.created_at)}

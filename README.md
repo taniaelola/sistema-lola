@@ -1,16 +1,24 @@
 # Loja LOLA
 
-Ecommerce de calçados e acessórios: vitrine (Home com banner, categorias e
-lançamentos), página de produto, carrinho, checkout com Mercado Pago (Pix e
-cartão), acompanhamento do pedido, `/minha-conta`, `/surpresa`, login por
-e-mail e senha (`/entrar`), área de **atacado** para revendedores aprovados
-(`/atacado`) e painel `/admin` com permissões por papel (Pedidos, Financeiro,
-Produtos, Promoções, Banner do hero, Textos da loja, Revendedores, Usuários, Config).
+Site de calçados e acessórios **só de atacado**: a Home é uma landing page
+pública para revendedoras (destaques com preço de varejo e de atacado); o
+catálogo, o produto e o carrinho ficam atrás de login e só abrem para
+revendedor **aprovado** (`/atacado`). Checkout com Mercado Pago (Pix e cartão),
+acompanhamento do pedido, login por e-mail e senha (`/entrar`) e painel
+`/admin` com permissões por papel (Pedidos, Financeiro, Produtos, Promoções,
+Banner do hero, Textos da loja, Revendedores, Usuários, Config).
+
+O **varejo está desligado por padrão** (`admin_config.varejo_ativo = false`):
+`/produto`, `/carrinho`, `/surpresa`, `/minha-conta` e o checkout de varejo não
+atendem visitantes, e o checkout de convidado foi revogado para `anon` no banco.
+Religar o varejo exige uma migração (ver "Varejo e bonificação").
 
 ## Lançamento
 
 Faça os passos **nesta ordem**. O SQL único (`supabase/release-unico.sql`) cobre
-as migrações 0004 a 0008; as 0001 a 0003 já estão no banco de produção.
+as migrações 0004 a 0008; as 0001 a 0003 já estão no banco de produção. Estes
+passos são do primeiro lançamento; para aplicar a **0010** (site só atacado) em
+produção, siga "Janela da migração 0010" mais abaixo.
 
 1. **Configurar o Auth no Supabase** (Authentication):
    - Providers > Email: ligado, **Confirm email = ON** (bloqueante: sem isso
@@ -80,6 +88,72 @@ as migrações 0004 a 0008; as 0001 a 0003 já estão no banco de produção.
    - Revisar o histórico do git atrás de segredos expostos: o repositório
      `taniaelola/sistema-lola` é **público**; considere torná-lo privado.
 
+### Janela da migração 0010 (site só atacado)
+
+A `0010_site_so_atacado.sql` fecha o catálogo (só função, com login), revoga o
+checkout de convidado, abre o cadastro de produto ao supervisor e mascara valores
+de Pedidos para ele. Ela **quebra o app antigo** (o `SELECT` das tabelas de
+produto é revogado), então o SQL e o deploy do app novo acontecem **na mesma
+janela**, em horário de pouco movimento, **nesta ordem: app novo primeiro, SQL
+depois** (app antigo + SQL novo derruba Home, catálogo e salvar categoria; app
+novo + SQL antigo só degrada: varejo off, sem bônus, Config e salvar produto
+falham, e os caminhos de dinheiro nunca quebram). As migrações 0001 a 0009 já estão em
+produção; o pacote da janela é só o `supabase/release-0010.sql` (gerado por
+`npm run release:sql`, que também regenera o `release-unico.sql`).
+
+1. Antes: conferir Authentication > Providers > Email com "Confirm email"
+   ligado; ter à mão `supabase/rollback-0010.sql` e o deploy anterior para reverter.
+2. **Ideal (versions upload):** subir o app novo **sem promover** (`wrangler versions
+   upload`) e abrir a URL da versão para o smoke do app.
+3. Colar `supabase/release-0010.sql` inteiro no SQL Editor e rodar **uma vez**
+   (transação única: se der erro, nada é aplicado).
+4. Rodar `supabase/smoke.sql` (todas as linhas `ok = true`) e repetir o smoke da
+   versão nova (home, `/atacado`, login).
+5. Promover a versão a 100% (`wrangler versions deploy`). Em seguida rodar
+   `supabase/rls-teste.sql` (todas as linhas `ok = true`).
+   **Se o build do Worker só publica automaticamente pelo Git** (sem
+   `versions upload`): mergear **primeiro** e rodar o SQL **imediatamente** depois;
+   até o build terminar o app antigo fica sem catálogo e sem compra de convidado.
+6. Passada de QA em [`docs/QA.md`](docs/QA.md): LP, vitrine só logado e aprovado,
+   telas de pendente/recusado, bônus, supervisor sem preço e sem valores.
+
+Estado inicial depois da janela: **varejo desligado**, **bonificação desligada**
+(`bonus_min_pecas = 15`, `bonus_quantidade = 1`, sem produto de brinde). Rollback:
+`supabase/rollback-0010.sql` + voltar o deploy; o rollback também religa o varejo.
+
+
+Estoque: o checkout só **valida** estoque, não reserva. Dois pedidos pendentes
+podem pedir o mesmo estoque; ao liquidar, o banco baixa até zero e grava
+`orders.estoque_aviso` ("Faltaram N un. de produto / cor / tamanho") no pedido
+que ficou sem estoque. O admin vê um aviso vermelho em Pedidos e resolve na mão
+(repor, trocar ou reembolsar). O aviso só aparece em `admin_list_orders`.
+Ativar produto de venda exige preço de varejo e **preço de atacado efetivo**
+(override ou desconto da categoria) maiores que zero.
+
+Webhook do Mercado Pago: pagamento aprovado para pedido já registrado com outro
+payment id, ou para pedido cancelado, responde 200 e deixa no log do Worker uma
+linha `ALERTA_PAGAMENTO_REVISAR` (pedido, payment id, motivo, valor): é dinheiro
+recebido que exige reembolso ou conciliação manual. `p_transaction_amount` passou a ser obrigatório em
+`mp_register_order_payment`. O app sempre envia o valor pago e, se o Mercado Pago
+não trouxer um valor válido, nem chama o RPC (responde 200 e o pedido segue
+pendente; veja o log do Worker).
+
+### Varejo e bonificação
+
+Em **Config** (engrenagem no rodapé do menu do `/admin`, só `superadmin`):
+
+- **Varejo ligado**: o interruptor existe, mas a 0010 deixou o checkout de varejo
+  de visitante fechado de propósito (decisão do dono, 05/11). Ligar aqui não basta:
+  para vender no varejo de novo é preciso uma migração que reabra o checkout.
+  A tela avisa e pede confirmação antes de ligar.
+- **Bonificação**: liga o brinde no pedido de atacado. Campos: peças mínimas
+  (padrão 15), quantidade do brinde e o **produto do brinde**. Só aparecem na lista
+  produtos marcados como **Somente bônus** (checkbox no cadastro do produto). O
+  produto de bônus não aparece na vitrine e precisa de **preço nominal maior que
+  zero** (o banco não deixa ativar produto com preço zero). Sem estoque, inativo ou
+  em uso por outro pedido, o pedido segue sem o brinde e o aviso fica gravado no
+  pedido (`orders.bonus_aviso`).
+
 ### Papéis e acessos
 
 Papéis: `superadmin` (o dono do sistema), `admin` (a loja), `supervisor`,
@@ -89,15 +163,18 @@ RPCs `admin_*` validam a sessão e o papel no banco (`assert_papel`).
 | Área | superadmin | admin | supervisor |
 |---|---|---|---|
 | Visão geral | completa | completa | só contagens de pedidos/vendas e estoque baixo (sem valores de receita) |
-| Pedidos (ver, mudar status) | sim | sim | sim |
+| Pedidos (ver, mudar status) | sim | sim | sim, **sem valores** (total, frete e preços saem como "—"); telefone e endereço continuam |
 | Vendas (lista de vendas) | sim | sim | sim, sem totais financeiros |
 | Financeiro (KPIs, lançamentos, repasses) | sim | sim | não |
-| Produtos, Categorias, Promoções | sim | sim | não |
+| Produtos e Categorias: cadastrar/editar (nome, descrição, cores, tamanhos, estoque, ativo, destaque, "Somente bônus") | sim | sim | sim |
+| Produtos e Categorias: **preço**, preço de atacado, desconto e desconto de atacado da categoria | sim | sim | não (campos desabilitados; produto novo dele nasce inativo e com preço zero até um admin definir o preço e ativar) |
+| Produtos, Categorias, cores e tamanhos: **excluir**; Live Surpresa | sim | sim | não |
+| Promoções | sim | sim | não |
 | Banner do hero, Textos da loja | sim | sim | não |
 | Revendedores: cadastrar e editar | sim | sim | sim |
 | Revendedores: aprovar/recusar | sim | sim | não |
 | Usuários: cadastrar/editar | todos os papéis | admin, supervisor, revendedor, cliente (nunca superadmin) | não |
-| Config do sistema (taxa de entrega, WhatsApp, cidade) | sim | não | não |
+| Config do sistema (taxa de entrega, WhatsApp, cidade, varejo ligado/desligado, bonificação) | sim | não | não |
 
 Regras: só `superadmin` cria, edita ou desativa `superadmin`; ninguém rebaixa ou
 desativa a si mesmo; sempre existe ao menos um `superadmin` ativo. Convites de
@@ -160,14 +237,22 @@ papel em Usuários não corta o atacado).
    O acesso ao `/admin` é por e-mail e senha do Supabase Auth, conforme o papel
    do usuário (ver "Papéis e acessos"); não há senha em variável de ambiente.
 
+   Modo demo (`LOLA_DEMO=1` no `.env.local`, só fora de produção): serve catálogo e
+   textos de exemplo para a landing e a vitrine. Nele, **adicionar ao carrinho do
+   atacado falha por design**: os ids dos produtos demo não são UUIDs e a ação
+   rejeita a entrada antes de falar com o banco. Para testar o carrinho, use um
+   Supabase real com a migration 0010 aplicada.
+
 ## Migrations
 
-Fonte em `supabase/migrations/`. Produção já tem `0001` a `0003`. O lançamento
-aplica `0004` a `0008` de uma vez pelo `supabase/release-unico.sql` (gerado por
-`npm run release:sql`; ver "Lançamento"). Banco novo e vazio: rode `0001`,
-`0002` e `0003` no SQL Editor (no `0003`, substitua os placeholders por valores
-reais; o webhook secret é o `ADMIN_WEBHOOK_SECRET` do ambiente) e depois o
-`release-unico.sql`. Nunca reaplique `0002`/`0007` depois do `0008`.
+Fonte em `supabase/migrations/`. Produção tem `0001` a `0009`; a `0010`
+(site só atacado) entra na janela descrita em "Janela da migração 0010", pelo
+`supabase/release-0010.sql`. Banco novo e vazio: rode `0001`, `0002` e `0003` no
+SQL Editor (no `0003`, substitua os placeholders por valores reais; o webhook
+secret é o `ADMIN_WEBHOOK_SECRET` do ambiente) e depois o `release-unico.sql`.
+Nunca reaplique `0002`/`0007` depois do `0008`, nem `0008`/`0009` depois da `0010`
+(reabririam o que ela fecha). Testes do banco rodam num Postgres local em Docker:
+`npm run db:up`, `npm run db:test`, `npm run db:down` (nunca contra produção).
 
 ## Scripts
 
@@ -176,7 +261,7 @@ npm run dev          # desenvolvimento em http://localhost:3000
 npm run build        # build de produção
 npm test             # testes unitários (Vitest)
 npm run lint         # ESLint (deve sair com 0 erros)
-npm run release:sql  # regenera supabase/release-unico.sql a partir das migrações 0004-0008
+npm run release:sql  # regenera supabase/release-unico.sql e supabase/release-0010.sql
 ```
 
 ## Deploy (Cloudflare Workers)

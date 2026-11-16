@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import type { Order, OrderStatus } from "@/lib/types";
-import { ORDER_STATUS_LABEL, entregaTipoLabel } from "@/lib/types";
+import { ORDER_STATUS_LABEL, brlOuTraco, entregaTipoLabel } from "@/lib/types";
 import { updateOrderStatus, settleOrder } from "@/app/admin/actions";
 import SwingTag from "@/components/SwingTag";
 import { corStatus } from "@/lib/admin-status";
 import { opcoesStatusPedido } from "@/lib/admin-acesso";
+import { itemEhBonus } from "@/lib/atacado";
 
 type Filtro = "todos" | "varejo" | "atacado";
 
@@ -30,9 +31,10 @@ const STATUS_TAG_LABEL: Record<OrderStatus, string> = {
 };
 
 const COLS = "110px 1.5fr 90px 70px 110px 170px 100px 280px";
+// Supervisor recebe os valores como null: a coluna VALOR some em vez de mostrar traços.
+const COLS_SEM_VALORES = "110px 1.5fr 90px 70px 170px 100px 280px";
 
-const brl = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const brl = brlOuTraco;
 
 export default function PedidosTab({
   orders,
@@ -40,13 +42,18 @@ export default function PedidosTab({
   onFiltro,
   onChange,
   podeLiquidar,
+  semValores = false,
 }: {
   orders: Order[];
   filtro: Filtro;
   onFiltro: (f: Filtro) => void;
   onChange: () => void;
   podeLiquidar: boolean;
+  /** true para o supervisor: valores e preços chegam null do banco. */
+  semValores?: boolean;
 }) {
+  const cols = semValores ? COLS_SEM_VALORES : COLS;
+  const minLargura = semValores ? 990 : 1100;
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -101,12 +108,12 @@ export default function PedidosTab({
       </div>
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, overflowX: "auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: COLS, minWidth: 1100, padding: "14px 20px", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--adm-text-secondary)", letterSpacing: "0.04em", borderBottom: "1px solid var(--line)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: cols, minWidth: minLargura, padding: "14px 20px", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--adm-text-secondary)", letterSpacing: "0.04em", borderBottom: "1px solid var(--line)" }}>
           <div>PEDIDO</div>
           <div>CLIENTE / REVENDEDOR</div>
           <div>TIPO</div>
           <div>ITENS</div>
-          <div>VALOR</div>
+          {!semValores && <div>VALOR</div>}
           <div>ENTREGA</div>
           <div>DATA</div>
           <div>AÇÕES</div>
@@ -127,8 +134,8 @@ export default function PedidosTab({
                   onClick={() => setExpandedId(aberto ? null : o.id)}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: COLS,
-                    minWidth: 1100,
+                    gridTemplateColumns: cols,
+                    minWidth: minLargura,
                     padding: "14px 20px",
                     alignItems: "center",
                     borderBottom: "1px solid var(--line)",
@@ -139,13 +146,20 @@ export default function PedidosTab({
                     #{o.id.slice(0, 8)}
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {o.estoque_aviso ? (
+                      <span title={o.estoque_aviso} aria-label="Estoque insuficiente" style={{ color: "#b23b3b", marginRight: 6 }}>
+                        ⚠
+                      </span>
+                    ) : null}
                     {o.cliente_nome}
                   </div>
                   <div style={{ fontSize: 12.5, color: o.is_atacado ? "var(--adm-purple-text)" : "var(--adm-text-secondary)", fontWeight: o.is_atacado ? 600 : 400 }}>
                     {o.is_atacado ? "Atacado" : "Varejo"}
                   </div>
                   <div style={{ fontSize: 12.5, color: "var(--adm-text-secondary)" }}>{o.items.length}</div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}>{brl(o.valor_total)}</div>
+                  {!semValores && (
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}>{brl(o.valor_total)}</div>
+                  )}
                   <div>
                     <SwingTag color={cor.bg} textColor={cor.text} size="sm">
                       {STATUS_TAG_LABEL[o.status]}
@@ -204,9 +218,37 @@ export default function PedidosTab({
                             {item.quantidade}× {item.produto_nome}
                             {item.produto_cor ? ` — ${item.produto_cor}` : ""}
                             {item.produto_tamanho ? ` / ${item.produto_tamanho}` : ""}
+                            {itemEhBonus(item) ? " (bônus)" : ""}
                           </div>
                         ))}
                       </div>
+                      {o.bonus_aplicado === true && (
+                        <p style={{ fontSize: 12, color: "var(--adm-text-secondary)", margin: "8px 0 0" }}>
+                          Bônus aplicado neste pedido.
+                        </p>
+                      )}
+                      {o.estoque_aviso && (
+                        <p
+                          role="alert"
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            color: "#8a2a2a",
+                            background: "#fdecec",
+                            border: "1px solid #e8b4b4",
+                            borderRadius: 8,
+                            padding: "8px 10px",
+                            margin: "8px 0 0",
+                          }}
+                        >
+                          Estoque insuficiente (pagamento já recebido): {o.estoque_aviso}
+                        </p>
+                      )}
+                      {o.bonus_aviso && (
+                        <p role="note" style={{ fontSize: 12, color: "#b23b3b", margin: "8px 0 0" }}>
+                          Aviso do bônus: {o.bonus_aviso}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--adm-text-secondary)", marginBottom: 8 }}>

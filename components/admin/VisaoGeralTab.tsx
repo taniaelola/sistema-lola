@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Product, Order, Sale, EstoqueBaixoItem } from "@/lib/types";
-import { totalEstoque } from "@/lib/types";
+import { brlOuTraco, totalEstoque } from "@/lib/types";
 import SwingTag from "@/components/SwingTag";
 import { corStatus } from "@/lib/admin-status";
 
@@ -13,7 +13,7 @@ const FILTROS: { key: Filtro; label: string }[] = [
   { key: "atacado", label: "Atacado" },
 ];
 
-const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const brl = brlOuTraco;
 
 export default function VisaoGeralTab({
   products,
@@ -190,7 +190,9 @@ export default function VisaoGeralTab({
                     <div style={{ fontSize: 13, fontWeight: 600 }}>#{o.id.slice(0, 8)} · {o.cliente_nome}</div>
                     <div style={{ fontSize: 11, color: "var(--adm-text-secondary)" }}>{o.is_atacado ? "Atacado" : "Varejo"}</div>
                   </div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}>{brl(o.valor_total)}</div>
+                  {!semReceita && (
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}>{brl(o.valor_total)}</div>
+                  )}
                 </div>
               );
             })

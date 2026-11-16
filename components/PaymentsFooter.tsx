@@ -22,5 +22,11 @@ const cacheRodape = criarCache<DadosRodape>();
 
 export function SiteFooter() {
   const dados = useDadosCacheados(cacheRodape, buscarDadosRodape);
-  return <RodapeView textos={dados?.textos ?? TEXTOS_PADRAO} categorias={dados?.categorias ?? []} />;
+  return (
+    <RodapeView
+      textos={dados?.textos ?? TEXTOS_PADRAO}
+      categorias={dados?.categorias ?? []}
+      varejoAtivo={dados?.varejoAtivo ?? false}
+    />
+  );
 }

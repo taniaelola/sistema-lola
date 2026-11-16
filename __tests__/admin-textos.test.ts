@@ -14,7 +14,16 @@ describe("GRUPOS_TEXTOS", () => {
     const chaves = chavesDosGrupos();
     expect(new Set(chaves).size).toBe(chaves.length);
     expect([...chaves].sort()).toEqual(Object.keys(TEXTOS_PADRAO).sort());
-    expect(chaves).toHaveLength(19);
+    expect(chaves).toHaveLength(34);
+  });
+
+  it("grupo Landing de revendedores lista as 15 chaves lp_*", () => {
+    const g = GRUPOS_TEXTOS.find((x) => x.titulo === "Landing de revendedores");
+    expect(g).toBeDefined();
+    const chaves = g!.campos.map((c) => c.chave);
+    expect(chaves).toHaveLength(15);
+    expect(chaves.every((k) => k.startsWith("lp_"))).toBe(true);
+    expect([...chaves].sort()).toEqual(Object.keys(TEXTOS_PADRAO).filter((k) => k.startsWith("lp_")).sort());
   });
 
   it("os campos *_link são do tipo link", () => {

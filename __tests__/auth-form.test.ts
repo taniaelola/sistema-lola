@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CAMPOS,
+  abasLogin,
   aplicarMascara,
   diagnosticarFormulario,
   diagnosticarNovaSenha,
@@ -20,6 +21,29 @@ describe("normalizarModo", () => {
     expect(normalizarModo(undefined)).toBe("entrar");
     expect(normalizarModo("admin")).toBe("entrar");
     expect(normalizarModo(["cadastro", "x"])).toBe("entrar");
+  });
+});
+
+describe("normalizarModo sem varejo", () => {
+  it("cadastro de cliente cai em revendedor quando o varejo está desligado", () => {
+    expect(normalizarModo("cadastro", false)).toBe("revendedor");
+    expect(normalizarModo("cadastro", true)).toBe("cadastro");
+    expect(normalizarModo("cadastro")).toBe("cadastro");
+  });
+  it("os demais modos não mudam", () => {
+    for (const m of ["entrar", "revendedor", "esqueci"]) expect(normalizarModo(m, false)).toBe(m);
+    expect(normalizarModo(undefined, false)).toBe("entrar");
+  });
+});
+
+describe("abasLogin", () => {
+  it("varejo ligado: Entrar e Criar conta", () => {
+    expect(abasLogin(true).map((a) => a.modo)).toEqual(["entrar", "cadastro"]);
+  });
+  it("varejo desligado: sem cadastro de cliente, com Seja revendedora", () => {
+    const abas = abasLogin(false);
+    expect(abas.map((a) => a.modo)).toEqual(["entrar", "revendedor"]);
+    expect(abas.some((a) => a.modo === "cadastro")).toBe(false);
   });
 });
 

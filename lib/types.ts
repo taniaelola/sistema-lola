@@ -33,6 +33,7 @@ export type Product = {
   categoria_id: string;
   categoria?: Categoria | null;
   colecao: string | null;
+  // Em runtime vem null para o supervisor (admin_list_products mascara preços); só o admin os usa.
   preco: number;
   desconto_percentual: number | null;
   desconto_efetivo?: number | null;
@@ -43,6 +44,7 @@ export type Product = {
   destaque: boolean;
   ordem: number;
   surpresa_ativo: boolean;
+  somente_bonus?: boolean;
   colors: ProductColor[];
 };
 
@@ -66,8 +68,11 @@ export type OrderItem = {
   color_id: string | null;
   size_id: string | null;
   quantidade: number;
-  preco_unit: number;
-  subtotal: number;
+  // null quando o RPC oculta valores (supervisor).
+  preco_unit: number | null;
+  subtotal: number | null;
+  /** Brinde da bonificação (calculado por _order_json: pedido com bônus e item a preço 0). */
+  bonus?: boolean;
 };
 
 export type EntregaTipo = "retirada" | "entrega" | "entrega_fora";
@@ -79,15 +84,20 @@ export type Order = {
   cliente_nome: string;
   cliente_telefone: string | null;
   entrega_tipo: EntregaTipo;
-  entrega_taxa: number;
+  entrega_taxa: number | null;
   endereco_rua: string | null;
   endereco_numero: string | null;
   endereco_bairro: string | null;
   endereco_complemento: string | null;
   endereco_cep: string | null;
   endereco_cidade: string | null;
-  valor_produtos: number;
-  valor_total: number;
+  valor_produtos: number | null;
+  valor_total: number | null;
+  bonus_aplicado?: boolean | null;
+  /** Só em admin_list_orders (nunca em public_get_order). */
+  bonus_aviso?: string | null;
+  /** Só em admin_list_orders: pedido liquidado com estoque menor que o vendido (nunca em public_get_order). */
+  estoque_aviso?: string | null;
   mp_payment_id: string | null;
   forma_pagamento: string | null;
   is_atacado: boolean;
@@ -165,19 +175,12 @@ export function precoVarejo(p: Pick<Product, "preco" | "desconto_percentual">): 
   return Math.round(cents / 100) / 100;
 }
 
-// Preço de atacado: override explícito do produto tem prioridade; senão
-// deriva do % da subcategoria; sem nenhum dos dois, cai no preço de tabela.
-// Nunca aplica a promo de varejo (desconto_percentual não entra na conta).
-export function precoAtacado(
-  p: Pick<Product, "preco" | "preco_atacado">,
-  categoria: Pick<Categoria, "desconto_atacado_percentual"> | null | undefined
-): number {
-  if (p.preco_atacado != null) return p.preco_atacado;
-  const pct = categoria?.desconto_atacado_percentual;
-  if (pct == null) return p.preco;
-  // Mesma math em centavos inteiros do `precoVarejo` — bate com `_preco_atacado`.
-  const cents = Math.round(p.preco * 100) * (100 - pct);
-  return Math.round(cents / 100) / 100;
+const TRACO = "—";
+
+/** Reais em pt-BR; "—" quando o valor é ocultado (null/undefined) ou inválido. */
+export function brlOuTraco(n: number | null | undefined): string {
+  if (typeof n !== "number" || !Number.isFinite(n)) return TRACO;
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 export function precisaNumeracao(grupo: Categoria["grupo"] | undefined): boolean {

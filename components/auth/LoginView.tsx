@@ -10,12 +10,13 @@ import {
   esqueciAction,
   renovarSessaoAction,
 } from "@/app/entrar/actions";
-import { COPY, CAMPOS, aplicarMascara, diagnosticarFormulario, type Modo } from "@/components/auth/form";
+import { COPY, CAMPOS, abasLogin, aplicarMascara, diagnosticarFormulario, type Modo } from "@/components/auth/form";
 import ChecklistRevendedor from "@/components/auth/ChecklistRevendedor";
 import "@/components/auth/auth.css";
 
 type Props = {
   modoInicial: Modo;
+  varejoAtivo: boolean;
   next: string | null;
   etiqueta: string;
   titulo: string;
@@ -39,7 +40,7 @@ function urlDoModo(modo: Modo, next: string | null): string {
   return s ? `/entrar?${s}` : "/entrar";
 }
 
-export default function LoginView({ modoInicial, next, etiqueta, titulo, renovar }: Props) {
+export default function LoginView({ modoInicial, varejoAtivo, next, etiqueta, titulo, renovar }: Props) {
   const router = useRouter();
   const [modo, setModo] = useState<Modo>(modoInicial);
   const [avisoSessao, setAvisoSessao] = useState("");
@@ -67,7 +68,9 @@ export default function LoginView({ modoInicial, next, etiqueta, titulo, renovar
   }
 
   const copy = COPY[modo];
-  const mostraAbas = (modo === "entrar" || modo === "cadastro") && !enviado;
+  const abas = abasLogin(varejoAtivo);
+  const mostraAbas = abas.some((a) => a.modo === modo) && !enviado;
+  const rotuloVoltar = varejoAtivo ? "Voltar à loja" : "Voltar ao início";
 
   return (
     <div className="auth-frame">
@@ -80,12 +83,12 @@ export default function LoginView({ modoInicial, next, etiqueta, titulo, renovar
 
       <div className="auth-side">
         <div className="auth-top">
-          <Link href="/" aria-label="LOLA, voltar à loja">
+          <Link href="/" aria-label={`LOLA, ${rotuloVoltar.toLowerCase()}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/lola-logo.png" alt="LOLA" />
           </Link>
           <Link href="/" className="auth-link">
-            ← Voltar à loja
+            ← {rotuloVoltar}
           </Link>
         </div>
 
@@ -111,12 +114,17 @@ export default function LoginView({ modoInicial, next, etiqueta, titulo, renovar
 
             {mostraAbas && (
               <div className="auth-tabs" role="group" aria-label="Acesso">
-                <button type="button" className="auth-tab" aria-pressed={modo === "entrar"} onClick={() => ir("entrar")}>
-                  Entrar
-                </button>
-                <button type="button" className="auth-tab" aria-pressed={modo === "cadastro"} onClick={() => ir("cadastro")}>
-                  Criar conta
-                </button>
+                {abas.map((a) => (
+                  <button
+                    key={a.modo}
+                    type="button"
+                    className="auth-tab"
+                    aria-pressed={modo === a.modo}
+                    onClick={() => ir(a.modo)}
+                  >
+                    {a.rotulo}
+                  </button>
+                ))}
               </div>
             )}
 
@@ -131,7 +139,7 @@ export default function LoginView({ modoInicial, next, etiqueta, titulo, renovar
               onEsqueci={() => ir("esqueci")}
             />
 
-            {mostraAbas && (
+            {mostraAbas && varejoAtivo && (
               <button type="button" className="auth-reseller" onClick={() => ir("revendedor")}>
                 <span className="auth-reseller-text">
                   <span className="auth-reseller-title">Quero ser revendedor</span>

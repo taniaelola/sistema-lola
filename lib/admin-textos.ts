@@ -69,6 +69,27 @@ export const GRUPOS_TEXTOS: GrupoTextos[] = [
       { chave: "login.titulo", rotulo: "Título", tipo: "linha" },
     ],
   },
+  {
+    id: "lp",
+    titulo: "Landing de revendedores",
+    campos: [
+      { chave: "lp_hero_titulo", rotulo: "Topo: título", tipo: "linha" },
+      { chave: "lp_hero_subtitulo", rotulo: "Topo: subtítulo", tipo: "area" },
+      { chave: "lp_hero_botao", rotulo: "Topo: texto do botão", tipo: "linha" },
+      { chave: "lp_regras_titulo", rotulo: "Regras: título", tipo: "linha" },
+      { chave: "lp_regra_skus", rotulo: "Regra: modelos por pedido", tipo: "linha" },
+      { chave: "lp_regra_bonus", rotulo: "Regra: bonificação", tipo: "linha", dica: "o mínimo de peças e o produto da bonificação vêm da configuração do varejo/bônus; não escreva números aqui" },
+      { chave: "lp_regra_preco", rotulo: "Regra: preço", tipo: "linha" },
+      { chave: "lp_passos_titulo", rotulo: "Passos: título", tipo: "linha" },
+      { chave: "lp_passo_1", rotulo: "Passo 1", tipo: "linha" },
+      { chave: "lp_passo_2", rotulo: "Passo 2", tipo: "linha" },
+      { chave: "lp_passo_3", rotulo: "Passo 3", tipo: "linha" },
+      { chave: "lp_amostra_titulo", rotulo: "Amostra: título", tipo: "linha" },
+      { chave: "lp_amostra_aviso", rotulo: "Amostra: aviso", tipo: "area" },
+      { chave: "lp_final_titulo", rotulo: "Chamada final: título", tipo: "linha" },
+      { chave: "lp_final_botao", rotulo: "Chamada final: texto do botão", tipo: "linha" },
+    ],
+  },
 ];
 
 export function chavesDosGrupos(): string[] {

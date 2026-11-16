@@ -13,7 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { BRAND } from "@/lib/brand.config";
-import { progressoSkus } from "@/lib/atacado";
+import { progressoSkus, secaoAtacado } from "@/lib/atacado";
+import { MIN_SKUS_ATACADO } from "@/lib/pricing";
 import { sairAction } from "@/app/entrar/actions";
 
 type Item = {
@@ -45,7 +46,9 @@ const ITENS: Item[] = [
     label: "Carrinho",
     Icon: ShoppingCart,
     titulo: "Carrinho",
-    subtitulo: "Mínimo de 12 produtos distintos por pedido",
+    // Dívida: o mínimo também é literal 12 em checkout_iniciar_pedido (SQL, 0010) e no texto lp_regra_skus
+    // (textos_loja/TEXTOS_PADRAO). Aqui vem de MIN_SKUS_ATACADO; mudar o mínimo exige mexer nos três.
+    subtitulo: `Mínimo de ${MIN_SKUS_ATACADO} produtos distintos por pedido`,
     contador: true,
   },
   {
@@ -57,9 +60,18 @@ const ITENS: Item[] = [
   },
 ];
 
+const HREF_SECAO = {
+  painel: "/atacado",
+  catalogo: "/atacado/catalogo",
+  produto: "/atacado/catalogo",
+  carrinho: "/atacado/carrinho",
+  pedidos: "/atacado/pedidos",
+} as const;
+
+const TITULO_PRODUTO = { titulo: "Produto", subtitulo: "Cores, tamanhos e preços de revenda" };
+
 function ativo(href: string, caminho: string): boolean {
-  if (href === "/atacado") return caminho === "/atacado";
-  return caminho === href || caminho.startsWith(`${href}/`);
+  return HREF_SECAO[secaoAtacado(caminho)] === href;
 }
 
 function Logo() {
@@ -83,7 +95,8 @@ export default function AtacadoShell({
   const [menuAberto, setMenuAberto] = useState(false);
   const [saindo, iniciarSaida] = useTransition();
   const progresso = progressoSkus(skus);
-  const atual = ITENS.find((i) => ativo(i.href, caminho)) ?? ITENS[0];
+  const atual =
+    secaoAtacado(caminho) === "produto" ? TITULO_PRODUTO : (ITENS.find((i) => ativo(i.href, caminho)) ?? ITENS[0]);
 
   useEffect(() => {
     if (!menuAberto) return;

@@ -9,6 +9,7 @@ import {
   podeEditarRevendedor,
   podeGerirPapel,
   destinoPosLogin,
+  urlEntrar,
   type Papel,
   type Tela,
 } from "@/lib/roles";
@@ -32,7 +33,7 @@ const TODAS: Tela[] = [
 const MATRIZ: Record<Papel, Tela[]> = {
   superadmin: TODAS.filter((t) => t !== "vendas"),
   admin: TODAS.filter((t) => t !== "config" && t !== "vendas"),
-  supervisor: ["visao-geral", "pedidos", "vendas", "revendedores"],
+  supervisor: ["visao-geral", "pedidos", "vendas", "produtos", "revendedores"],
   revendedor: [],
   cliente: [],
 };
@@ -103,4 +104,16 @@ describe("destinoPosLogin", () => {
       expect(destinoPosLogin("cliente", next)).toBe("/");
     }
   );
+});
+
+describe("urlEntrar (login obrigatório, aba Entrar)", () => {
+  it("abre o login com next codificado, sem modo", () => {
+    expect(urlEntrar("/atacado/catalogo")).toBe("/entrar?next=%2Fatacado%2Fcatalogo");
+    expect(urlEntrar("/checkout?modo=atacado")).toBe("/entrar?next=%2Fcheckout%3Fmodo%3Datacado");
+    expect(urlEntrar("/admin")).toBe("/entrar?next=%2Fadmin");
+    expect(urlEntrar("/atacado")).not.toContain("modo=");
+  });
+  it("next inseguro vira /", () => {
+    expect(urlEntrar("//evil.com")).toBe("/entrar?next=%2F");
+  });
 });

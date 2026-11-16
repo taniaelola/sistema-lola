@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   precoVarejo,
-  precoAtacado,
   totalEstoque,
   capaImagem,
   slugify,
   precisaNumeracao,
   contarSkusDistintos,
   entregaTipoLabel,
+  brlOuTraco,
 } from "@/lib/types";
 import { montarItensMP } from "@/lib/mercadopago-utils";
 
@@ -50,31 +50,6 @@ describe("montarItensMP", () => {
     expect(
       montarItensMP([{ titulo: "X", quantidade: 2, preco_unit: 56.91 }], 0)
     ).toEqual([{ titulo: "X", quantidade: 2, precoUnitario: 56.91 }]);
-  });
-});
-
-describe("precoAtacado", () => {
-  it("1: usa o override do produto quando preenchido", () => {
-    expect(
-      precoAtacado({ preco: 100, preco_atacado: 62 }, { desconto_atacado_percentual: 30 })
-    ).toBe(62);
-  });
-  it("2: deriva do % da subcategoria quando não há override", () => {
-    expect(
-      precoAtacado({ preco: 100, preco_atacado: null }, { desconto_atacado_percentual: 30 })
-    ).toBe(70);
-  });
-  it("3: sem override e sem % da subcategoria, cai no preço de tabela", () => {
-    expect(
-      precoAtacado({ preco: 100, preco_atacado: null }, { desconto_atacado_percentual: null })
-    ).toBe(100);
-    expect(precoAtacado({ preco: 100, preco_atacado: null }, null)).toBe(100);
-  });
-  it("nunca aplica a promo de varejo", () => {
-    // precoAtacado não recebe desconto_percentual — garante isolamento por assinatura
-    expect(
-      precoAtacado({ preco: 200, preco_atacado: null }, { desconto_atacado_percentual: 25 })
-    ).toBe(150);
   });
 });
 
@@ -128,5 +103,19 @@ describe("entregaTipoLabel", () => {
     expect(entregaTipoLabel("retirada")).toMatch(/retirada/i);
     expect(entregaTipoLabel("entrega")).toMatch(/entrega/i);
     expect(entregaTipoLabel("entrega_fora")).toMatch(/fora/i);
+  });
+});
+
+describe("brlOuTraco", () => {
+  it("formata número em reais", () => {
+    expect(brlOuTraco(1234.5).replace(/\s/g, " ")).toBe("R$ 1.234,50");
+    expect(brlOuTraco(0).replace(/\s/g, " ")).toBe("R$ 0,00");
+  });
+  it("devolve travessão para null e undefined", () => {
+    expect(brlOuTraco(null)).toBe("—");
+    expect(brlOuTraco(undefined)).toBe("—");
+  });
+  it("devolve travessão para número não finito", () => {
+    expect(brlOuTraco(Number.NaN)).toBe("—");
   });
 });

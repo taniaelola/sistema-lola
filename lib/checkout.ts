@@ -14,6 +14,8 @@ export type DadosEntrega = {
   cidade?: string;
 };
 
+export const MSG_VAREJO_DESATIVADO = "A loja de varejo está desativada no momento.";
+
 export function validarEntrega(dados: DadosEntrega): string | null {
   if (!dados.nome.trim()) return "Informe seu nome.";
   if (!dados.telefone.trim()) return "Informe seu telefone/WhatsApp.";
@@ -39,6 +41,8 @@ export function mensagemErroCheckout(
   atacado: boolean
 ): string | null {
   const m = msg ?? "";
+  // O banco recusa o checkout enquanto admin_config.varejo_ativo for false (vale para as duas vias).
+  if (m.includes("varejo desativado")) return MSG_VAREJO_DESATIVADO;
   if (!atacado) {
     return m.includes("estoque insuficiente")
       ? "Um item do carrinho ficou sem estoque. Volte ao carrinho e ajuste as quantidades."
@@ -74,19 +78,6 @@ export function mensagemErroCheckout(
 
   if (m.includes("carrinho vazio")) return "Seu carrinho de atacado está vazio.";
   return null;
-}
-
-/**
- * Varejo com sessão cujo JWT o PostgREST rejeitou (401 / PGRST30x): repetir
- * como convidado. Erro de auth sai antes de a função rodar, então não duplica
- * pedido. Atacado nunca: o erro precisa aparecer.
- */
-export function deveTentarComoConvidado(
-  erro: { status?: number | null; code?: string | null; message?: string | null } | null,
-  atacado: boolean
-): boolean {
-  if (atacado || !erro) return false;
-  return erro.status === 401 || (erro.code ?? "").startsWith("PGRST30");
 }
 
 /** Linha de atacado_cart_get(). */

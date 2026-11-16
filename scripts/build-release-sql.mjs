@@ -16,6 +16,14 @@ const ORDEM = [
   '0008_checkout_atacado.sql',
 ]
 
+// Só grava se o CONTEÚDO (fim de linha normalizado) mudar: evita sujar o git por CRLF/LF.
+function gravarSeMudou(caminho, conteudo) {
+  const atual = existsSync(caminho) ? readFileSync(caminho, 'utf8').replace(/\r\n/g, '\n') : null
+  if (atual === conteudo) return false
+  writeFileSync(caminho, conteudo, 'utf8')
+  return true
+}
+
 function falhar(msg) {
   console.error(`release:sql ERRO: ${msg}`)
   process.exit(1)
@@ -138,5 +146,38 @@ end $$;
 `
 
 const corpo = partes.map((p) => banner(p.nome) + p.conteudo + '\n').join('')
-writeFileSync(saida, cabecalho + corpo + blocoDono, 'utf8')
-console.log(`release:sql OK: ${saida} (${ORDEM.length} migrações + bloco do dono)`)
+const mudou = gravarSeMudou(saida, cabecalho + corpo + blocoDono)
+console.log(`release:sql OK: ${saida} (${ORDEM.length} migrações + bloco do dono${mudou ? '' : '; sem mudanças'})`)
+
+// ---------------------------------------------------------------------
+// release-0010.sql: pacote da migração 0010 (site só atacado). As migrações
+// 0001 a 0009 já estão em produção; este arquivo tem SOMENTE a 0010.
+// ---------------------------------------------------------------------
+const saida0010 = join(raiz, 'supabase', 'release-0010.sql')
+const arq0010 = '0010_site_so_atacado.sql'
+const caminho0010 = join(dirMigracoes, arq0010)
+if (!existsSync(caminho0010)) falhar(`migração ausente: supabase/migrations/${arq0010}`)
+const conteudo0010 = readFileSync(caminho0010, 'utf8').replace(/\r\n/g, '\n').trim()
+if (!conteudo0010) falhar(`migração vazia: ${arq0010}`)
+
+const cabecalho0010 = `-- release-0010.sql — ORDEM SEGURA: app novo SEM promover -> este SQL + smoke -> promover o app.
+--   (GERADO por scripts/build-release-sql.mjs; NÃO edite à mão. Contém somente a migração ${arq0010};
+--    as migrações 0001 a 0009 já estão aplicadas em produção.)
+--   Por quê: app antigo + SQL novo derruba Home, catálogo e salvar categoria (o SELECT anônimo do catálogo é
+--   revogado). App novo + SQL antigo só degrada (varejo off, sem bônus, Config e salvar produto falham) e os
+--   caminhos de dinheiro nunca quebram. Por isso o SQL NUNCA vai antes do app novo estar de pé.
+--   0. Antes: confira Authentication > Providers > Email: "Confirm email" LIGADO e troca segura de e-mail.
+--   1. IDEAL (Cloudflare Workers): suba o app novo SEM promover (wrangler versions upload) e teste a URL da versão.
+--   2. Cole este arquivo inteiro no SQL Editor do projeto LOLA e rode UMA vez, em horário de pouco movimento.
+--      Se der erro, nada foi aplicado (transação única): corrija e rode o arquivo inteiro de novo.
+--   3. Rode supabase/smoke.sql (todas as linhas ok = true, exceto "superadmin ativo" se a conta do dono ainda não existir)
+--      e faça o smoke da versão nova (home, /atacado, login, um pedido de teste).
+--   4. Promova a versão (wrangler versions deploy, 100%). Em seguida rode supabase/rls-teste.sql (todas as linhas ok = true).
+--   SE o build só faz deploy automático pelo Git (sem versions upload): mergeie PRIMEIRO e rode este SQL
+--   IMEDIATAMENTE em seguida (o build leva minutos; até lá, o app antigo fica sem catálogo e sem compra de convidado).
+--   Rollback: supabase/rollback-0010.sql + rollback do deploy. O rollback também religa o varejo
+--   (admin_config.varejo_ativo = true), que a 0010 deixa desligado por padrão.
+
+`
+const mudou0010 = gravarSeMudou(saida0010, cabecalho0010 + conteudo0010 + '\n')
+console.log(`release:sql OK: ${saida0010} (somente ${arq0010}${mudou0010 ? '' : '; sem mudanças'})`)

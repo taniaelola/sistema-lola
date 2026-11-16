@@ -54,8 +54,21 @@ export const COPY: Record<Modo, { titulo: string; subtitulo: string; botao: stri
 
 const MODOS: Modo[] = ["entrar", "cadastro", "revendedor", "esqueci"];
 
-export function normalizarModo(valor: string | string[] | undefined): Modo {
-  return typeof valor === "string" && (MODOS as string[]).includes(valor) ? (valor as Modo) : "entrar";
+export function normalizarModo(valor: string | string[] | undefined, varejoAtivo: boolean = true): Modo {
+  const modo: Modo =
+    typeof valor === "string" && (MODOS as string[]).includes(valor) ? (valor as Modo) : "entrar";
+  // Sem varejo não existe conta de cliente: o cadastro cai no de revendedora.
+  return modo === "cadastro" && !varejoAtivo ? "revendedor" : modo;
+}
+
+/** Abas do topo do login: cadastro de cliente só com varejo ligado; sem ele, o cadastro de revendedora ocupa a vaga. */
+export function abasLogin(varejoAtivo: boolean): { modo: Modo; rotulo: string }[] {
+  return [
+    { modo: "entrar", rotulo: "Entrar" },
+    varejoAtivo
+      ? { modo: "cadastro", rotulo: "Criar conta" }
+      : { modo: "revendedor", rotulo: "Seja revendedora" },
+  ];
 }
 
 export function aplicarMascara(nome: string, valor: string): string {

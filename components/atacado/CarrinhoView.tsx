@@ -6,7 +6,10 @@ import { Minus, Plus, ShoppingBag, X } from "lucide-react";
 import {
   alertaLinha,
   decisaoFinalizar,
+  progressoBonus,
   progressoSkus,
+  somarPecas,
+  textoBonus,
   type ItemCarrinho,
 } from "@/lib/atacado";
 import { formatarReais } from "@/lib/home";
@@ -16,16 +19,22 @@ export default function CarrinhoView({
   itens,
   skus,
   total,
+  bonus,
 }: {
   itens: ItemCarrinho[];
   skus: number;
   total: number;
+  bonus: { ativo: boolean; minPecas: number; quantidade: number; produtoNome: string | null };
 }) {
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, iniciar] = useTransition();
   const progresso = progressoSkus(skus);
   const decisao = decisaoFinalizar(itens);
-  const pecas = itens.filter((i) => i.disponivel).reduce((s, i) => s + i.quantidade, 0);
+  const pecas = somarPecas(itens.filter((i) => i.disponivel));
+  // Sem nome de produto (bônus inativo/inexistente no banco) o checkout não entrega brinde: trata como desligado.
+  const bonusVisivel = bonus.ativo && bonus.produtoNome !== null;
+  const progressoPecas = progressoBonus(pecas, bonus.minPecas, bonusVisivel);
+  const mensagemBonus = textoBonus(progressoPecas, bonus.produtoNome, bonus.quantidade);
 
   function executar(acao: () => Promise<{ error: string | null }>) {
     setErro(null);
@@ -137,6 +146,24 @@ export default function CarrinhoView({
             {progresso.atual} de {progresso.minimo} produtos
           </div>
         </div>
+        {bonusVisivel && (
+          <div>
+            <div
+              className="atc-barra"
+              role="progressbar"
+              aria-label="peças para a bonificação"
+              aria-valuemin={0}
+              aria-valuemax={progressoPecas.min}
+              aria-valuenow={Math.min(progressoPecas.pecas, progressoPecas.min)}
+              aria-valuetext={mensagemBonus}
+            >
+              <span style={{ width: `${progressoPecas.pct}%` }} />
+            </div>
+            <p className="atc-mono" style={{ fontSize: 13, marginTop: 6 }} role="status">
+              {mensagemBonus}
+            </p>
+          </div>
+        )}
         <div className="atc-resumo-linha" style={{ paddingTop: 8, borderTop: "1px solid var(--line)" }}>
           <span>Peças totais</span>
           <span className="atc-mono" style={{ color: "var(--ink)" }}>

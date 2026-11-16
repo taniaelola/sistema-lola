@@ -8,6 +8,7 @@ import {
   ehUuid,
   mensagemErroAtacado,
   normalizarCarrinho,
+  normalizarProdutoRevendedor,
   proximaQuantidade,
   quantidadeValida,
 } from "@/lib/atacado";
@@ -48,41 +49,42 @@ function falhaInesperada(contexto: string, e: unknown): ResultadoAcao {
   return falha(mensagemErroAtacado(null));
 }
 
+// O banco (atacado_cart_set_item) valida revendedor aprovado, produto ativo e a ligação
+// produto/cor/tamanho, mas NÃO valida estoque. Por isso o estoque é lido aqui, no servidor,
+// por get_produto_revendedor(slug); nada que o navegador mande sobre estoque é confiável.
+// O slug vai como parâmetro ligado do RPC (sem concatenação de SQL): aqui só barramos entrada
+// vazia, enorme ou com espaço/caractere de controle; a existência é decidida pelo banco.
+const SLUG = /^[^\s\x00-\x1f\x7f]{1,200}$/;
+
 export async function addAoCarrinho(
-  productId: string,
+  slug: string,
   colorId: string,
   sizeId: string
 ): Promise<ResultadoAcao> {
   try {
-    if (!ehUuid(productId) || !ehUuid(colorId) || !ehUuid(sizeId)) return falha(ERRO_ENTRADA);
+    if (typeof slug !== "string" || !SLUG.test(slug) || !ehUuid(colorId) || !ehUuid(sizeId)) {
+      return falha(ERRO_ENTRADA);
+    }
     const { db, erro } = await preparar();
     if (!db) return falha(erro);
 
+    const produto = await db.rpc("get_produto_revendedor", { p_slug: slug });
+    if (produto.error) return falhaRpc("addAoCarrinho/produto", produto.error);
+    const p = normalizarProdutoRevendedor(produto.data);
+    const tamanho = p?.cores.find((c) => c.id === colorId)?.tamanhos.find((t) => t.id === sizeId);
+    if (!p || !tamanho) return falha(ERRO_ENTRADA);
+
     const lido = await db.rpc("atacado_cart_get");
     if (lido.error) return falhaRpc("addAoCarrinho/cart_get", lido.error);
-    const carrinho = normalizarCarrinho(lido.data);
-    const linha = carrinho.itens.find(
-      (i) => i.product_id === productId && i.color_id === colorId && i.size_id === sizeId
+    const linha = normalizarCarrinho(lido.data).itens.find(
+      (i) => i.product_id === p.id && i.color_id === colorId && i.size_id === sizeId
     );
 
-    let estoque = linha?.estoque;
-    if (estoque === undefined) {
-      const { data, error } = await db
-        .from("product_sizes")
-        .select("estoque")
-        .eq("id", sizeId)
-        .eq("color_id", colorId)
-        .maybeSingle();
-      if (error) return falhaRpc("addAoCarrinho/estoque", error);
-      if (!data) return falha(ERRO_ENTRADA);
-      estoque = Number((data as { estoque: number }).estoque);
-    }
-
-    const quantidade = proximaQuantidade(linha?.quantidade ?? 0, estoque);
+    const quantidade = proximaQuantidade(linha?.quantidade ?? 0, tamanho.estoque);
     if (quantidade === null) return falha(ERRO_ESTOQUE);
 
     const { error } = await db.rpc("atacado_cart_set_item", {
-      p_product_id: productId,
+      p_product_id: p.id,
       p_color_id: colorId,
       p_size_id: sizeId,
       p_quantidade: quantidade,

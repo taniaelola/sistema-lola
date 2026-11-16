@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dadosPublicosHeader, destinoAjuda, itensMenuConta, linksCategorias, primeiroNome } from "@/lib/header-menu";
+import { dadosPublicosHeader, destinoAjuda, itensMenu, itensMenuConta, linksCategorias, primeiroNome } from "@/lib/header-menu";
 
 const WA = "https://wa.me/5581987307223";
 
@@ -8,6 +8,15 @@ describe("itensMenuConta", () => {
     const r = itensMenuConta({ nome: "Ana", papel: "cliente" });
     expect(r.map((i) => i.rotulo)).toEqual(["Minha conta", "Sair"]);
     expect(r[1].tipo).toBe("sair");
+  });
+  it("cliente com varejo desligado vê só Sair (sem link morto)", () => {
+    const r = itensMenuConta({ nome: "Ana", papel: "cliente" }, false);
+    expect(r.map((i) => i.rotulo)).toEqual(["Sair"]);
+    expect(itensMenuConta({ nome: "Ana", papel: "cliente" }, true).map((i) => i.rotulo)).toEqual(["Minha conta", "Sair"]);
+  });
+  it("equipe e revendedor não dependem do varejo", () => {
+    expect(itensMenuConta({ nome: "R", papel: "revendedor" }, false).map((i) => i.rotulo)).toEqual(["Painel de atacado", "Sair"]);
+    expect(itensMenuConta({ nome: "A", papel: "admin" }, false).map((i) => i.rotulo)).toEqual(["Painel", "Sair"]);
   });
   it("equipe vê só Painel e Sair", () => {
     for (const papel of ["superadmin", "admin", "supervisor"] as const) {
@@ -20,6 +29,57 @@ describe("itensMenuConta", () => {
     const r = itensMenuConta({ nome: "R", papel: "revendedor" });
     expect(r.map((i) => i.rotulo)).toEqual(["Painel de atacado", "Sair"]);
     expect(r[0]).toEqual({ tipo: "link", rotulo: "Painel de atacado", href: "/atacado" });
+  });
+});
+
+describe("itensMenu", () => {
+  const cats = [{ slug: "tenis", nome: "Tênis" }];
+  const rotulos = (r: { rotulo: string }[]) => r.map((i) => i.rotulo);
+  const semVarejo = (r: { tipo: string }[]) =>
+    r.every((i) => i.tipo !== "sacola" && i.tipo !== "categoria");
+
+  it("varejo off, visitante: Entrar e Seja revendedora, sem sacola nem categorias", () => {
+    const r = itensMenu({ varejoAtivo: false, logado: false, categorias: cats });
+    expect(r).toEqual([
+      { tipo: "link", rotulo: "Entrar", href: "/entrar" },
+      { tipo: "link", rotulo: "Seja revendedora", href: "/entrar?modo=revendedor" },
+    ]);
+    expect(semVarejo(r)).toBe(true);
+  });
+  it("varejo off, revendedor: painel de atacado", () => {
+    const r = itensMenu({ varejoAtivo: false, logado: true, papel: "revendedor", categorias: cats });
+    expect(r).toEqual([{ tipo: "link", rotulo: "Painel de atacado", href: "/atacado" }]);
+  });
+  it("varejo off, equipe: painel em /admin", () => {
+    for (const papel of ["superadmin", "admin", "supervisor"] as const) {
+      const r = itensMenu({ varejoAtivo: false, logado: true, papel, categorias: cats });
+      expect(r).toEqual([{ tipo: "link", rotulo: "Painel", href: "/admin" }]);
+    }
+  });
+  it("varejo off, cliente logado: nada de varejo", () => {
+    expect(itensMenu({ varejoAtivo: false, logado: true, papel: "cliente", categorias: cats })).toEqual([]);
+    expect(itensMenu({ varejoAtivo: false, logado: true, papel: null, categorias: cats })).toEqual([]);
+  });
+  it("varejo off nunca devolve sacola nem categoria, em nenhuma combinação", () => {
+    for (const logado of [false, true])
+      for (const papel of [null, "cliente", "revendedor", "supervisor", "admin", "superadmin"] as const)
+        expect(semVarejo(itensMenu({ varejoAtivo: false, logado, papel, categorias: cats }))).toBe(true);
+  });
+  it("varejo on, visitante: categorias, Lançamentos, sacola e entrada", () => {
+    const r = itensMenu({ varejoAtivo: true, logado: false, categorias: cats });
+    expect(rotulos(r)).toEqual(["Tênis", "Lançamentos", "Sacola", "Entrar", "Seja revendedora"]);
+    expect(r.find((i) => i.tipo === "sacola")?.href).toBe("/carrinho");
+  });
+  it("varejo on, logado: sacola e destino do papel", () => {
+    expect(rotulos(itensMenu({ varejoAtivo: true, logado: true, papel: "cliente" }))).toEqual([
+      "Lançamentos", "Sacola", "Minha conta",
+    ]);
+    expect(rotulos(itensMenu({ varejoAtivo: true, logado: true, papel: "revendedor" }))).toEqual([
+      "Lançamentos", "Sacola", "Painel de atacado",
+    ]);
+    expect(rotulos(itensMenu({ varejoAtivo: true, logado: true, papel: "admin" }))).toEqual([
+      "Lançamentos", "Sacola", "Painel",
+    ]);
   });
 });
 
@@ -78,11 +138,17 @@ describe("dadosPublicosHeader", () => {
   it("remove o perfil e mantém só dados públicos", () => {
     const r = dadosPublicosHeader({
       categorias: [{ slug: "a", nome: "A" }],
+      varejoAtivo: false,
       perfil: { nome: "Ana", papel: "admin" },
       avisoTexto: "oi",
       avisoAtivo: "true",
     });
-    expect(r).toEqual({ categorias: [{ slug: "a", nome: "A" }], avisoTexto: "oi", avisoAtivo: "true" });
+    expect(r).toEqual({
+      categorias: [{ slug: "a", nome: "A" }],
+      varejoAtivo: false,
+      avisoTexto: "oi",
+      avisoAtivo: "true",
+    });
     expect("perfil" in r).toBe(false);
     expect(JSON.stringify(r)).not.toContain("Ana");
   });

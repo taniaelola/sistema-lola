@@ -24,3 +24,34 @@ export function parsePaymentId(url: URL, body: unknown): string | null {
 
   return null;
 }
+
+/**
+ * Valor pago consultado no Mercado Pago, pronto para `p_transaction_amount` (obrigatório no RPC).
+ * Só número finito e positivo vale; qualquer outra coisa vira `null` e o webhook não chama o RPC.
+ */
+export function valorPagoValido(valor: unknown): number | null {
+  return typeof valor === "number" && Number.isFinite(valor) && valor > 0 ? valor : null;
+}
+
+export type MotivoAlertaPagamento = "pedido_cancelado" | "pagamento_duplicado";
+
+/**
+ * Classifica o retorno 'already' de mp_register_order_payment. Retentativa do MESMO pagamento é normal
+ * (retorna null, sem alerta). Pagamento aprovado para pedido cancelado, ou um segundo payment id para um
+ * pedido que já tem outro registrado, é dinheiro recebido que ninguém vai reconhecer sozinho: pede revisão
+ * manual (reembolso ou conciliação). Sem as chaves status_atual/mp_payment_id_registrado (RPC antigo), null.
+ */
+export function classificarPagamentoJaRegistrado(
+  resultado: unknown,
+  paymentId: string
+): MotivoAlertaPagamento | null {
+  const r = resultado as {
+    already?: boolean;
+    status_atual?: string | null;
+    mp_payment_id_registrado?: string | null;
+  } | null;
+  if (!r || r.already !== true) return null;
+  if (r.status_atual === "cancelado") return "pedido_cancelado";
+  if (r.mp_payment_id_registrado && r.mp_payment_id_registrado !== paymentId) return "pagamento_duplicado";
+  return null;
+}

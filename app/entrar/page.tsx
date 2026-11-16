@@ -6,6 +6,7 @@ import { normalizarModo } from "@/components/auth/form";
 import { getPerfil } from "@/lib/auth";
 import { COOKIE_RT } from "@/lib/auth-cookies";
 import { destinoPosLogin } from "@/lib/roles";
+import { getLojaFlags } from "@/lib/loja-flags-server";
 import { getTextos } from "@/lib/textos";
 import { nextSeguro } from "@/lib/validators";
 
@@ -26,11 +27,12 @@ export default async function EntrarPage({ searchParams }: { searchParams: Searc
   if (perfil?.ativo) redirect(destinoPosLogin(perfil.papel, next));
 
   const temRefresh = (await cookies()).has(COOKIE_RT);
-  const textos = await getTextos();
+  const [textos, flags] = await Promise.all([getTextos(), getLojaFlags()]);
 
   return (
     <LoginView
-      modoInicial={normalizarModo(sp.modo)}
+      modoInicial={normalizarModo(sp.modo, flags.varejoAtivo)}
+      varejoAtivo={flags.varejoAtivo}
       next={next}
       etiqueta={textos["login.etiqueta"]}
       titulo={textos["login.titulo"]}

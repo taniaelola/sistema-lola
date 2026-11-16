@@ -10,11 +10,9 @@ import type {
   Sale,
 } from "@/lib/types";
 
-export type ConfigAdmin = {
-  taxa_entrega_local: number;
-  whatsapp: string;
-  cidade_taxa: string;
-};
+import type { ConfigAdmin } from "@/lib/admin-config";
+
+export type { ConfigAdmin };
 
 async function lista<T>(sb: SupabaseClient, rpc: string, args?: Record<string, unknown>): Promise<T[]> {
   const { data, error } = await sb.rpc(rpc, args);

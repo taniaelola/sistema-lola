@@ -21,6 +21,22 @@ export const TEXTOS_PADRAO: Record<string, string> = {
   "home.lancamentos_titulo": "Lançamentos",
   "login.etiqueta": "COLEÇÃO VERÃO 26",
   "login.titulo": "Pisa confiante.",
+  lp_hero_titulo: "Revenda calçados e acessórios LOLA.",
+  lp_hero_subtitulo: "Preço de atacado, aprovação rápida e um painel só seu para montar o pedido.",
+  lp_hero_botao: "Quero ser revendedora",
+  lp_regras_titulo: "Como funciona o atacado",
+  // regra fixa: mínimo de 12 SKUs (checkout_iniciar_pedido)
+  lp_regra_skus: "12 modelos diferentes por pedido.",
+  lp_regra_bonus: "Peças suficientes no pedido garantem uma bonificação.",
+  lp_regra_preco: "Preço de atacado em todos os modelos, direto no painel.",
+  lp_passos_titulo: "Em três passos",
+  lp_passo_1: "Crie o seu cadastro de revendedora.",
+  lp_passo_2: "Aguarde a aprovação da nossa equipe.",
+  lp_passo_3: "Monte o pedido no painel e pague.",
+  lp_amostra_titulo: "Uma amostra do catálogo",
+  lp_amostra_aviso: "Valores de referência. O catálogo completo abre depois da aprovação do cadastro.",
+  lp_final_titulo: "Pronta para revender LOLA?",
+  lp_final_botao: "Criar meu cadastro",
 };
 
 export function mesclarTextos(doBanco: unknown): Record<string, string> {
