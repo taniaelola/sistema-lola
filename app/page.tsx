@@ -12,6 +12,7 @@ import RegrasLP from "@/components/lp/RegrasLP";
 import PassosLP from "@/components/lp/PassosLP";
 import AmostraLP from "@/components/lp/AmostraLP";
 import CtaFinalLP from "@/components/lp/CtaFinalLP";
+import MarcaLP from "@/components/lp/MarcaLP";
 
 export const revalidate = 0;
 
@@ -56,8 +57,9 @@ export default async function Home() {
           seloBonus={seloBonus(flags)}
           preco={textos.lp_regra_preco}
         />
-        <PassosLP titulo={textos.lp_passos_titulo} passos={[textos.lp_passo_1, textos.lp_passo_2, textos.lp_passo_3]} />
         <AmostraLP titulo={textos.lp_amostra_titulo} aviso={textos.lp_amostra_aviso} itens={amostra} />
+        <MarcaLP />
+        <PassosLP titulo={textos.lp_passos_titulo} passos={[textos.lp_passo_1, textos.lp_passo_2, textos.lp_passo_3]} />
         <CtaFinalLP titulo={textos.lp_final_titulo} botao={cta.rotulo ?? textos.lp_final_botao} href={cta.href} />
       </main>
       <SiteFooterServer />

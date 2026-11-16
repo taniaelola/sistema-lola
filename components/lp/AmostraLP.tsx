@@ -15,7 +15,7 @@ export default function AmostraLP({ titulo, aviso, itens }: { titulo: string; av
               <div className="lp-prod-foto">
                 {p.imagem ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.imagem} alt={p.nome} width={600} height={600} loading="lazy" decoding="async" />
+                  <img src={p.imagem} alt={p.nome} width={600} height={750} loading="lazy" decoding="async" />
                 ) : (
                   <span className="lp-prod-inicial" aria-hidden="true">{p.nome.trim().charAt(0).toUpperCase()}</span>
                 )}
@@ -23,7 +23,7 @@ export default function AmostraLP({ titulo, aviso, itens }: { titulo: string; av
               </div>
               <h3 className="lp-prod-nome">{p.nome}</h3>
               <p className="lp-prod-venda">
-                <span>preço de venda sugerido</span> <s>{formatarReais(p.precoVarejo)}</s>
+                <span>venda sugerida</span> <s>{formatarReais(p.precoVarejo)}</s>
               </p>
               <p className="lp-prod-seu">
                 <span>seu preço</span> <strong>{formatarReais(p.precoAtacado)}</strong>

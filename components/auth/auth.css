@@ -327,3 +327,16 @@
 .auth-check-nome { font-size: 15px; font-weight: 700; color: var(--ink); }
 .auth-check-texto { font-size: 13px; line-height: 1.5; color: var(--ink-soft); overflow-wrap: anywhere; }
 .auth-check-passo--espera .auth-check-nome { color: var(--muted); }
+
+/* Identidade "ateliê" (marfim, taupe e cacau): reaproveita as variáveis pastel do site, só nesta tela */
+.auth-frame {
+  --peach: #C9B39A;
+  --pink: #E6D5C3;
+  --lilac: #C9B39A;
+  --mint: #D8CBB8;
+  --mint-deep: #9A8570;
+}
+.auth-photo { background: linear-gradient(160deg, #F3EDE3 0%, #D9C9B4 100%); }
+.auth-photo-label { font-family: var(--font-sans); letter-spacing: 0.28em; text-transform: uppercase; color: var(--taupe-escuro); }
+.auth-photo-title { font-family: var(--font-display), Georgia, serif; font-weight: 400; font-size: 52px; letter-spacing: -0.01em; }
+.auth-title { font-family: var(--font-display), Georgia, serif; font-weight: 500; }

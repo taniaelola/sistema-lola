@@ -17,8 +17,8 @@ export default function RegrasLP({
     { chave: "preco", destaque: "R$", rotulo: "atacado", texto: preco },
   ];
   return (
-    <section className="lp-secao" aria-labelledby="lp-regras-titulo">
-      <h2 id="lp-regras-titulo" className="lp-titulo">{titulo}</h2>
+    <section className="lp-faixa" aria-labelledby="lp-regras-titulo">
+      <h2 id="lp-regras-titulo" className="lp-rotulo">{titulo}</h2>
       <ul className="lp-regras">
         {cartoes.map((c) => (
           <li key={c.chave} className="lp-regra">
