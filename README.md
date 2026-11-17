@@ -250,6 +250,11 @@ Fonte em `supabase/migrations/`. Produção tem `0001` a `0009`; a `0010`
 `supabase/release-0010.sql`. A `0011` (pedido mínimo do atacado = 12 PEÇAS, não 12 modelos
 distintos) vai por `supabase/release-0011.sql`: pode rodar antes ou junto do deploy do app
 (o app antigo é mais estrito que o SQL novo); rollback em `supabase/rollback-0011.sql`.
+A `0012` (pedido de atacado sem pagamento no site, revendedora premium e nome do convidado de
+equipe) vai por `supabase/release-0012.sql`: rode ANTES de promover o app novo; rollback em
+`supabase/rollback-0012.sql`. O convite de equipe manda o e-mail de confirmação do Supabase
+("Confirm signup", com `{{ .ConfirmationURL }}`) e a pessoa finaliza em `/entrar/redefinir`
+(URL já liberada em Authentication > URL Configuration).
 Banco novo e vazio: rode `0001`, `0002` e `0003` no
 SQL Editor (no `0003`, substitua os placeholders por valores reais; o webhook
 secret é o `ADMIN_WEBHOOK_SECRET` do ambiente) e depois o `release-unico.sql`.
@@ -264,7 +269,7 @@ npm run dev          # desenvolvimento em http://localhost:3000
 npm run build        # build de produção
 npm test             # testes unitários (Vitest)
 npm run lint         # ESLint (deve sair com 0 erros)
-npm run release:sql  # regenera supabase/release-unico.sql, release-0010.sql e release-0011.sql
+npm run release:sql  # regenera supabase/release-unico.sql, release-0010.sql, release-0011.sql e release-0012.sql
 ```
 
 ## Deploy (Cloudflare Workers)

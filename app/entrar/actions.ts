@@ -170,6 +170,53 @@ export async function redefinirAction(
   return { ok: true };
 }
 
+/**
+ * Convite de equipe: a pessoa abriu o link do e-mail (já tem sessão do Supabase no token do link),
+ * informa nome e senha e a conta fica pronta. O papel já foi aplicado pelo banco ao confirmar o e-mail.
+ */
+export async function finalizarCadastroAction(
+  _prev: ResultadoRedefinir | undefined,
+  formData: FormData
+): Promise<ResultadoRedefinir> {
+  const token = campo(formData, "access_token");
+  const nome = campo(formData, "nome");
+  const senha = senhaCampo(formData, "senha");
+  const confirmar = senhaCampo(formData, "confirmar");
+
+  const info = token ? analisarToken(token, Math.floor(Date.now() / 1000)) : null;
+  if (!info || info.expirado) return { error: "Link inválido ou expirado. Peça um novo convite." };
+  if (!nome) return { error: "Informe o seu nome." };
+  if (nome.length > 120) return { error: "Nome muito longo." };
+  if (senha.length < SENHA_MIN) return { error: MSG_SENHA_CURTA };
+  if (senha !== confirmar) return { error: "As senhas não conferem." };
+
+  let resposta: Response;
+  try {
+    resposta = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      method: "PUT",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ password: senha, data: { nome } }),
+      cache: "no-store",
+    });
+  } catch {
+    return { error: mensagemErroAuth(null, "redefinir") };
+  }
+  if (!resposta.ok) {
+    const corpo = (await resposta.json().catch(() => null)) as { code?: unknown; error_code?: unknown } | null;
+    const code = typeof corpo?.error_code === "string" ? corpo.error_code : typeof corpo?.code === "string" ? corpo.code : undefined;
+    return { error: mensagemErroAuth({ code, status: resposta.status }, "redefinir") };
+  }
+
+  // O perfil é criado antes do nome ser informado; grava o nome nele (só o próprio usuário, só se ainda vazio).
+  const { error } = await supabaseComToken(token).rpc("set_meu_nome", { p_nome: nome });
+  if (error) console.error("set_meu_nome falhou:", error.message);
+  return { ok: true };
+}
+
 export async function sairAction(): Promise<void> {
   try {
     const sessao = await getSessao({ renovar: true });

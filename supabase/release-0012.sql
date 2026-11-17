@@ -42,6 +42,20 @@ end $$;
 revoke all on function admin_set_revendedor_premium(uuid, boolean) from public, anon, authenticated;
 grant execute on function admin_set_revendedor_premium(uuid, boolean) to authenticated;
 
+--  (3) CONVITE DE EQUIPE POR E-MAIL: a pessoa convidada abre o link do e-mail, informa nome e senha e a tela
+--      grava o nome no perfil com esta função (só o próprio usuário, só se o nome ainda estiver vazio).
+create or replace function set_meu_nome(p_nome text)
+returns void language plpgsql security definer set search_path = public, extensions as $$
+declare v_nome text := left(trim(coalesce(p_nome, '')), 200);
+begin
+  if auth.uid() is null then raise exception 'sem sessão' using errcode = '42501'; end if;
+  if v_nome = '' then raise exception 'nome obrigatório'; end if;
+  update profiles set nome = v_nome where id = auth.uid() and nome = '';
+end $$;
+
+revoke all on function set_meu_nome(text) from public, anon;
+grant execute on function set_meu_nome(text) to authenticated;
+
 create or replace function checkout_iniciar_pedido(
   p_cliente_nome text,
   p_cliente_telefone text,

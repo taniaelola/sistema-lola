@@ -4,6 +4,7 @@
 set search_path = public, extensions;
 
 drop function if exists admin_set_revendedor_premium(uuid, boolean);
+drop function if exists set_meu_nome(text);
 
 create or replace function atacado_me()
 returns jsonb language plpgsql security definer set search_path = public, extensions stable as $$
