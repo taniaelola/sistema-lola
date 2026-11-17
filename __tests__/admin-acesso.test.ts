@@ -335,3 +335,15 @@ describe("ação de config (salvarLojaConfig)", () => {
     expect(c.produtos && c.estoqueBaixo).toBe(true);
   });
 });
+
+describe("opcoesStatusPedido — pedido em separação sem pagamento", () => {
+  const valores = (o: { status: string }[]) => o.map((x) => x.status);
+
+  it("só avança para aguardando pagamento ou cancela (nada de retirada sem pagar)", () => {
+    expect(valores(opcoesStatusPedido("retirada", "preparando", true))).toEqual(["preparando", "pendente", "cancelado"]);
+  });
+
+  it("depois de pago, preparando segue o fluxo normal da retirada", () => {
+    expect(valores(opcoesStatusPedido("retirada", "preparando", false))).toContain("pronto_retirada");
+  });
+});

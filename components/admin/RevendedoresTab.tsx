@@ -6,7 +6,7 @@ import { podeAprovarRevendedor, type Papel } from "@/lib/roles";
 import { confirmarDescarte, temAlteracoes } from "@/lib/admin-rascunho";
 import SwingTag from "@/components/SwingTag";
 import { corStatus } from "@/lib/admin-status";
-import { saveRevendedor } from "@/app/admin/actions";
+import { saveRevendedor, setRevendedorPremium } from "@/app/admin/actions";
 import {
   REVENDEDOR_VAZIO,
   avisoTrocaEmail,
@@ -110,6 +110,11 @@ export default function RevendedoresTab({
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {r.razao_social}
+                    {r.premium === true && (
+                      <span style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--adm-purple-text)", background: "var(--adm-purple-bg)", borderRadius: 6, padding: "2px 6px" }}>
+                        Premium
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: 12, color: "var(--adm-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {r.email}
@@ -202,9 +207,13 @@ function RevendedorDrawer({
   const [erros, setErros] = useState<ErrosRevendedor>({});
   const [erroGeral, setErroGeral] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  // Caixa "Revendedora premium": só quem aprova/recusa (admin/superadmin) enxerga e altera.
+  const podeMarcarPremium = podeAprovarRevendedor(papel);
+  const premiumInicial = revendedor?.premium === true;
+  const [premium, setPremium] = useState(premiumInicial);
 
   const inicial = useState(form)[0];
-  const alterado = temAlteracoes(inicial, form);
+  const alterado = temAlteracoes(inicial, form) || premium !== premiumInicial;
   const fechar = () => {
     if (confirmarDescarte(alterado)) onFechar();
   };
@@ -223,11 +232,21 @@ function RevendedorDrawer({
     if (!payload) return;
     setOcupado(true);
     const r = await saveRevendedor({ id: revendedor?.id ?? null, ...payload });
-    setOcupado(false);
     if (r.error) {
+      setOcupado(false);
       setErroGeral(r.error);
       return;
     }
+    const idSalvo = revendedor?.id ?? r.id;
+    if (podeMarcarPremium && idSalvo && premium !== premiumInicial) {
+      const p = await setRevendedorPremium(idSalvo, premium);
+      if (p.error) {
+        setOcupado(false);
+        setErroGeral(`Dados salvos, mas não consegui alterar a marcação premium: ${p.error}`);
+        return;
+      }
+    }
+    setOcupado(false);
     await onConcluir(revendedor ? "Revendedor atualizado." : "Revendedor cadastrado.");
   }
 
@@ -341,6 +360,22 @@ function RevendedorDrawer({
             )}
           </Campo>
         </div>
+        {podeMarcarPremium && (
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={premium}
+              onChange={(e) => setPremium(e.target.checked)}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              <strong>Revendedora premium</strong>
+              <span className="adm-dica" style={{ display: "block", margin: 0 }}>
+                Pode comprar sem o pedido mínimo de peças (ex.: 3 pares num dia e 5 no outro).
+              </span>
+            </span>
+          </label>
+        )}
         {revendedor && (
           <p className="adm-dica" style={{ margin: 0 }}>
             {!podeAprovarRevendedor(papel)

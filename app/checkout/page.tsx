@@ -4,6 +4,8 @@ import type { ItemCarrinhoAtacado } from "@/lib/checkout";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooterServer from "@/components/SiteFooterServer";
 import { exigirVarejo } from "@/lib/loja-rotas-server";
+import { MIN_PECAS_ATACADO } from "@/lib/pricing";
+import { carregarCadastro } from "@/app/atacado/dados";
 import CheckoutVarejo from "./CheckoutVarejo";
 import CheckoutAtacado from "./CheckoutAtacado";
 
@@ -57,5 +59,7 @@ export default async function CheckoutPage({
     estoque: Number(i.estoque),
   }));
 
-  return <CheckoutAtacado itens={itens} total={Number(resumo.total ?? 0)} />;
+  const cadastro = await carregarCadastro(db);
+  const minimo = cadastro?.premium ? 0 : MIN_PECAS_ATACADO;
+  return <CheckoutAtacado itens={itens} total={Number(resumo.total ?? 0)} minimo={minimo} />;
 }

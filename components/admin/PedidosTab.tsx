@@ -8,6 +8,7 @@ import SwingTag from "@/components/SwingTag";
 import { corStatus } from "@/lib/admin-status";
 import { opcoesStatusPedido } from "@/lib/admin-acesso";
 import { itemEhBonus } from "@/lib/atacado";
+import { linkPedidoProntoWhatsApp } from "@/lib/aviso-revendedor";
 
 type Filtro = "todos" | "varejo" | "atacado";
 
@@ -20,9 +21,9 @@ const FILTROS: { key: Filtro; label: string }[] = [
 // Label curto por status, reconhecido por `corStatus` (ver lib/admin-status.ts).
 // Diferente de ORDER_STATUS_LABEL (usado no <select>, com texto mais longo/descritivo).
 const STATUS_TAG_LABEL: Record<OrderStatus, string> = {
-  pendente: "Pendente",
+  pendente: "Aguardando pagamento",
   pago: "Pago",
-  preparando: "Preparando",
+  preparando: "Em separação",
   enviado: "Enviado",
   pronto_retirada: "Pronto para retirada",
   entregue: "Entregue",
@@ -65,10 +66,32 @@ export default function PedidosTab({
     else onChange();
   }
 
+  // Pedido separado: abre o WhatsApp com a mensagem pronta (a vendedora cola o link de pagamento)
+  // e move o pedido para "Aguardando pagamento". O WhatsApp abre primeiro para o navegador não bloquear a aba.
+  async function handleAvisar(o: Order) {
+    const link = linkPedidoProntoWhatsApp({
+      telefone: o.cliente_telefone,
+      nome: o.cliente_nome,
+      pedidoId: o.id,
+      total: o.valor_total,
+    });
+    if (!link) {
+      alert("Este pedido não tem um WhatsApp válido. Confira o telefone do cliente.");
+      return;
+    }
+    window.open(link, "_blank", "noopener,noreferrer");
+    if (o.status === "pendente") return;
+    setSalvandoId(o.id);
+    const { error } = await updateOrderStatus(o.id, "pendente");
+    setSalvandoId(null);
+    if (error) alert(`Não deu pra marcar como aguardando pagamento: ${error}`);
+    else onChange();
+  }
+
   async function handleSettle(id: string) {
     if (
       !confirm(
-        "Confirmar recebimento deste pedido? Isso baixa o estoque e registra a venda."
+        "Confirmar o pagamento deste pedido? Isso baixa o estoque e registra a venda."
       )
     )
       return;
@@ -125,7 +148,9 @@ export default function PedidosTab({
           </div>
         ) : (
           orders.map((o) => {
-            const opcoes = opcoesStatusPedido(o.entrega_tipo, o.status);
+            const semPagamento = !o.mp_payment_id;
+            const opcoes = opcoesStatusPedido(o.entrega_tipo, o.status, semPagamento);
+            const aguardaPagar = o.status === "pendente" || (o.status === "preparando" && semPagamento);
             const aberto = expandedId === o.id;
             const cor = corStatus(STATUS_TAG_LABEL[o.status]);
             return (
@@ -172,7 +197,25 @@ export default function PedidosTab({
                     onClick={(e) => e.stopPropagation()}
                     style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}
                   >
-                    {podeLiquidar && o.status === "pendente" && (
+                    {o.is_atacado && aguardaPagar && (
+                      <button
+                        onClick={() => handleAvisar(o)}
+                        disabled={salvandoId === o.id}
+                        style={{
+                          background: "var(--adm-success-bg)",
+                          color: "var(--adm-success-text)",
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "7px 12px",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {o.status === "pendente" ? "Reenviar no WhatsApp" : "Pronto: avisar no WhatsApp"}
+                      </button>
+                    )}
+                    {podeLiquidar && aguardaPagar && (
                       <button
                         onClick={() => handleSettle(o.id)}
                         disabled={salvandoId === o.id}
@@ -187,7 +230,7 @@ export default function PedidosTab({
                           cursor: "pointer",
                         }}
                       >
-                        Marcar como pago
+                        Registrar pagamento
                       </button>
                     )}
 

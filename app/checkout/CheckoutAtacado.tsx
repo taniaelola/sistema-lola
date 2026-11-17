@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { avaliarCarrinhoAtacado, type ItemCarrinhoAtacado } from "@/lib/checkout";
-import { MIN_PECAS_ATACADO } from "@/lib/pricing";
 import { criarPedidoAtacado } from "./actions";
 import Header from "@/components/Header";
 import { SiteFooter } from "@/components/PaymentsFooter";
@@ -14,15 +13,18 @@ const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
 export default function CheckoutAtacado({
   itens,
   total,
+  minimo,
 }: {
   itens: ItemCarrinhoAtacado[];
   total: number;
+  /** Peças exigidas no pedido (12; 0 para a revendedora premium). */
+  minimo: number;
 }) {
   const [dados, setDados] = useState<DadosForm>(DADOS_VAZIOS);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const avaliacao = avaliarCarrinhoAtacado(itens);
+  const avaliacao = avaliarCarrinhoAtacado(itens, minimo);
   const problemaPorId = new Map(avaliacao.problemas.map((p) => [p.id, p.motivo]));
 
   function set<K extends keyof DadosForm>(campo: K, valor: DadosForm[K]) {
@@ -54,7 +56,7 @@ export default function CheckoutAtacado({
       return;
     }
     if (res.url) {
-      // O carrinho de atacado só é esvaziado quando o pagamento é aprovado.
+      // Sem pagamento no site: o pedido já foi criado e o carrinho esvaziado no banco.
       window.location.href = res.url;
     }
   }
@@ -98,7 +100,7 @@ export default function CheckoutAtacado({
                 margin: 0,
               }}
             >
-              {avaliacao.pecas} de {MIN_PECAS_ATACADO} peças
+              {minimo > 0 ? `${avaliacao.pecas} de ${minimo} peças` : `${avaliacao.pecas} peças`}
             </p>
             {itens.map((i) => {
               const problema = problemaPorId.get(i.id);
@@ -166,11 +168,11 @@ export default function CheckoutAtacado({
                 disabled={enviando}
                 style={{ justifyContent: "center", opacity: enviando ? 0.6 : 1 }}
               >
-                {enviando ? "Abrindo pagamento…" : "Ir para o pagamento →"}
+                {enviando ? "Enviando pedido…" : "Enviar pedido →"}
               </button>
               <p style={{ fontSize: 11, color: "var(--muted)", textAlign: "center", margin: 0 }}>
-                Pagamento com Pix ou cartão via Mercado Pago. Os preços são de atacado e
-                conferidos no servidor.
+                Você não paga agora. A loja separa o seu pedido e avisa pelo WhatsApp, com o link de
+                pagamento. Os preços são de atacado e conferidos no servidor.
               </p>
             </form>
           )}

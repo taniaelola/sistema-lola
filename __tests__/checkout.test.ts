@@ -239,3 +239,19 @@ describe("atacado só com retirada", () => {
     expect(validarEntregaAtacado({ ...base, nome: " ", entregaTipo: "retirada" })).toBe("Informe seu nome.");
   });
 });
+
+describe("avaliarCarrinhoAtacado — revendedora premium (mínimo 0)", () => {
+  it("3 peças libera sem o mínimo de 12", () => {
+    const r = avaliarCarrinhoAtacado(nItens(1, 3), 0);
+    expect(r.liberado).toBe(true);
+    expect(r.motivo).toBeNull();
+  });
+
+  it("sem o parâmetro continua exigindo 12", () => {
+    expect(avaliarCarrinhoAtacado(nItens(1, 3)).liberado).toBe(false);
+  });
+
+  it("carrinho vazio continua bloqueado", () => {
+    expect(avaliarCarrinhoAtacado([], 0).liberado).toBe(false);
+  });
+});

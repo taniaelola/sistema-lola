@@ -186,7 +186,7 @@ describe("rotuloStatusPedido", () => {
   it("mapeia os status do banco para rótulos conhecidos de corStatus", () => {
     expect(rotuloStatusPedido("pendente")).toBe("Aguardando pagamento");
     expect(rotuloStatusPedido("pago")).toBe("Pago");
-    expect(rotuloStatusPedido("preparando")).toBe("Preparando");
+    expect(rotuloStatusPedido("preparando")).toBe("Em separação");
     expect(rotuloStatusPedido("enviado")).toBe("Enviado");
     expect(rotuloStatusPedido("pronto_retirada")).toBe("Pronto para retirada");
     expect(rotuloStatusPedido("entregue")).toBe("Entregue");

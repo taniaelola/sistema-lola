@@ -420,6 +420,16 @@ export async function setRevendedorStatus(
   return {};
 }
 
+// Revendedora premium (sem pedido mínimo): só quem decide status (admin/superadmin) marca.
+export async function setRevendedorPremium(id: string, premium: boolean): Promise<{ error?: string }> {
+  const g = await autorizar("revendedores-status");
+  if ("error" in g) return { error: g.error };
+  if (typeof id !== "string" || typeof premium !== "boolean") return { error: MSG_DADOS_INVALIDOS };
+  const { error } = await g.sb.rpc("admin_set_revendedor_premium", { p_id: id, p_premium: premium });
+  if (error) return { error: traduzirErroRevendedor(error.message) };
+  return {};
+}
+
 export async function saveRevendedor(
   payload: { id: string | null } & RevendedorPayload
 ): Promise<{ error?: string; id?: string }> {

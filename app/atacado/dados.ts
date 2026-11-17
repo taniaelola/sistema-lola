@@ -18,6 +18,8 @@ import { DEMO, produtosRevendedorDemo } from "@/lib/demo-catalogo";
 export type CadastroRevendedor = {
   status: "pendente" | "aprovado" | "recusado";
   razao_social: string;
+  /** Revendedora premium: sem pedido mínimo (caixa marcada no admin). */
+  premium: boolean;
 } | null;
 
 export type CorCatalogo = CorRevendedor;
@@ -42,9 +44,13 @@ export async function carregarCadastro(db: SupabaseClient): Promise<CadastroReve
     return null;
   }
   if (!data || typeof data !== "object") return null;
-  const r = data as { status?: unknown; razao_social?: unknown };
+  const r = data as { status?: unknown; razao_social?: unknown; premium?: unknown };
   if (r.status !== "pendente" && r.status !== "aprovado" && r.status !== "recusado") return null;
-  return { status: r.status, razao_social: typeof r.razao_social === "string" ? r.razao_social : "" };
+  return {
+    status: r.status,
+    razao_social: typeof r.razao_social === "string" ? r.razao_social : "",
+    premium: r.premium === true,
+  };
 }
 
 export async function cadastroAprovado(db: SupabaseClient): Promise<boolean> {

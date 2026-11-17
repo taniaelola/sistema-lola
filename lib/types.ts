@@ -155,6 +155,8 @@ export type Revendedor = {
   cidade: string;
   uf: string;
   status: RevendedorStatus;
+  /** Revendedora premium: compra sem o pedido mínimo (caixa marcada pelo admin). */
+  premium?: boolean;
   created_at: string;
   reviewed_at: string | null;
   reviewed_by: string | null;

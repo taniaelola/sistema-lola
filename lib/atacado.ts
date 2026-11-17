@@ -64,19 +64,19 @@ export function progressoBonus(pecas: number, min: number, ativo: boolean) {
   };
 }
 
-export function progressoPecas(pecas: number) {
+export function progressoPecas(pecas: number, minimo: number = MIN_PECAS_ATACADO) {
   const atual = inteiroNaoNegativo(pecas);
   return {
     atual,
-    minimo: MIN_PECAS_ATACADO,
-    pct: Math.min(100, Math.round((atual / MIN_PECAS_ATACADO) * 100)),
-    label: `${atual}/${MIN_PECAS_ATACADO}`,
-    completo: atual >= MIN_PECAS_ATACADO,
+    minimo,
+    pct: minimo > 0 ? Math.min(100, Math.round((atual / minimo) * 100)) : 100,
+    label: `${atual}/${minimo}`,
+    completo: atual >= minimo,
   };
 }
 
-export function textoFaltam(pecas: number): string | null {
-  const faltam = MIN_PECAS_ATACADO - inteiroNaoNegativo(pecas);
+export function textoFaltam(pecas: number, minimo: number = MIN_PECAS_ATACADO): string | null {
+  const faltam = minimo - inteiroNaoNegativo(pecas);
   if (faltam <= 0) return null;
   return faltam === 1 ? "Falta 1 peça para finalizar" : `Faltam ${faltam} peças para finalizar`;
 }
@@ -88,9 +88,12 @@ export function alertaLinha(i: Pick<ItemCarrinho, "disponivel" | "estoque" | "qu
   return null;
 }
 
-export function decisaoFinalizar(itens: ItemCarrinho[]): { habilitado: boolean; texto: string } {
-  const av = avaliarCarrinhoAtacado(itens);
-  const faltam = textoFaltam(av.pecas);
+export function decisaoFinalizar(
+  itens: ItemCarrinho[],
+  minimo: number = MIN_PECAS_ATACADO
+): { habilitado: boolean; texto: string } {
+  const av = avaliarCarrinhoAtacado(itens, minimo);
+  const faltam = textoFaltam(av.pecas, minimo);
   if (faltam) return { habilitado: false, texto: faltam };
   if (av.problemas.length > 0) {
     return { habilitado: false, texto: "Ajuste os itens com alerta para finalizar" };
@@ -113,7 +116,7 @@ export function proximaQuantidade(atual: number, estoque: number): number | null
 const ROTULO_STATUS: Record<string, string> = {
   pendente: "Aguardando pagamento",
   pago: "Pago",
-  preparando: "Preparando",
+  preparando: "Em separação",
   enviado: "Enviado",
   pronto_retirada: "Pronto para retirada",
   entregue: "Entregue",

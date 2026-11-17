@@ -19,16 +19,19 @@ export default function CarrinhoView({
   itens,
   total,
   bonus,
+  minimo,
 }: {
   itens: ItemCarrinho[];
   total: number;
   bonus: { ativo: boolean; minPecas: number; quantidade: number; produtoNome: string | null };
+  /** Peças exigidas no pedido (12 para as demais; 0 para a revendedora premium). */
+  minimo: number;
 }) {
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, iniciar] = useTransition();
-  const decisao = decisaoFinalizar(itens);
+  const decisao = decisaoFinalizar(itens, minimo);
   const pecas = somarPecas(itens.filter((i) => i.disponivel));
-  const progresso = progressoMinimo(pecas);
+  const progresso = progressoMinimo(pecas, minimo);
   // Sem nome de produto (bônus inativo/inexistente no banco) o checkout não entrega brinde: trata como desligado.
   const bonusVisivel = bonus.ativo && bonus.produtoNome !== null;
   const progressoPecas = progressoBonus(pecas, bonus.minPecas, bonusVisivel);
@@ -48,7 +51,9 @@ export default function CarrinhoView({
         <ShoppingBag size={28} aria-hidden="true" style={{ color: "var(--adm-text-secondary)" }} />
         <p style={{ fontSize: 15, fontWeight: 600, margin: "10px 0 4px" }}>Seu carrinho está vazio</p>
         <p className="atc-suave" style={{ fontSize: 13, margin: "0 0 16px" }}>
-          Escolha produtos no catálogo até completar {progresso.minimo} peças.
+          {minimo > 0
+            ? `Escolha produtos no catálogo até completar ${minimo} peças.`
+            : "Escolha produtos no catálogo para montar o seu pedido."}
         </p>
         <Link href="/atacado/catalogo" className="atc-btn">
           Ver catálogo
@@ -125,25 +130,31 @@ export default function CarrinhoView({
 
       <aside className="atc-resumo" aria-label="Resumo do pedido">
         <h2>Resumo do pedido</h2>
-        <div>
+        {minimo > 0 ? (
+          <div>
+            <div className="atc-suave" style={{ fontSize: 13 }}>
+              peças no carrinho (mínimo do pedido)
+            </div>
+            <div
+              className="atc-barra"
+              style={{ marginTop: 6 }}
+              role="progressbar"
+              aria-label="peças no carrinho (mínimo do pedido)"
+              aria-valuemin={0}
+              aria-valuemax={progresso.minimo}
+              aria-valuenow={Math.min(progresso.atual, progresso.minimo)}
+            >
+              <span style={{ width: `${progresso.pct}%` }} />
+            </div>
+            <div className="atc-mono" style={{ fontSize: 13, marginTop: 6 }}>
+              {progresso.atual} de {progresso.minimo} peças
+            </div>
+          </div>
+        ) : (
           <div className="atc-suave" style={{ fontSize: 13 }}>
-            peças no carrinho (mínimo do pedido)
+            Revendedora premium: sem pedido mínimo.
           </div>
-          <div
-            className="atc-barra"
-            style={{ marginTop: 6 }}
-            role="progressbar"
-            aria-label="peças no carrinho (mínimo do pedido)"
-            aria-valuemin={0}
-            aria-valuemax={progresso.minimo}
-            aria-valuenow={Math.min(progresso.atual, progresso.minimo)}
-          >
-            <span style={{ width: `${progresso.pct}%` }} />
-          </div>
-          <div className="atc-mono" style={{ fontSize: 13, marginTop: 6 }}>
-            {progresso.atual} de {progresso.minimo} peças
-          </div>
-        </div>
+        )}
         {bonusVisivel && (
           <div>
             <div

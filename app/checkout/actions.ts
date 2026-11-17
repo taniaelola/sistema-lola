@@ -100,6 +100,11 @@ async function iniciarPedido(
   // A RPC retorna jsonb { id, entrega_taxa, itens } — `itens` são as linhas
   // precificadas no servidor (fonte da verdade do valor cobrado).
   const orderId = (data as { id: string }).id;
+
+  // Atacado: sem pagamento no site. O pedido já nasceu "Em separação" (e o carrinho foi esvaziado no banco);
+  // a vendedora separa, avisa no WhatsApp com o link de pagamento e registra o pagamento no admin.
+  if (atacado) return { url: `/pedido/${orderId}?pedido=recebido` };
+
   const entregaTaxa = Number((data as { entrega_taxa?: number }).entrega_taxa ?? 0);
   const rpcItens =
     (data as { itens?: { titulo: string; quantidade: number; preco_unit: number }[] }).itens ?? [];
