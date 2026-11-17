@@ -97,17 +97,17 @@ begin
   reset role;
   if (select status from orders where id = v_o) <> 'pendente' then raise exception 'FALHOU 4: não foi para aguardando pagamento'; end if;
 
-  -- 5. supervisor não registra pagamento; admin registra: baixa estoque, grava venda, status pago
-  perform set_config('request.jwt.claims', json_build_object('sub', u_sp, 'role', 'authenticated')::text, true);
+  -- 5. cliente (revendedora) não registra pagamento; supervisora registra: baixa estoque, grava venda, status pago
+  perform set_config('request.jwt.claims', json_build_object('sub', u_ra, 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     perform admin_settle_order(v_o);
-    raise exception 'FALHOU 5: supervisor liquidou';
+    raise exception 'FALHOU 5: revendedora liquidou';
   exception when others then
     if sqlerrm like 'FALHOU%' then raise; end if;
   end;
   reset role;
-  perform set_config('request.jwt.claims', json_build_object('sub', u_ad, 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', u_sp, 'role', 'authenticated')::text, true);
   set local role authenticated;
   r := admin_settle_order(v_o);
   reset role;

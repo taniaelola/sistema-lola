@@ -316,13 +316,13 @@ begin
 end $$;
 
 -- Liquidação manual: aceita 'pendente' (aguardando pagamento) e 'preparando' ainda sem pagamento
--- (cliente pagou no balcão antes de a vendedora marcar aguardando). Idempotente.
+-- (cliente pagou no balcão antes de a vendedora marcar aguardando). Idempotente. Equipe toda registra (supervisora inclusive).
 create or replace function admin_settle_order(
   p_order_id uuid, p_forma_pagamento text default 'Manual'
 ) returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare v_ord orders;
 begin
-  perform assert_papel(array['superadmin','admin']);
+  perform assert_papel(array['superadmin','admin','supervisor']);
   select * into v_ord from orders where id = p_order_id for update;
   if not found then raise exception 'pedido não encontrado'; end if;
   if not (v_ord.status = 'pendente' or (v_ord.status = 'preparando' and v_ord.mp_payment_id is null)) then

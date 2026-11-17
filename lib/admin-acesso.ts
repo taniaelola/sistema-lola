@@ -79,7 +79,8 @@ const PAPEIS_DA_ACAO: Record<AcaoAdmin, Papel[]> = {
   preco: ADMINS,
   exclusao: ADMINS,
   "vendas-escrita": ADMINS,
-  liquidar: ADMINS,
+  // Registrar pagamento de pedido (baixa estoque e lança a venda): equipe toda, inclusive a supervisora.
+  liquidar: EQUIPE_TODA,
   pedidos: EQUIPE_TODA,
   "vendas-leitura": EQUIPE_TODA,
   "estoque-baixo": EQUIPE_TODA,
