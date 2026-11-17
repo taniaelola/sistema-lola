@@ -1377,3 +1377,45 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
   .lp-hero-texto { padding: 0 48px 0 40px; }
   .lp-marca-texto { padding: 0 48px; }
 }
+
+/* ===== Admin: cadastro de produto (passos, cores, grade de tamanhos) ===== */
+.pe-passo { border-top: 1px solid var(--line); padding-top: 24px; }
+.pe-passo-num { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--adm-text-secondary); margin-bottom: 4px; }
+.pe-passo-titulo, .pe-cores-topo h3 { font-size: 16px; font-weight: 600; margin: 0 0 14px; }
+.pe-cores-topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.pe-cores-topo h3 { margin: 0; }
+.pe-cor { border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 16px; background: var(--surface); display: flex; flex-direction: column; gap: 12px; }
+.pe-cor-nova { border-color: var(--ink-soft, var(--ink)); }
+.pe-cor-topo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pe-cor-acoes { margin-left: auto; display: flex; gap: 8px; }
+.pe-sub { font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--adm-text-secondary); text-transform: uppercase; }
+.pe-bolinha { width: 22px; height: 22px; border-radius: 50%; box-shadow: 0 0 0 1px var(--line); flex: none; }
+.pe-bolinha-p { width: 14px; height: 14px; }
+.pe-paleta { display: flex; flex-wrap: wrap; gap: 8px; }
+.pe-chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px 6px 9px; font: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer; }
+.pe-chip[aria-pressed="true"] { border-color: var(--ink); background: var(--peach); font-weight: 600; }
+.pe-nome-cor { display: flex; gap: 10px; align-items: center; }
+.pe-cor-input { width: 44px; height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--surface); flex: none; }
+.pe-upload { display: flex; align-items: center; justify-content: center; gap: 10px; border: 1.5px dashed var(--line); border-radius: 12px; padding: 18px; font-size: 13px; font-weight: 600; color: var(--adm-text-secondary); cursor: pointer; }
+.pe-upload:hover, .pe-upload:focus-within { border-color: var(--ink); color: var(--ink); }
+.pe-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.pe-fotos { display: flex; flex-wrap: wrap; gap: 10px; }
+.pe-foto { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
+.pe-foto-item { position: relative; }
+.pe-foto-x { position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 50%; border: none; background: #b23b3b; color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.pe-tam-lista { display: flex; flex-direction: column; gap: 8px; }
+.pe-tam-linha { display: grid; grid-template-columns: 44px auto 1fr 28px; align-items: center; gap: 12px; }
+.pe-tam-num { font-family: var(--font-mono); font-weight: 600; font-size: 15px; }
+.pe-tam-estado { font-size: 11.5px; color: var(--adm-text-secondary); }
+.pe-stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.pe-stepper button { width: 38px; height: 38px; border: none; background: transparent; color: var(--ink); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.pe-stepper button:hover:not(:disabled) { background: var(--peach); }
+.pe-stepper button:disabled { opacity: .35; cursor: not-allowed; }
+.pe-stepper input { width: 56px; height: 38px; border: none; border-left: 1px solid var(--line); border-right: 1px solid var(--line); text-align: center; font: inherit; font-family: var(--font-mono); font-size: 14px; background: transparent; color: var(--ink); border-radius: 0; }
+.pe-x { border: none; background: none; color: #b23b3b; cursor: pointer; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; padding: 0; }
+.pe-x:hover { background: #fbeaea; }
+.pe-novo-tam { display: flex; gap: 8px; max-width: 360px; }
+.pe-erro { color: #b23b3b; font-size: 12.5px; margin: 6px 0 0; }
+.pe-rodape { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
+.pe-stepper button:focus-visible, .pe-chip:focus-visible, .pe-x:focus-visible, .pe-foto-x:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (max-width: 520px) { .pe-tam-linha { grid-template-columns: 38px auto 1fr 28px; gap: 8px; } .pe-cor-acoes { margin-left: 0; } }
