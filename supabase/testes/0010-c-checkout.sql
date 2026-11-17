@@ -140,6 +140,9 @@ begin
 
   -- ---------- 5. bônus desativado com 15 peças: sem bônus e sem aviso ----------
   update admin_config set bonus_ativo = false where id = 1;
+  -- 0012: o checkout esvazia o carrinho; reabastece para o próximo pedido
+  insert into carrinho_atacado (revendedor_id, product_id, color_id, size_id, quantidade)
+    select v_rev, t.prod, t.color, t.size, v_q[t.n] from t_sku t where t.n <= 12;
   perform set_config('request.jwt.claims', json_build_object('sub', u_ra, 'role', 'authenticated')::text, true);
   set local role authenticated;
   r := checkout_iniciar_pedido('Rev Teste', '(11) 99999-0000', 'retirada', null, null, null, null, null, null, '[]'::jsonb, true);
@@ -193,6 +196,10 @@ begin
     raise exception 'FALHOU: authenticated perdeu EXECUTE em checkout_iniciar_pedido'; end if;
   select count(*) into v_n from pg_proc where proname = 'checkout_iniciar_pedido';
   if v_n <> 1 then raise exception 'FALHOU: checkout_iniciar_pedido tem % sobrecargas (esperado 1)', v_n; end if;
+
+  -- 0012: o pedido de atacado nasce 'preparando' (sem pagamento no site). O webhook do Mercado Pago continua
+  -- valendo para pedidos 'pendente' (legado/varejo): simula esse estado para conferir a regra de valores.
+  update orders set status = 'pendente' where id in (v_o30, v_ono, v_ooff);
 
   -- ---------- 9. webhook: valor obrigatório e conferido ----------
   select count(*) into v_n from pg_proc where proname = 'mp_register_order_payment';
@@ -323,7 +330,7 @@ begin
   if exists (select 1 from jsonb_object_keys(r) k where k like 'endereco%') then
     raise exception 'FALHOU: public_get_order devolve campos de endereço (%)', r; end if;
   if r::text like '%Rua A%' or r::text like '%01000-000%' then raise exception 'FALHOU: public_get_order vaza o endereço'; end if;
-  if r->>'id' <> v_o14::text or r->>'status' <> 'pendente' or jsonb_array_length(r->'items') <> 12 then
+  if r->>'id' <> v_o14::text or r->>'status' <> 'preparando' or jsonb_array_length(r->'items') <> 12 then
     raise exception 'FALHOU: public_get_order perdeu os campos básicos (%)', r; end if;
   if not exists (select 1 from orders where id = v_o14 and endereco_rua = 'Rua A') then
     raise exception 'FALHOU: fixture de endereço não foi gravada (teste 10 sem valor)'; end if;
