@@ -14,6 +14,7 @@ import {
   type PerfilNav,
 } from "@/lib/header-menu";
 import { sairAction } from "@/app/entrar/actions";
+import { ehEquipe } from "@/lib/roles";
 
 export default function HeaderClient({
   categorias,
@@ -35,7 +36,25 @@ export default function HeaderClient({
   const { totalItens } = useCart();
   // Com o varejo desligado itensMenu nunca devolve sacola nem categorias; visitante vê Entrar / Seja revendedora.
   const itens = itensMenu({ varejoAtivo, logado: !!perfil, papel: perfil?.papel, categorias });
-  const links = itens.filter((i) => i.tipo === "categoria" || (i.tipo === "link" && !perfil));
+  const categoriasNav = itens.filter((i) => i.tipo === "categoria");
+  // Menu à esquerda: categorias (varejo ligado) ou âncoras da home. À direita: Entrar + botão de cadastro/painel.
+  const navEsquerda = categoriasNav.length
+    ? categoriasNav
+    : perfil
+      ? []
+      : [
+        { href: "/#destaque", rotulo: "Coleção" },
+        { href: "/#como-funciona", rotulo: "Como funciona" },
+      ];
+  const entrar = perfil ? null : { href: "/entrar", rotulo: "Entrar" };
+  const cta = perfil
+    ? perfil.papel === "revendedor"
+      ? { href: "/atacado/catalogo", rotulo: "Ver catálogo" }
+      : ehEquipe(perfil.papel)
+        ? { href: "/admin", rotulo: "Painel" }
+        : null
+    : { href: "/entrar?modo=revendedor", rotulo: "Seja revendedora" };
+  const links = [...navEsquerda, ...(entrar ? [entrar] : []), ...(cta ? [cta] : [])];
   const temSacola = itens.some((i) => i.tipo === "sacola");
 
   useEffect(() => {
@@ -100,7 +119,7 @@ export default function HeaderClient({
         </Link>
 
         <nav className="nav-main" aria-label="Navegação">
-          {links.map((l) => (
+          {navEsquerda.map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -112,6 +131,16 @@ export default function HeaderClient({
         </nav>
 
         <div className="site-header-actions">
+          {entrar && (
+            <Link href={entrar.href} className="nav-link hd-entrar">
+              {entrar.rotulo}
+            </Link>
+          )}
+          {cta && (
+            <Link href={cta.href} className="hd-cta">
+              {cta.rotulo}
+            </Link>
+          )}
           {perfil ? (
             <div className="conta-menu" ref={contaRef}>
               <button
@@ -154,7 +183,7 @@ export default function HeaderClient({
               )}
             </div>
           ) : (
-            <Link href="/entrar" className="hd-icon-btn" aria-label="Entrar">
+            <Link href="/entrar" className="hd-icon-btn hd-conta-visitante" aria-label="Entrar">
               <User size={20} aria-hidden="true" />
             </Link>
           )}
