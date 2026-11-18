@@ -5,6 +5,7 @@ import { apagarSessao, encerrarNoSupabase, getSessao, perfilPorToken, type Perfi
 import { headers } from "next/headers";
 import { supabaseComToken, supabaseEfemero } from "@/lib/supabase";
 import { mensagemErroAuth, origemSite } from "@/lib/auth-cookies";
+import { siteUrlSeguro } from "@/lib/aviso-revendedor";
 import { MSG_PERFIL_INDISPONIVEL, decidirAcesso, type AcaoAdmin } from "@/lib/admin-acesso";
 import type {
   Product,
@@ -564,7 +565,8 @@ export type ResultadoConvite = {
 // o link confirma o e-mail e abre /entrar/redefinir, onde a pessoa informa nome e senha. O papel do convite é
 // aplicado pelo banco na hora da confirmação (trigger handle_auth_user).
 async function enviarEmailConvite(email: string): Promise<string | null> {
-  const base = origemSite(await headers(), process.env.NEXT_PUBLIC_SITE_URL);
+  // Sem NEXT_PUBLIC_SITE_URL no build, usa o domínio de produção: sem redirect o Supabase abriria a home.
+  const base = origemSite(await headers(), process.env.NEXT_PUBLIC_SITE_URL) || siteUrlSeguro(undefined);
   try {
     const { error } = await supabaseEfemero().auth.signInWithOtp({
       email,
