@@ -10,7 +10,7 @@ Trava: Entradas do dono para a Parte C: GTM ID, GA4, Meta Pixel e token da API d
 - Home de atacado nova (PR #18, Claude Design, hero com vídeo) mergeada e no ar; build da Cloudflare ok
 - Pedido de atacado SEM pagamento no site: nasce "Em separação"; a vendedora avisa no WhatsApp (botão no admin), manda o link de pagamento feito à mão no Mercado Pago e registra o pagamento no admin (baixa estoque e lança a venda); carrinho esvazia ao enviar o pedido (SQL 0012)
 - Revendedora premium: caixa no admin (só admin/superadmin) que isenta do pedido mínimo (carrinho, checkout e banco)
-- Cadastro de produto em passos: escolher cor (paleta), foto, grade 36–40 com botões − e +, estoque que grava sozinho
+- Cadastro de produto em passos: escolher cor (paleta), foto, grade 34–40 com botões − e +, estoque que grava sozinho
 - Convite de equipe por e-mail (Supabase, sem chave extra): a pessoa abre o link, informa nome e senha e entra com o papel escolhido; reenvio na lista de pendentes
 - Testes 722 passando, tsc/lint/build ok. SQL 0012 testado num Postgres local (Docker): todos os testes do banco passam. Não verificado: telas do admin no navegador (sem login)
 

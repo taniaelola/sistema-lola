@@ -259,7 +259,7 @@ function CorSalva({
   );
 }
 
-/** Cor nova (com a grade 36–40) ou edição de nome, bolinha e fotos de uma cor existente. */
+/** Cor nova (com a grade 34–40) ou edição de nome, bolinha e fotos de uma cor existente. */
 function CorForm({
   productId,
   existing,
