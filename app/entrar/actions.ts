@@ -7,6 +7,7 @@ import { getLojaFlags } from "@/lib/loja-flags-server";
 import { destinoPosLogin } from "@/lib/roles";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseComToken, supabaseEfemero } from "@/lib/supabase";
 import { cnpjValido, emailValido, nextSeguro } from "@/lib/validators";
+import { siteUrlSeguro } from "@/lib/aviso-revendedor";
 
 type ResultadoEntrar = { error?: string; destino?: string };
 type ResultadoEnvio = { error?: string; sent?: string };
@@ -32,7 +33,8 @@ function emailCampo(formData: FormData): string {
 }
 
 async function origem(): Promise<string> {
-  return origemSite(await headers(), process.env.NEXT_PUBLIC_SITE_URL);
+  // Em produção sem NEXT_PUBLIC_SITE_URL no build, cai no domínio da loja (senão o link do e-mail abriria a home).
+  return origemSite(await headers(), process.env.NEXT_PUBLIC_SITE_URL) || siteUrlSeguro(undefined);
 }
 
 export async function entrarAction(_prev: ResultadoEntrar | undefined, formData: FormData): Promise<ResultadoEntrar> {

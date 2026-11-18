@@ -3,6 +3,7 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 import { BRAND } from "@/lib/brand.config";
 import { CartProvider } from "@/lib/cart";
+import RedirecionaLinkAcesso from "@/components/RedirecionaLinkAcesso";
 
 export const metadata: Metadata = {
   title: `${BRAND.nome} — Loja`,
@@ -26,6 +27,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        <RedirecionaLinkAcesso />
         <CartProvider>{children}</CartProvider>
         <Analytics />
       </body>
