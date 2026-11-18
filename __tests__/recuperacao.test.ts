@@ -21,3 +21,22 @@ describe("lerHashAcesso", () => {
     expect(lerHashRecuperacao("#access_token=abc&type=recovery")).toBe("abc");
   });
 });
+
+describe("lerHashAcesso — revendedora que se cadastrou sozinha", () => {
+  const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
+  const jwt = (meta: object) => `${b64({ alg: "HS256" })}.${b64({ sub: "u1", exp: 9999999999, user_metadata: meta })}.assinatura`;
+
+  it("link de confirmação de revendedora NÃO é convite de equipe", () => {
+    expect(lerHashAcesso(`#access_token=${jwt({ tipo: "revendedor", nome: "Ana" })}&type=signup`)).toBeNull();
+  });
+
+  it("link de confirmação sem tipo revendedor continua sendo convite de equipe", () => {
+    const token = jwt({});
+    expect(lerHashAcesso(`#access_token=${token}&type=signup`)).toEqual({ token, tipo: "convite" });
+  });
+
+  it("recuperação de senha de revendedora continua redefinindo senha", () => {
+    const token = jwt({ tipo: "revendedor" });
+    expect(lerHashAcesso(`#access_token=${token}&type=recovery`)).toEqual({ token, tipo: "recuperacao" });
+  });
+});

@@ -10,7 +10,9 @@ import { lerHashAcesso } from "@/components/auth/recuperacao";
  */
 export default function RedirecionaLinkAcesso() {
   useEffect(() => {
-    if (window.location.pathname === "/entrar/redefinir") return;
+    // /entrar* é onde o Supabase deve devolver o link; lá o hash é tratado pela própria página
+    // (a revendedora que se cadastra sozinha volta para /entrar e não passa pela tela de convite).
+    if (window.location.pathname.startsWith("/entrar")) return;
     if (!lerHashAcesso(window.location.hash)) return;
     window.location.replace(`/entrar/redefinir${window.location.hash}`);
   }, []);
