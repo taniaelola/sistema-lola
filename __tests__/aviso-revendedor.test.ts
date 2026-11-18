@@ -61,3 +61,25 @@ describe("linkAvisoWhatsApp", () => {
     expect(linkAvisoWhatsApp({ telefone: "lixo", nome: "Ana" })).toBeNull();
   });
 });
+
+import { linkPedidoProntoWhatsApp, mensagemPedidoPronto } from "@/lib/aviso-revendedor";
+
+describe("pedido pronto (WhatsApp)", () => {
+  it("mensagem com nome, id curto e total, terminando para colar o link", () => {
+    const m = mensagemPedidoPronto({ nome: "Maria Souza", pedidoId: "abcdef12-3456", total: 1234.5 });
+    expect(m).toContain("Olá, Maria!");
+    expect(m).toContain("#abcdef12");
+    expect(m).toMatch(/R\$\s?1\.234,50/);
+    expect(m.endsWith("link para pagamento: ")).toBe(true);
+  });
+
+  it("sem total (supervisor) não cita valor", () => {
+    expect(mensagemPedidoPronto({ pedidoId: "abcdef12", total: null })).not.toContain("R$");
+  });
+
+  it("link usa o telefone em formato internacional e null se inválido", () => {
+    const link = linkPedidoProntoWhatsApp({ telefone: "(81) 99999-0000", pedidoId: "abcdef12" });
+    expect(link).toMatch(/^https:\/\/wa\.me\/5581999990000\?text=/);
+    expect(linkPedidoProntoWhatsApp({ telefone: "123", pedidoId: "abcdef12" })).toBeNull();
+  });
+});

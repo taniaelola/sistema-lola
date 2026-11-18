@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { deleteConvite, fetchConvites, fetchUsuarios, inviteUsuario, saveUsuario } from "@/app/admin/actions";
+import {
+  deleteConvite,
+  fetchConvites,
+  fetchUsuarios,
+  inviteUsuario,
+  reenviarConvite,
+  saveUsuario,
+  type ResultadoConvite,
+} from "@/app/admin/actions";
 import { dicaRevogarAtacado, rotuloPapel } from "@/lib/admin-acesso";
 import { podeGerirPapel, type Papel } from "@/lib/roles";
 import {
@@ -213,6 +221,18 @@ export default function UsuariosTab({
                   type="button"
                   className="adm-btn-mini"
                   disabled={cancelando === c.email || !podeGerirPapel(ator.papel, c.papel)}
+                  onClick={async () => {
+                    const r = await reenviarConvite(c.email);
+                    onToast(r.error ?? `E-mail reenviado para ${c.email}.`);
+                  }}
+                  aria-label={`Reenviar e-mail de convite para ${c.email}`}
+                >
+                  Reenviar e-mail
+                </button>
+                <button
+                  type="button"
+                  className="adm-btn-mini"
+                  disabled={cancelando === c.email || !podeGerirPapel(ator.papel, c.papel)}
                   onClick={() => cancelarConvite(c)}
                   aria-label={`Cancelar convite de ${c.email}`}
                 >
@@ -384,8 +404,9 @@ function ConviteDrawer({
   const [erros, setErros] = useState<{ email?: string; papel?: string }>({});
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
-  const [registrado, setRegistrado] = useState<{ email: string; papel: Papel } | null>(null);
-  const [copiado, setCopiado] = useState(false);
+  const [registrado, setRegistrado] = useState<{ email: string; papel: Papel; resultado: ResultadoConvite } | null>(null);
+  const [reenviando, setReenviando] = useState(false);
+  const [reenvio, setReenvio] = useState<string | null>(null);
   const inicial = useState({ email, papel })[0];
   const alterado = temAlteracoes(inicial, { email, papel });
   const fechar = () => {
@@ -406,16 +427,19 @@ function ConviteDrawer({
       setErro(r.error);
       return;
     }
-    setRegistrado({ email: v.email, papel });
+    setRegistrado({ email: v.email, papel, resultado: r });
   }
 
-  const linkCadastro = typeof window === "undefined" ? "" : `${window.location.origin}/entrar?modo=cadastro`;
-  async function copiarLink() {
-    try {
-      await navigator.clipboard.writeText(linkCadastro);
-      setCopiado(true);
-    } catch {
-      setCopiado(false);
+  async function reenviar() {
+    if (!registrado || reenviando) return;
+    setReenviando(true);
+    setReenvio(null);
+    const r = await reenviarConvite(registrado.email);
+    setReenviando(false);
+    if (r.error) setReenvio(r.error);
+    else {
+      setRegistrado({ ...registrado, resultado: { emailEnviado: true } });
+      setReenvio("E-mail reenviado.");
     }
   }
 
@@ -437,7 +461,7 @@ function ConviteDrawer({
               Cancelar
             </button>
             <button type="submit" form={formId} className="adm-btn adm-btn-primario" disabled={ocupado}>
-              {ocupado ? "Salvando…" : "Registrar convite"}
+              {ocupado ? "Enviando…" : "Convidar por e-mail"}
             </button>
           </>
         )
@@ -445,30 +469,46 @@ function ConviteDrawer({
     >
       {registrado ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <p className="adm-nota" style={{ margin: 0 }}>
-            <strong>Convite registrado, mas nenhum e-mail foi enviado.</strong> O sistema só guarda que{" "}
-            <strong>{registrado.email}</strong> terá o papel <strong>{rotuloPapel(registrado.papel)}</strong>. Para ele valer:
-          </p>
-          <ol style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.6 }}>
-            <li>Envie o link abaixo para a pessoa, por WhatsApp ou e-mail.</li>
-            <li>Ela cria a conta com <strong>exatamente este e-mail</strong>: {registrado.email}.</li>
-            <li>Ela confirma o e-mail pelo link que a LOLA envia. O papel é aplicado na hora da confirmação.</li>
-          </ol>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input className="adm-input" readOnly value={linkCadastro} aria-label="Link de cadastro" onFocus={(e) => e.currentTarget.select()} />
-            <button type="button" className="adm-btn" onClick={copiarLink}>
-              {copiado ? "Copiado" : "Copiar link"}
-            </button>
-          </div>
-          <p className="adm-dica" style={{ margin: 0 }}>
-            Se a pessoa já tinha conta confirmada com este e-mail, o papel já foi aplicado e ela só precisa sair e entrar de novo.
-            Convites de equipe só valem para contas criadas depois do convite.
-          </p>
+          {registrado.resultado.aplicadoAgora ? (
+            <p className="adm-nota" style={{ margin: 0 }}>
+              <strong>{registrado.email}</strong> já tinha conta confirmada: o papel <strong>{rotuloPapel(registrado.papel)}</strong>{" "}
+              foi aplicado agora. A pessoa só precisa sair e entrar de novo. Nenhum e-mail foi necessário.
+            </p>
+          ) : registrado.resultado.emailEnviado ? (
+            <>
+              <p className="adm-nota" style={{ margin: 0 }}>
+                <strong>E-mail enviado para {registrado.email}.</strong> A pessoa abre o link, informa o nome e cria a senha, e já
+                entra com o papel <strong>{rotuloPapel(registrado.papel)}</strong>.
+              </p>
+              <p className="adm-dica" style={{ margin: 0 }}>
+                Se o e-mail não chegar em alguns minutos, peça para olhar o spam ou use &quot;Reenviar e-mail&quot; abaixo (e também
+                na lista de convites pendentes).
+              </p>
+            </>
+          ) : (
+            <p className="adm-nota" style={{ margin: 0 }} role="alert">
+              <strong>Convite registrado, mas o e-mail não saiu</strong>
+              {registrado.resultado.avisoEmail ? `: ${registrado.resultado.avisoEmail}` : "."} O convite continua pendente: tente
+              &quot;Reenviar e-mail&quot; em instantes.
+            </p>
+          )}
+          {!registrado.resultado.aplicadoAgora && (
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <button type="button" className="adm-btn" onClick={reenviar} disabled={reenviando}>
+                {reenviando ? "Enviando…" : "Reenviar e-mail"}
+              </button>
+              {reenvio && (
+                <span role="status" className="adm-dica">
+                  {reenvio}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       ) : (
       <form id={formId} onSubmit={enviar} noValidate style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <p className="adm-nota" style={{ margin: 0 }}>
-          Isso registra um convite, não cria conta nem envia e-mail. Depois de registrar, você recebe o link de cadastro para mandar à pessoa. Quando ela criar a conta com este e-mail e confirmar, recebe o papel escolhido. Se ela já tem conta confirmada, o papel é aplicado agora.
+          Ao registrar, a LOLA envia um e-mail para a pessoa com o link para finalizar o cadastro (nome e senha). Ela entra já com o papel escolhido. Se ela já tem conta confirmada, o papel é aplicado agora e não há e-mail.
         </p>
         <Campo rotulo="E-mail *" erro={erros.email}>
           {(p) => (

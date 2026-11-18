@@ -2,7 +2,9 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { apagarSessao, encerrarNoSupabase, getSessao, perfilPorToken, type Perfil } from "@/lib/auth";
-import { supabaseComToken } from "@/lib/supabase";
+import { headers } from "next/headers";
+import { supabaseComToken, supabaseEfemero } from "@/lib/supabase";
+import { mensagemErroAuth, origemSite } from "@/lib/auth-cookies";
 import { MSG_PERFIL_INDISPONIVEL, decidirAcesso, type AcaoAdmin } from "@/lib/admin-acesso";
 import type {
   Product,
@@ -420,6 +422,16 @@ export async function setRevendedorStatus(
   return {};
 }
 
+// Revendedora premium (sem pedido mínimo): só quem decide status (admin/superadmin) marca.
+export async function setRevendedorPremium(id: string, premium: boolean): Promise<{ error?: string }> {
+  const g = await autorizar("revendedores-status");
+  if ("error" in g) return { error: g.error };
+  if (typeof id !== "string" || typeof premium !== "boolean") return { error: MSG_DADOS_INVALIDOS };
+  const { error } = await g.sb.rpc("admin_set_revendedor_premium", { p_id: id, p_premium: premium });
+  if (error) return { error: traduzirErroRevendedor(error.message) };
+  return {};
+}
+
 export async function saveRevendedor(
   payload: { id: string | null } & RevendedorPayload
 ): Promise<{ error?: string; id?: string }> {
@@ -538,7 +550,33 @@ export async function saveUsuario(payload: {
   return {};
 }
 
-export async function inviteUsuario(payload: { email: string; papel: Papel }): Promise<{ error?: string }> {
+export type ResultadoConvite = {
+  error?: string;
+  /** O e-mail com o link para finalizar o cadastro saiu. */
+  emailEnviado?: boolean;
+  /** O convite foi gravado, mas o e-mail não saiu (motivo aqui); dá para reenviar na lista de pendentes. */
+  avisoEmail?: string;
+  /** A pessoa já tinha conta confirmada: o papel foi aplicado agora e não há e-mail a enviar. */
+  aplicadoAgora?: boolean;
+};
+
+// Manda o e-mail de acesso pelo próprio Supabase Auth (sem chave de serviço): para quem ainda não tem conta,
+// o link confirma o e-mail e abre /entrar/redefinir, onde a pessoa informa nome e senha. O papel do convite é
+// aplicado pelo banco na hora da confirmação (trigger handle_auth_user).
+async function enviarEmailConvite(email: string): Promise<string | null> {
+  const base = origemSite(await headers(), process.env.NEXT_PUBLIC_SITE_URL);
+  try {
+    const { error } = await supabaseEfemero().auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true, ...(base ? { emailRedirectTo: `${base}/entrar/redefinir` } : {}) },
+    });
+    return error ? mensagemErroAuth(error) : null;
+  } catch {
+    return "Não foi possível enviar o e-mail agora.";
+  }
+}
+
+export async function inviteUsuario(payload: { email: string; papel: Papel }): Promise<ResultadoConvite> {
   const g = await autorizar("usuarios");
   if ("error" in g) return { error: g.error };
   if (typeof payload?.email !== "string" || !PAPEIS.includes(payload.papel)) return { error: MSG_DADOS_INVALIDOS };
@@ -547,7 +585,30 @@ export async function inviteUsuario(payload: { email: string; papel: Papel }): P
   if (primeiro) return { error: primeiro };
   const { error } = await g.sb.rpc("admin_invite_user", { p_email: email, p_papel: payload.papel });
   if (error) return { error: traduzirErroUsuarios(error.message) };
-  return {};
+
+  // Convite de uso único: se a pessoa já tinha conta confirmada o banco aplicou o papel e apagou o convite.
+  const { data } = await g.sb.rpc("admin_list_convites");
+  const pendente = ((data ?? []) as Convite[]).some((c) => c.email.toLowerCase() === email);
+  if (!pendente) return { aplicadoAgora: true };
+
+  const falha = await enviarEmailConvite(email);
+  return falha ? { avisoEmail: falha } : { emailEnviado: true };
+}
+
+// Reenvia o e-mail de um convite pendente SEM mexer no convite (regravar o convite o tornaria mais novo que a
+// conta já criada e o papel de equipe não seria aplicado).
+export async function reenviarConvite(email: string): Promise<{ error?: string }> {
+  const g = await autorizar("usuarios");
+  if ("error" in g) return { error: g.error };
+  if (typeof email !== "string") return { error: MSG_DADOS_INVALIDOS };
+  const alvo = email.trim().toLowerCase();
+  const { data, error: erroLista } = await g.sb.rpc("admin_list_convites");
+  if (erroLista) return { error: "Não foi possível carregar os convites." };
+  const convite = ((data ?? []) as Convite[]).find((c) => c.email.toLowerCase() === alvo);
+  if (!convite) return { error: traduzirErroUsuarios("convite não encontrado") };
+  if (!podeGerirPapel(g.perfil.papel, convite.papel)) return { error: "Sem permissão." };
+  const falha = await enviarEmailConvite(alvo);
+  return falha ? { error: falha } : {};
 }
 
 export async function fetchConvites(): Promise<{ convites?: Convite[]; error?: string }> {

@@ -50,9 +50,10 @@ describe("podeExecutar", () => {
     expect(permitidas("admin")).toEqual(ACOES.filter((a) => a !== "config"));
   });
 
-  it("supervisor só cadastro de produto, pedidos, leitura de vendas, estoque baixo e cadastro de revendedores", () => {
+  it("supervisor só cadastro de produto, registrar pagamento, pedidos, leitura de vendas, estoque baixo e cadastro de revendedores", () => {
     expect(permitidas("supervisor")).toEqual([
       "cadastro",
+      "liquidar",
       "pedidos",
       "vendas-leitura",
       "estoque-baixo",
@@ -60,8 +61,8 @@ describe("podeExecutar", () => {
     ]);
   });
 
-  it("supervisor não liquida pedido nem aprova revendedor", () => {
-    expect(podeExecutar("supervisor", "liquidar")).toBe(false);
+  it("supervisor registra pagamento, mas não aprova revendedor", () => {
+    expect(podeExecutar("supervisor", "liquidar")).toBe(true);
     expect(podeExecutar("supervisor", "revendedores-status")).toBe(false);
   });
 
@@ -276,7 +277,7 @@ describe("decidirAcesso", () => {
   });
 
   it("perfil ativo sem o papel devolve Sem permissão, sem encerrar sessão", () => {
-    expect(decidirAcesso(perfil("supervisor"), "liquidar")).toEqual({
+    expect(decidirAcesso(perfil("supervisor"), "preco")).toEqual({
       ok: false,
       error: MSG_SEM_PERMISSAO,
       encerrarSessao: false,
@@ -333,5 +334,17 @@ describe("ação de config (salvarLojaConfig)", () => {
   it("supervisor carrega produtos e estoque baixo ao mesmo tempo", () => {
     const c = cargasIniciais("supervisor");
     expect(c.produtos && c.estoqueBaixo).toBe(true);
+  });
+});
+
+describe("opcoesStatusPedido — pedido em separação sem pagamento", () => {
+  const valores = (o: { status: string }[]) => o.map((x) => x.status);
+
+  it("só avança para aguardando pagamento ou cancela (nada de retirada sem pagar)", () => {
+    expect(valores(opcoesStatusPedido("retirada", "preparando", true))).toEqual(["preparando", "pendente", "cancelado"]);
+  });
+
+  it("depois de pago, preparando segue o fluxo normal da retirada", () => {
+    expect(valores(opcoesStatusPedido("retirada", "preparando", false))).toContain("pronto_retirada");
   });
 });

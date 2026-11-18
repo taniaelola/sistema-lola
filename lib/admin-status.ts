@@ -11,6 +11,7 @@ export function corStatus(status: string): { bg: string; text: string } {
     "Pronto para retirada": { bg: "var(--adm-purple-bg)", text: "var(--adm-purple-text)" },
     "Em preparação": { bg: "var(--adm-orange-bg)", text: "var(--adm-orange-text)" },
     "Preparando": { bg: "var(--adm-orange-bg)", text: "var(--adm-orange-text)" },
+    "Em separação": { bg: "var(--adm-orange-bg)", text: "var(--adm-orange-text)" },
     "Pendente": { bg: "var(--adm-orange-bg)", text: "var(--adm-orange-text)" },
     "Cadastro pendente": { bg: "var(--adm-orange-bg)", text: "var(--adm-orange-text)" },
     "Aguardando pagamento": { bg: "var(--adm-orange-bg)", text: "var(--adm-orange-text)" },

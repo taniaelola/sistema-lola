@@ -126,7 +126,11 @@ export type AvaliacaoAtacado = {
   motivo: string | null;
 };
 
-export function avaliarCarrinhoAtacado(itens: ItemCarrinhoAtacado[]): AvaliacaoAtacado {
+/** `minimo` = peças exigidas no pedido; a revendedora premium passa 0 (sem mínimo). */
+export function avaliarCarrinhoAtacado(
+  itens: ItemCarrinhoAtacado[],
+  minimo: number = MIN_PECAS_ATACADO
+): AvaliacaoAtacado {
   const pecas = totalPecas(itens);
   const problemas = itens.flatMap((i) => {
     const motivo = problemaLinhaAtacado(i);
@@ -137,8 +141,9 @@ export function avaliarCarrinhoAtacado(itens: ItemCarrinhoAtacado[]): AvaliacaoA
   if (itens.length === 0) motivo = "Seu carrinho de atacado está vazio.";
   else if (problemas.length > 0)
     motivo = "Há itens indisponíveis ou sem estoque suficiente. Ajuste o carrinho para continuar.";
-  else if (pecas < MIN_PECAS_ATACADO)
-    motivo = `O pedido de atacado precisa de pelo menos ${MIN_PECAS_ATACADO} peças. Seu carrinho tem ${pecas}.`;
+  else if (pecas < minimo)
+    motivo = `O pedido de atacado precisa de pelo menos ${minimo} peças. Seu carrinho tem ${pecas}.`;
+  else if (pecas < 1) motivo = "Seu carrinho de atacado está vazio.";
 
   return { pecas, problemas, liberado: motivo === null, motivo };
 }

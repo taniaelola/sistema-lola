@@ -9,12 +9,19 @@ import SiteFooterServer from "@/components/SiteFooterServer";
 
 export const revalidate = 0;
 
-type PagamentoStatus = "sucesso" | "falha" | "pendente";
+type PagamentoStatus = "sucesso" | "falha" | "pendente" | "recebido";
 
 const BANNERS: Record<
   PagamentoStatus,
   { texto: string; fundo: string; borda: string; cor: string }
 > = {
+  recebido: {
+    texto:
+      "Pedido recebido! Vamos separar as peças e avisar você pelo WhatsApp, com o link de pagamento.",
+    fundo: "#e9f6ec",
+    borda: "#bfe3c6",
+    cor: "#1e6b34",
+  },
   sucesso: {
     texto: "Pagamento aprovado! Já estamos preparando seu pedido.",
     fundo: "#e9f6ec",
@@ -73,7 +80,7 @@ export default async function PedidoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ pagamento?: string }>;
+  searchParams: Promise<{ pagamento?: string; pedido?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -81,9 +88,18 @@ export default async function PedidoPage({
   if (!order) notFound();
 
   const banner =
-    sp.pagamento === "sucesso" || sp.pagamento === "falha" || sp.pagamento === "pendente"
-      ? BANNERS[sp.pagamento]
-      : null;
+    sp.pedido === "recebido"
+      ? BANNERS.recebido
+      : sp.pagamento === "sucesso" || sp.pagamento === "falha" || sp.pagamento === "pendente"
+        ? BANNERS[sp.pagamento]
+        : null;
+  // Pedido de atacado: sem pagamento no site; explica em que etapa está.
+  const avisoEtapa =
+    order.is_atacado && order.status === "preparando"
+      ? "Estamos separando o seu pedido. Quando estiver pronto, avisamos pelo WhatsApp com o link de pagamento."
+      : order.is_atacado && order.status === "pendente"
+        ? "Seu pedido está separado e aguardando pagamento. Use o link que enviamos no WhatsApp ou pague na loja."
+        : null;
 
   const mostrarEndereco = order.entrega_tipo !== "retirada";
   const entrega = linhaEntrega(order.entrega_tipo, order.entrega_taxa);
@@ -133,6 +149,9 @@ export default async function PedidoPage({
           <p style={{ fontSize: 13.5, color: "var(--muted)", marginBottom: 24 }}>
             Status: <strong style={{ color: "var(--ink-soft)" }}>{ORDER_STATUS_LABEL[order.status]}</strong>
           </p>
+          {avisoEtapa && (
+            <p style={{ fontSize: 13.5, color: "var(--ink-soft)", marginTop: -10, marginBottom: 24 }}>{avisoEtapa}</p>
+          )}
 
           <div style={cardStyle}>
             <h3 style={cardTitleStyle}>Itens</h3>

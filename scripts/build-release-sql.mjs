@@ -207,3 +207,28 @@ const cabecalho0011 = `-- release-0011.sql — mínimo do atacado: 12 PEÇAS (an
 `
 const mudou0011 = gravarSeMudou(saida0011, cabecalho0011 + conteudo0011 + '\n')
 console.log(`release:sql OK: ${saida0011} (somente ${arq0011}${mudou0011 ? '' : '; sem mudanças'})`)
+
+// ---------------------------------------------------------------------
+// release-0012.sql: pedido de atacado sem pagamento no site + revendedora premium.
+// As migrações 0001 a 0011 já estão em produção; este arquivo tem SOMENTE a 0012.
+// ---------------------------------------------------------------------
+const saida0012 = join(raiz, 'supabase', 'release-0012.sql')
+const arq0012 = '0012_pedido_sem_pagamento_premium.sql'
+const caminho0012 = join(dirMigracoes, arq0012)
+if (!existsSync(caminho0012)) falhar(`migração ausente: supabase/migrations/${arq0012}`)
+const conteudo0012 = readFileSync(caminho0012, 'utf8').replace(/\r\n/g, '\n').trim()
+if (!conteudo0012) falhar(`migração vazia: ${arq0012}`)
+
+const cabecalho0012 = `-- release-0012.sql — pedido de atacado SEM pagamento no site + revendedora premium (sem pedido mínimo).
+--   (GERADO por scripts/build-release-sql.mjs; NÃO edite à mão. Contém somente a migração ${arq0012};
+--    as migrações 0001 a 0011 já estão aplicadas em produção.)
+--   ORDEM: rode este SQL ANTES de promover o app novo. O app novo (botão "Enviar pedido") exige a 0012:
+--   sem ela o pedido nasceria 'pendente' e a vendedora não teria como separar/avisar. O app antigo com o SQL novo
+--   continua abrindo o Mercado Pago, mas o pedido nasce 'preparando' e o webhook não o liquida: por isso o SQL
+--   vai logo antes do deploy, em horário de pouco movimento.
+--   Cole o arquivo inteiro no SQL Editor do projeto LOLA e rode UMA vez (create or replace: idempotente).
+--   Rollback: supabase/rollback-0012.sql.
+
+`
+const mudou0012 = gravarSeMudou(saida0012, cabecalho0012 + conteudo0012 + '\n')
+console.log(`release:sql OK: ${saida0012} (somente ${arq0012}${mudou0012 ? '' : '; sem mudanças'})`)

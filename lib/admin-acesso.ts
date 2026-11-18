@@ -79,7 +79,8 @@ const PAPEIS_DA_ACAO: Record<AcaoAdmin, Papel[]> = {
   preco: ADMINS,
   exclusao: ADMINS,
   "vendas-escrita": ADMINS,
-  liquidar: ADMINS,
+  // Registrar pagamento de pedido (baixa estoque e lança a venda): equipe toda, inclusive a supervisora.
+  liquidar: EQUIPE_TODA,
   pedidos: EQUIPE_TODA,
   "vendas-leitura": EQUIPE_TODA,
   "estoque-baixo": EQUIPE_TODA,
@@ -172,9 +173,20 @@ export type OpcaoStatus = { status: OrderStatus; disabled: boolean };
  * recusa as duas transições em admin_update_order_status. Pendente só pode
  * ser cancelado; para seguir, liquida-se o pedido.
  */
-export function opcoesStatusPedido(entrega: EntregaTipo, atual: OrderStatus): OpcaoStatus[] {
+export function opcoesStatusPedido(
+  entrega: EntregaTipo,
+  atual: OrderStatus,
+  /** Pedido "Em separação" ainda sem pagamento: só avança para Aguardando pagamento ou cancela. */
+  semPagamento = false
+): OpcaoStatus[] {
   const base: OrderStatus[] =
-    atual === "pendente" ? ["cancelado"] : entrega === "retirada" ? OPCOES_RETIRADA : OPCOES_ENTREGA;
+    atual === "pendente"
+      ? ["cancelado"]
+      : atual === "preparando" && semPagamento
+        ? ["preparando", "pendente", "cancelado"]
+        : entrega === "retirada"
+          ? OPCOES_RETIRADA
+          : OPCOES_ENTREGA;
   const opcoes = base.map((status) => ({ status, disabled: false }));
   return base.includes(atual) ? opcoes : [{ status: atual, disabled: true }, ...opcoes];
 }

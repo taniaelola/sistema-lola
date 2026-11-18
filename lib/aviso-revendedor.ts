@@ -45,3 +45,46 @@ export function linkAvisoWhatsApp({
   const texto = mensagemAprovacao({ nome, urlAcesso });
   return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
 }
+
+/** Valor em reais para a mensagem ("R$ 1.234,56"); sem valor (supervisor) devolve null. */
+function reais(valor: number | null | undefined): string | null {
+  return typeof valor === "number" && Number.isFinite(valor)
+    ? valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    : null;
+}
+
+export function mensagemPedidoPronto({
+  nome,
+  pedidoId,
+  total,
+}: {
+  nome?: string | null;
+  pedidoId: string;
+  total?: number | null;
+}): string {
+  const primeiro = primeiroNome(nome);
+  const saudacao = primeiro ? `Olá, ${primeiro}!` : "Olá!";
+  const valor = reais(total);
+  return (
+    `${saudacao} Seu pedido #${pedidoId.slice(0, 8)} na LOLA está separado e pronto` +
+    `${valor ? ` (total ${valor})` : ""}. ` +
+    `Segue o link para pagamento: `
+  );
+}
+
+/** Link do WhatsApp com a mensagem do pedido pronto; a vendedora cola o link de pagamento no fim. */
+export function linkPedidoProntoWhatsApp({
+  telefone,
+  nome,
+  pedidoId,
+  total,
+}: {
+  telefone: string | null | undefined;
+  nome?: string | null;
+  pedidoId: string;
+  total?: number | null;
+}): string | null {
+  const numero = telefoneParaWhatsApp(telefone);
+  if (!numero) return null;
+  return `https://wa.me/${numero}?text=${encodeURIComponent(mensagemPedidoPronto({ nome, pedidoId, total }))}`;
+}
