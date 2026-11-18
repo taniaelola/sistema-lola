@@ -1,12 +1,12 @@
 // Lógica pura do cadastro de cores e tamanhos no admin (sem React): grade padrão, estoque com +/- e paleta.
 
-export const TAMANHOS_PADRAO = ["36", "37", "38", "39", "40"] as const;
+export const TAMANHOS_PADRAO = ["34", "35", "36", "37", "38", "39", "40"] as const;
 
 export const ESTOQUE_MAXIMO = 9999;
 
 export type LinhaTamanho = { tamanho: string; estoque: number };
 
-/** Grade inicial de uma cor nova: 36 a 40, estoque zerado. */
+/** Grade inicial de uma cor nova: 34 a 40, estoque zerado. */
 export function gradePadrao(): LinhaTamanho[] {
   return TAMANHOS_PADRAO.map((tamanho) => ({ tamanho, estoque: 0 }));
 }

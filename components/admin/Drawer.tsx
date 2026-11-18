@@ -14,6 +14,7 @@ export default function Drawer({
   confirmarFechar,
   rodape,
   largo,
+  centralizado,
   children,
 }: {
   aberto: boolean;
@@ -23,6 +24,8 @@ export default function Drawer({
   confirmarFechar?: () => boolean;
   rodape?: ReactNode;
   largo?: boolean;
+  /** Janela centralizada na tela (em vez do painel lateral): melhor para formulários longos. */
+  centralizado?: boolean;
   children: ReactNode;
 }) {
   const painelRef = useRef<HTMLDivElement>(null);
@@ -90,14 +93,14 @@ export default function Drawer({
 
   return (
     <div
-      className="adm-drawer-overlay"
+      className={centralizado ? "adm-drawer-overlay adm-drawer-overlay--centro" : "adm-drawer-overlay"}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) tentarFechar();
       }}
     >
       <div
         ref={painelRef}
-        className={largo ? "adm-drawer adm-drawer--largo" : "adm-drawer"}
+        className={centralizado ? "adm-drawer adm-drawer--centro" : largo ? "adm-drawer adm-drawer--largo" : "adm-drawer"}
         role="dialog"
         aria-modal="true"
         aria-labelledby={tituloId}
