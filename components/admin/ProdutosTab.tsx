@@ -6,13 +6,15 @@ import { precoAtacadoEfetivo } from "@/lib/admin-produto";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-// Supervisor (sem permissão de preço) não vê preço, desconto nem Live: só o cadastro.
+// Admin vê tudo. Supervisor vê o preço cheio e o de atacado, mas não Live nem desconto de varejo.
 const COLS_COMPLETAS = "1.6fr 1fr 100px 100px 80px 70px 70px 60px 90px";
+const COLS_COM_PRECO = "1.6fr 1fr 100px 100px 80px 70px 70px";
 const COLS_SEM_PRECO = "1.6fr 1fr 80px 70px 70px";
 
 export default function ProdutosTab({
   products,
   podeEditarPreco,
+  podeVerPreco,
   busyId,
   descontoOpenId,
   descontoInput,
@@ -30,7 +32,10 @@ export default function ProdutosTab({
   onSubTab,
 }: {
   products: Product[];
+  /** Admin/superadmin: Live e desconto de varejo. */
   podeEditarPreco: boolean;
+  /** Equipe toda: colunas de preço cheio e de atacado. */
+  podeVerPreco: boolean;
   busyId: string | null;
   descontoOpenId: string | null;
   descontoInput: string;
@@ -47,7 +52,7 @@ export default function ProdutosTab({
   subTab: "produtos" | "categorias";
   onSubTab: (t: "produtos" | "categorias") => void;
 }) {
-  const cols = podeEditarPreco ? COLS_COMPLETAS : COLS_SEM_PRECO;
+  const cols = podeEditarPreco ? COLS_COMPLETAS : podeVerPreco ? COLS_COM_PRECO : COLS_SEM_PRECO;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
@@ -62,9 +67,9 @@ export default function ProdutosTab({
       </div>
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, overflowX: "auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: cols, minWidth: podeEditarPreco ? 980 : 560, padding: "14px 20px", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--adm-text-secondary)", letterSpacing: "0.04em", borderBottom: "1px solid var(--line)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: cols, minWidth: podeEditarPreco ? 980 : podeVerPreco ? 760 : 560, padding: "14px 20px", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--adm-text-secondary)", letterSpacing: "0.04em", borderBottom: "1px solid var(--line)" }}>
           <div>PRODUTO</div><div>CATEGORIA</div>
-          {podeEditarPreco && (<><div>VAREJO</div><div>ATACADO</div></>)}
+          {podeVerPreco && (<><div>VAREJO</div><div>ATACADO</div></>)}
           <div>ESTOQUE</div><div>VISÍVEL</div><div>DESTAQUE</div>
           {podeEditarPreco && (<><div>LIVE</div><div>DESCONTO</div></>)}
         </div>
@@ -95,7 +100,7 @@ export default function ProdutosTab({
                     )}
                   </div>
                   <div style={{ fontSize: 13, color: "var(--adm-text-secondary)" }}>{p.categoria?.nome ?? "—"}</div>
-                  {podeEditarPreco && (
+                  {podeVerPreco && (
                     <>
                       <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}>{brl(p.preco)}</div>
                       <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--adm-purple-text)" }}>{brl(precoAtacadoEfetivo(p.preco, p.preco_atacado, p.categoria?.desconto_atacado_percentual))}</div>

@@ -56,6 +56,7 @@ export function screenPermitida(papel: Papel, atual: AdminScreen): AdminScreen |
 export type AcaoAdmin =
   | "cadastro"
   | "preco"
+  | "preco-produto"
   | "exclusao"
   | "vendas-escrita"
   | "liquidar"
@@ -77,6 +78,8 @@ const PAPEIS_DA_ACAO: Record<AcaoAdmin, Papel[]> = {
   // Cadastro de produto/cor/tamanho/categoria; preço e exclusão ficam só com admin.
   cadastro: EQUIPE_TODA,
   preco: ADMINS,
+  // Preço cheio do produto (ver e editar): equipe toda. Atacado próprio, desconto e Live seguem em "preco" (admins).
+  "preco-produto": EQUIPE_TODA,
   exclusao: ADMINS,
   "vendas-escrita": ADMINS,
   // Registrar pagamento de pedido (baixa estoque e lança a venda): equipe toda, inclusive a supervisora.
@@ -97,9 +100,14 @@ export function podeExecutar(papel: Papel, acao: AcaoAdmin): boolean {
   return PAPEIS_DA_ACAO[acao].includes(papel);
 }
 
-/** Campos de preço (preco, preco_atacado, desconto_percentual, desconto da categoria) só para superadmin/admin. */
+/** Preço de atacado próprio, desconto de varejo, desconto da categoria e Live: só superadmin/admin. */
 export function camposPrecoEditaveis(papel: Papel): boolean {
   return podeExecutar(papel, "preco");
+}
+
+/** Preço cheio do produto: equipe toda (inclusive supervisor). */
+export function precoProdutoEditavel(papel: Papel): boolean {
+  return podeExecutar(papel, "preco-produto");
 }
 
 export const MSG_SEM_PERMISSAO = "Sem permissão.";

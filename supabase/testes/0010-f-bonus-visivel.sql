@@ -110,19 +110,15 @@ begin
   r := public_lookup_orders('11999990011');
   if r::text like '%bonus_aviso%' then raise exception 'FALHOU 4: bonus_aviso vazou em public_lookup_orders'; end if;
 
-  -- ---------- 5. admin_list_products: supervisor com preços mascarados; admin com preços ----------
+  -- ---------- 5. (0013) admin_list_products: supervisor e admin veem os preços do produto ----------
   perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
   set local role authenticated;
   r := admin_list_products();
   reset role;
   select x into e from jsonb_array_elements(r) x where x->>'slug' = 'tf-p';
   if e is null then raise exception 'FALHOU 5: produto ausente na lista do supervisor'; end if;
-  if jsonb_typeof(e->'preco') is distinct from 'null' or jsonb_typeof(e->'preco_atacado') is distinct from 'null'
-     or jsonb_typeof(e->'desconto_percentual') is distinct from 'null' or jsonb_typeof(e->'desconto_efetivo') is distinct from 'null' then
-    raise exception 'FALHOU 5: preço visível ao supervisor (%)', e;
-  end if;
-  if jsonb_typeof(e->'categoria'->'desconto_atacado_percentual') is distinct from 'null' then
-    raise exception 'FALHOU 5: desconto da categoria visível ao supervisor (%)', e->'categoria';
+  if jsonb_typeof(e->'preco') is distinct from 'number' then
+    raise exception 'FALHOU 5: supervisor deveria ver o preço do produto (%)', e;
   end if;
   if e->>'nome' <> 'TF Prod' or e->'categoria'->>'nome' <> 'TF Cat' or jsonb_typeof(e->'colors') is distinct from 'array' then
     raise exception 'FALHOU 5: cadastro do supervisor ficou incompleto (%)', e;

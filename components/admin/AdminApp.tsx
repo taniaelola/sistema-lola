@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Product, Categoria, Order, Sale, EstoqueBaixoItem, Revendedor } from "@/lib/types";
 import type { Papel } from "@/lib/roles";
 import { podeAprovarRevendedor } from "@/lib/roles";
-import { camposPrecoEditaveis, podeExecutar, screenPermitida, screensVisiveis } from "@/lib/admin-acesso";
+import { camposPrecoEditaveis, precoProdutoEditavel, podeExecutar, screenPermitida, screensVisiveis } from "@/lib/admin-acesso";
 import type { ConfigAdmin } from "@/lib/admin-config";
 import { sairAction } from "@/app/entrar/actions";
 import {
@@ -82,6 +82,8 @@ export default function AdminApp({
   // baixo dele vem do banco (admin_estoque_baixo), os demais calculam a partir dos produtos.
   const podeEditarPreco = camposPrecoEditaveis(papel);
   const semValores = !podeEditarPreco;
+  // Preço cheio do produto: equipe toda. O resto (financeiro, atacado próprio, desconto) segue só com admin.
+  const podePrecoProduto = precoProdutoEditavel(papel);
   const podeExcluir = podeExecutar(papel, "exclusao");
   const [screenEscolhida, setScreen] = useState<AdminScreen>("visao-geral");
   const screen = screenPermitida(papel, screenEscolhida) ?? "visao-geral";
@@ -301,6 +303,7 @@ export default function AdminApp({
               <ProdutosTab
                 products={products}
                 podeEditarPreco={podeEditarPreco}
+                podeVerPreco={podePrecoProduto}
                 busyId={busyId}
                 descontoOpenId={descontoOpenId}
                 descontoInput={descontoInput}
@@ -379,7 +382,7 @@ export default function AdminApp({
               key={editingId}
               product={produtoEmEdicao}
               categorias={categorias}
-              podeEditarPreco={podeEditarPreco}
+              podeEditarPreco={podePrecoProduto}
               podeExcluir={podeExcluir}
               onChange={refreshProducts}
               onDone={async () => {
