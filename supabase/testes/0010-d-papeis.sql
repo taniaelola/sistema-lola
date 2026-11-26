@@ -94,7 +94,7 @@ begin
     end if;
   end loop;
 
-  -- ---------- 3. supervisor cria produto: preço 999 ignorado, nasce preco 0 e inativo ----------
+  -- ---------- 3. (0013) supervisor cria produto: preço 999 gravado e pode ativar; atacado/desconto ignorados ----------
   perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
   set local role authenticated;
   v_novo := admin_upsert_product(
@@ -104,8 +104,8 @@ begin
     p_somente_bonus => true);
   reset role;
   select * into rp from products where id = v_novo;
-  if rp.preco <> 0 then raise exception 'FALHOU 3: supervisor gravou preco % (esperado 0)', rp.preco; end if;
-  if rp.ativo then raise exception 'FALHOU 3: produto do supervisor nasceu ativo'; end if;
+  if rp.preco <> 999 then raise exception 'FALHOU 3: supervisor gravou preco % (esperado 999)', rp.preco; end if;
+  if not rp.ativo then raise exception 'FALHOU 3: produto do supervisor com preço deveria poder nascer ativo'; end if;
   if rp.preco_atacado is not null or rp.desconto_percentual is not null then
     raise exception 'FALHOU 3: supervisor gravou preco_atacado/desconto (% / %)', rp.preco_atacado, rp.desconto_percentual;
   end if;
@@ -113,7 +113,7 @@ begin
     raise exception 'FALHOU 3: campos de cadastro não gravados (nome %, slug %, ordem %, somente_bonus %)', rp.nome, rp.slug, rp.ordem, rp.somente_bonus;
   end if;
 
-  -- ---------- 4. supervisor edita: cadastro muda, preços preservados ----------
+  -- ---------- 4. (0013) supervisor edita: cadastro e preço cheio mudam; atacado próprio e desconto preservados ----------
   perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
   set local role authenticated;
   perform admin_upsert_product(
@@ -125,7 +125,7 @@ begin
   if rp.nome <> 'TD Cem Editado' or rp.colecao <> 'nova' or rp.descricao <> 'outra' or rp.ordem <> 7 or not rp.destaque then
     raise exception 'FALHOU 4: campos de cadastro não mudaram (%)', rp.nome;
   end if;
-  if rp.preco <> 100 then raise exception 'FALHOU 4: preco mudou para %', rp.preco; end if;
+  if rp.preco <> 1 then raise exception 'FALHOU 4: supervisor deveria gravar o preço cheio (preco = %)', rp.preco; end if;
   if rp.preco_atacado is distinct from 60 then raise exception 'FALHOU 4: preco_atacado mudou para %', rp.preco_atacado; end if;
   if rp.desconto_percentual is distinct from 10 then raise exception 'FALHOU 4: desconto_percentual mudou para %', rp.desconto_percentual; end if;
   -- supervisor com id inexistente: erro de negócio (não cria nada)
@@ -240,7 +240,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
-    perform admin_upsert_product(v_p0, 'TD Zero', v_cat, null, 50, null, null, null, null, true, false, 0, 'td-p0');
+    perform admin_upsert_product(v_p0, 'TD Zero', v_cat, null, 0, null, null, null, null, true, false, 0, 'td-p0');
     raise exception 'FALHOU 7: supervisor ativou produto com preco 0 pelo upsert';
   exception when raise_exception then
     reset role;
@@ -387,7 +387,7 @@ begin
   exception when insufficient_privilege then null; end;
   reset role;
 
-  -- ---------- 12. supervisor: troca de categoria não pode mudar o preço de atacado efetivo ----------
+  -- ---------- 12. (0013) supervisor: pode trocar de categoria livremente (o preço cheio ele já edita) ----------
   insert into categorias (grupo, nome, slug, desconto_atacado_percentual) values ('calcados', 'TD A', 'td-a', 10) returning id into v_cA;
   insert into categorias (grupo, nome, slug, desconto_atacado_percentual) values ('calcados', 'TD B', 'td-b', 20) returning id into v_cB;
   insert into categorias (grupo, nome, slug, desconto_atacado_percentual) values ('calcados', 'TD C', 'td-c', 10) returning id into v_cC;
@@ -395,12 +395,9 @@ begin
   insert into products (slug, nome, categoria_id, preco, preco_atacado, ativo) values ('td-pov', 'TD Com Override', v_cA, 100, 50, true) returning id into v_pov;
   perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  begin
-    perform admin_upsert_product(v_pnov, 'TD Sem Override', v_cB, null, 1, null, null, null, null, true, false, 0, 'td-pnov');
-    raise exception 'FALHOU 12: supervisor mudou categoria para desconto diferente sem override';
-  exception when insufficient_privilege then null; end;
+  perform admin_upsert_product(v_pnov, 'TD Sem Override', v_cB, null, 1, null, null, null, null, true, false, 0, 'td-pnov');
   reset role;
-  if (select categoria_id from products where id = v_pnov) <> v_cA then raise exception 'FALHOU 12: categoria mudou apesar do erro'; end if;
+  if (select categoria_id from products where id = v_pnov) <> v_cB then raise exception 'FALHOU 12: supervisor deveria trocar a categoria'; end if;
   perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
   set local role authenticated;
   perform admin_upsert_product(v_pnov, 'TD Sem Override', v_cC, null, 1, null, null, null, null, true, false, 0, 'td-pnov');   -- mesmo desconto (10)

@@ -6,6 +6,7 @@ import {
   MSG_SEM_PERMISSAO,
   TELA_DA_SCREEN,
   camposPrecoEditaveis,
+  precoProdutoEditavel,
   cargasIniciais,
   dicaRevogarAtacado,
   decidirAcesso,
@@ -22,6 +23,7 @@ import type { Papel } from "@/lib/roles";
 const ACOES: AcaoAdmin[] = [
   "cadastro",
   "preco",
+  "preco-produto",
   "exclusao",
   "vendas-escrita",
   "liquidar",
@@ -50,15 +52,24 @@ describe("podeExecutar", () => {
     expect(permitidas("admin")).toEqual(ACOES.filter((a) => a !== "config"));
   });
 
-  it("supervisor só cadastro de produto, registrar pagamento, pedidos, leitura de vendas, estoque baixo e cadastro de revendedores", () => {
+  it("supervisor só cadastro e preço cheio de produto, registrar pagamento, pedidos, leitura de vendas, estoque baixo e cadastro de revendedores", () => {
     expect(permitidas("supervisor")).toEqual([
       "cadastro",
+      "preco-produto",
       "liquidar",
       "pedidos",
       "vendas-leitura",
       "estoque-baixo",
       "revendedores",
     ]);
+  });
+
+  it("supervisor edita o preço cheio do produto, mas não atacado próprio, desconto nem Live", () => {
+    expect(podeExecutar("supervisor", "preco-produto")).toBe(true);
+    expect(podeExecutar("supervisor", "preco")).toBe(false);
+    expect(camposPrecoEditaveis("supervisor")).toBe(false);
+    expect(precoProdutoEditavel("supervisor")).toBe(true);
+    expect(precoProdutoEditavel("cliente")).toBe(false);
   });
 
   it("supervisor registra pagamento, mas não aprova revendedor", () => {

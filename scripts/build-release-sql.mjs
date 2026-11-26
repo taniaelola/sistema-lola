@@ -232,3 +232,24 @@ const cabecalho0012 = `-- release-0012.sql — pedido de atacado SEM pagamento n
 `
 const mudou0012 = gravarSeMudou(saida0012, cabecalho0012 + conteudo0012 + '\n')
 console.log(`release:sql OK: ${saida0012} (somente ${arq0012}${mudou0012 ? '' : '; sem mudanças'})`)
+
+// ---------------------------------------------------------------------
+// release-0013.sql: supervisor vê e edita o preço cheio do produto. As migrações 0001 a 0012 já estão em produção.
+// ---------------------------------------------------------------------
+const saida0013 = join(raiz, 'supabase', 'release-0013.sql')
+const arq0013 = '0013_supervisor_preco_produto.sql'
+const caminho0013 = join(dirMigracoes, arq0013)
+if (!existsSync(caminho0013)) falhar(`migração ausente: supabase/migrations/${arq0013}`)
+const conteudo0013 = readFileSync(caminho0013, 'utf8').replace(/\r\n/g, '\n').trim()
+if (!conteudo0013) falhar(`migração vazia: ${arq0013}`)
+
+const cabecalho0013 = `-- release-0013.sql — supervisor VÊ e EDITA o preço cheio do produto (atacado próprio, desconto e Live seguem só com admin).
+--   (GERADO por scripts/build-release-sql.mjs; NÃO edite à mão. Contém somente a migração ${arq0013};
+--    as migrações 0001 a 0012 já estão aplicadas em produção.)
+--   ORDEM: pode rodar antes ou junto do deploy do app (create or replace, mesmas assinaturas; idempotente).
+--   Cole o arquivo inteiro no SQL Editor do projeto LOLA e rode UMA vez.
+--   Rollback: supabase/rollback-0013.sql.
+
+`
+const mudou0013 = gravarSeMudou(saida0013, cabecalho0013 + conteudo0013 + '\n')
+console.log(`release:sql OK: ${saida0013} (somente ${arq0013}${mudou0013 ? '' : '; sem mudanças'})`)

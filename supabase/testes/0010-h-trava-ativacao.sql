@@ -89,17 +89,17 @@ begin
     raise exception 'FALHOU 2: produto ruim ficou ativo';
   end if;
 
-  -- ---------- 3. supervisor: nasce inativo com preço 0; ativar com atacado efetivo 0 também é barrado ----------
+  -- ---------- 3. (0013) supervisor: ativar sem preço é barrado; ativar com atacado efetivo 0 também ----------
   perform set_config('request.jwt.claims', json_build_object('sub', u_sup, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  v_novo := admin_upsert_product(null, 'TH Sup', v_cat, null, null, null, null, null, null, true, false, 0, 'th-sup');
-  reset role;
-  if (select ativo from products where id = v_novo) or (select preco from products where id = v_novo) <> 0 then
-    raise exception 'FALHOU 3: produto do supervisor deveria nascer inativo com preço 0';
-  end if;
-  set local role authenticated;
   begin
-    perform admin_upsert_product(v_pc100, 'TH Cat 100', v_cat100, null, null, null, null, null, null, true, false, 0, 'th-c100');
+    v_novo := admin_upsert_product(null, 'TH Sup', v_cat, null, null, null, null, null, null, true, false, 0, 'th-sup');
+    raise exception 'FALHOU 3: supervisor ativou produto sem preço';
+  exception when raise_exception then
+    if sqlerrm <> 'defina o preço antes de ativar' then raise exception 'FALHOU 3: mensagem (sem preço): %', sqlerrm; end if;
+  end;
+  begin
+    perform admin_upsert_product(v_pc100, 'TH Cat 100', v_cat100, null, 100, null, null, null, null, true, false, 0, 'th-c100');
     raise exception 'FALHOU 3: supervisor ativou produto com atacado efetivo 0';
   exception when raise_exception then
     if sqlerrm <> v_msg then raise exception 'FALHOU 3: mensagem (supervisor): %', sqlerrm; end if;
